@@ -2946,12 +2946,17 @@ test("arrangement Callable applies field-specific preset authorization", async (
   }
 });
 
-test("Outsourcer Rules allow create and update for company admins and an exact manager", async () => {
+test("Outsourcer Rules allow create and update for active registered same-tenant actors regardless of role", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const actors = [
     { label: "admin", isAdmin: true, roles: [], isSuperUser: false },
     { label: "admin-super", isAdmin: true, roles: [], isSuperUser: true },
     { label: "manager", isAdmin: false, roles: ["manager"], isSuperUser: false },
+    { label: "controller", isAdmin: false, roles: ["controller"], isSuperUser: false },
+    { label: "accountant", isAdmin: false, roles: ["accountant"], isSuperUser: false },
+    { label: "role-less", isAdmin: false, roles: [], isSuperUser: false },
+    { label: "unknown-role", isAdmin: false, roles: ["unknown-role"], isSuperUser: false },
+    { label: "non-admin-super", isAdmin: false, roles: [], isSuperUser: true },
   ];
 
   for (const actor of actors) {
@@ -2991,7 +2996,7 @@ test("Outsourcer Rules allow create and update for company admins and an exact m
   }
 });
 
-test("Outsourcer Rules enforce the exact document and partial-update contract", async () => {
+test("Outsourcer Rules leave field validation to the model while binding writes to the actor", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "outsourcer-rules-document-contract";
   await seedRegisteredUser({
@@ -3003,7 +3008,7 @@ test("Outsourcer Rules enforce the exact document and partial-update contract", 
   });
   const firestore = authenticatedFirestore(uid, { isSuperUser: false });
 
-  const invalidCreates = [
+  const modelRejectedButRulesAccepted = [
     { label: "missing-name", change: { name: undefined } },
     { label: "extra-field", change: { extraData: "not-allowed" } },
     { label: "oversized-code", change: { code: "O".repeat(11) } },
@@ -3013,81 +3018,47 @@ test("Outsourcer Rules enforce the exact document and partial-update contract", 
     { label: "oversized-remarks", change: { remarks: "外".repeat(201) } },
     { label: "invalid-status", change: { contractStatus: "UNKNOWN" } },
     { label: "terminated-create", change: { contractStatus: "TERMINATED" } },
-    { label: "spoofed-uid", change: { uid: "another-user" } },
     { label: "invalid-token-map", change: { tokenMap: { invalid: false } } },
   ];
-  for (const { label, change } of invalidCreates) {
-    const docId = `outsourcer-invalid-create-${label}`;
+  for (const { label, change } of modelRejectedButRulesAccepted) {
+    const docId = `outsourcer-rules-model-validation-${label}`;
     const data = outsourcerRulesData({ docId, uid, ...change });
     if (change.name === undefined) delete data.name;
-    await assertFails(setDoc(doc(firestore, "Companies", companyId, "Outsourcers", docId), data));
+    await assertSucceeds(setDoc(doc(firestore, "Companies", companyId, "Outsourcers", docId), data));
   }
 
-  const docId = "outsourcer-rules-valid-update-target";
+  const spoofedDocId = "outsourcer-rules-spoofed-create";
+  await assertFails(setDoc(
+    doc(firestore, "Companies", companyId, "Outsourcers", spoofedDocId),
+    outsourcerRulesData({ docId: spoofedDocId, uid: "another-user" }),
+  ));
+
+  const docId = "outsourcer-rules-whole-document-update-target";
   const reference = doc(firestore, "Companies", companyId, "Outsourcers", docId);
   await assertSucceeds(setDoc(reference, outsourcerRulesData({ docId, uid })));
-  await assertSucceeds(updateDoc(reference, {
-    remarks: "valid partial update",
+  await assertSucceeds(setDoc(reference, {
+    ...outsourcerRulesData({ docId, uid }),
+    contractStatus: "TERMINATED",
+    remarks: "whole-document-last-write-wins",
+    extraData: "model-validates-before-this-write",
     uid,
     updatedAt: serverTimestamp(),
   }));
-
-  const invalidUpdates = [
-    { extraData: "not-allowed", uid, updatedAt: serverTimestamp() },
-    { name: "外".repeat(21), uid, updatedAt: serverTimestamp() },
-    { name: 123, uid, updatedAt: serverTimestamp() },
-    { contractStatus: "UNKNOWN", uid, updatedAt: serverTimestamp() },
-    { name: deleteField(), uid, updatedAt: serverTimestamp() },
-    { createdAt: serverTimestamp(), remarks: "metadata attack", uid, updatedAt: serverTimestamp() },
-    { docId: "different", remarks: "id attack", uid, updatedAt: serverTimestamp() },
-    { remarks: "uid attack", uid: "another-user", updatedAt: serverTimestamp() },
-    { tokenMap: { forged: true }, uid, updatedAt: serverTimestamp() },
-    { uid, updatedAt: serverTimestamp() },
-  ];
-  for (const update of invalidUpdates) {
-    await assertFails(updateDoc(reference, update));
-  }
-
-  await assertSucceeds(updateDoc(reference, {
-    name: "合成協力会社二",
-    tokenMap: { "合": true, "会社": true },
-    uid,
-    updatedAt: serverTimestamp(),
-  }));
+  assert.equal((await assertSucceeds(getDoc(reference))).data().remarks, "whole-document-last-write-wins");
+  await assertFails(updateDoc(reference, { remarks: "uid attack", uid: "another-user" }));
 });
 
-test("Outsourcer Rules reject nonwriters, malformed identities, and cross-tenant writes", async () => {
+test("Outsourcer Rules reject inactive, unregistered, malformed-identity, and cross-tenant writes", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const deniedActors = [
-    { label: "controller", user: { isAdmin: false, roles: ["controller"] } },
-    { label: "accountant", user: { isAdmin: false, roles: ["accountant"] } },
-    { label: "human-resource", user: { isAdmin: false, roles: ["human-resource"] } },
-    { label: "labor", user: { isAdmin: false, roles: ["labor"] } },
-    { label: "legal", user: { isAdmin: false, roles: ["legal"] } },
-    { label: "direct-permission", user: { isAdmin: false, roles: ["outsourcers:write"] } },
-    { label: "unknown-role", user: { isAdmin: false, roles: ["unknown-role"] } },
-    { label: "prototype-to-string", user: { isAdmin: false, roles: ["toString"] } },
-    { label: "prototype-constructor", user: { isAdmin: false, roles: ["constructor"] } },
-    { label: "prototype-proto", user: { isAdmin: false, roles: ["__proto__"] } },
-    { label: "mixed-known-role", user: { isAdmin: false, roles: ["manager", "controller"] } },
-    { label: "mixed-unknown-role", user: { isAdmin: false, roles: ["manager", "unknown-role"] } },
-    { label: "duplicate-manager", user: { isAdmin: false, roles: ["manager", "manager"] } },
-    { label: "roles-not-list", user: { isAdmin: false, roles: "manager" } },
-    { label: "admin-state-missing", user: { roles: ["manager"] } },
-    { label: "super-user-only", user: { isAdmin: false, roles: ["manager"] }, claims: { isSuperUser: true } },
     { label: "temporary", user: { isAdmin: true, roles: [], isTemporary: true } },
     { label: "malformed-temporary", user: { isAdmin: true, roles: [], isTemporary: "false" } },
     { label: "disabled", user: { isAdmin: true, roles: [], disabled: true } },
     { label: "malformed-disabled", user: { isAdmin: true, roles: [], disabled: "false" } },
-    { label: "malformed-temporary", user: { isAdmin: true, roles: [], isTemporary: "false" } },
-    { label: "malformed-disabled", user: { isAdmin: true, roles: [], disabled: "false" } },
-    { label: "malformed-admin", user: { isAdmin: "true", roles: [] } },
     { label: "company-mismatch", user: { isAdmin: true, roles: [], companyId: CODEX_LOCAL_COMPANIES.secondary.id } },
     { label: "missing-user", missingUser: true },
-    { label: "missing-super-claim", user: { isAdmin: true, roles: [] }, missingSuperClaim: true },
     { label: "missing-company-claim", user: { isAdmin: true, roles: [] }, missingCompanyClaim: true },
     { label: "malformed-company-claim", user: { isAdmin: true, roles: [] }, claims: { companyId: 123 } },
-    { label: "malformed-super-claim", user: { isAdmin: true, roles: [] }, claims: { isSuperUser: "false" } },
     { label: "unverified", user: { isAdmin: true, roles: [] }, claims: { email_verified: false } },
   ];
 
@@ -3105,7 +3076,7 @@ test("Outsourcer Rules reject nonwriters, malformed identities, and cross-tenant
     const claims = {
       email_verified: true,
       companyId,
-      ...(actor.missingSuperClaim ? {} : { isSuperUser: false }),
+      isSuperUser: false,
       ...actor.claims,
     };
     if (actor.missingCompanyClaim) delete claims.companyId;
@@ -3290,7 +3261,7 @@ for (const contractStatus of ["ACTIVE", "TERMINATED"]) {
   });
 }
 
-test("Outsourcer Rules recheck revoked manager role and disabled state", async () => {
+test("Outsourcer Rules ignore role changes and recheck active registered state", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "outsourcer-rules-revoked-manager";
   const docId = "outsourcer-rules-revoked-manager-doc";
@@ -3318,7 +3289,11 @@ test("Outsourcer Rules recheck revoked manager role and disabled state", async (
       { roles: ["controller"] },
     );
   });
-  await assertFails(updateDoc(reference, { remarks: "role-revoked" }));
+  await assertSucceeds(updateDoc(reference, {
+    remarks: "role-changed",
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
 
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
     await updateDoc(

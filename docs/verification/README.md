@@ -31,6 +31,7 @@
 | FGA-03 Site Manager・document LWWのDev反映・受入れ | [FGA-03 Site Manager・document LWW Dev反映・受入れ記録](fga-03-site-manager-lww-dev.md) |
 | FGA-04 Employee Manager・document LWWのLocal検証 | [FGA-04 Employee Manager・document LWW Local検証記録](fga-04-employee-manager-lww-local.md) |
 | FGA-04 Employee Manager・document LWWのDev反映 | [FGA-04 Employee Manager・document LWW Dev反映記録](fga-04-employee-manager-lww-dev.md) |
+| FGA-05 Outsourcer Manager・document LWWのLocal検証 | [FGA-05 Outsourcer Manager・document LWW Local検証記録](fga-05-outsourcer-manager-lww-local.md) |
 | Customer archive safety CAS-04 local実装・画面受入れ | [Customer archive safety local acceptance verification receipt](customer-archive-local-acceptance.md) |
 | Site SITE-05/06 archive・取極め local実装 | [SITE-05/06 Codex専用local検証記録](site-05-06-local.md) |
 | Site SITE-07 一覧・検索・UI整合 local実装 | [SITE-07 Codex専用local検証記録](site-07-local.md) |

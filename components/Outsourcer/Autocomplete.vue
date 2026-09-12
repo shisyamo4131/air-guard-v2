@@ -48,7 +48,8 @@ const emit = defineEmits(["update:model-value"]);
  *****************************************************************************/
 const allSlots = useSlots();
 const { fetchOutsourcerComposable } = useFetch("OutsourcerAutocomplete");
-const { getOutsourcer, searchOutsourcers } = fetchOutsourcerComposable;
+const { getOutsourcer, pushOutsourcer, searchOutsourcers } =
+  fetchOutsourcerComposable;
 
 /*****************************************************************************
  * COMPUTED
@@ -68,13 +69,14 @@ const slots = computed(() =>
  * METHODS
  *****************************************************************************/
 function onCreateHandler(event) {
+  pushOutsourcer(event);
   const emitValue = props.returnObject ? event : event[props.itemValue];
   emit("update:model-value", emitValue);
 }
 
 async function api(text) {
   const normalizedLength = normalizeTokenText(text).length;
-  if (normalizedLength < 2 || normalizedLength > 40) return [];
+  if (normalizedLength < 1 || normalizedLength > 40) return [];
   return await searchOutsourcers(text, { returnAllCached: false });
 }
 </script>
@@ -84,7 +86,7 @@ async function api(text) {
     :api="api"
     :fetchItemByKeyApi="getOutsourcer"
     :custom-filter="() => true"
-    hint="名称を2〜40文字入力して検索"
+    hint="名称を1〜40文字入力して検索"
     :item-title="itemTitle"
     :item-value="itemValue"
     :label="label"
@@ -93,11 +95,14 @@ async function api(text) {
     @update:model-value="emit('update:model-value', $event)"
   >
     <template v-if="creatable" #append>
-      <OutsourcersManager @create="($event) => onCreateHandler($event)">
-        <template #table="{ toCreate, canCreate }">
-          <v-icon v-if="canCreate" @click="toCreate()">mdi-plus</v-icon>
+      <OutsourcerManager
+        label="外注先の新規登録"
+        @created="onCreateHandler"
+      >
+        <template #activator="{ toCreate }">
+          <v-icon @click="() => toCreate()">mdi-plus</v-icon>
         </template>
-      </OutsourcersManager>
+      </OutsourcerManager>
     </template>
 
     <template #item="slotProps">

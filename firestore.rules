@@ -219,110 +219,6 @@ service cloud.firestore {
             && hasOperationResultWriteRole(user)));
     }
 
-    function hasExactOutsourcerManagerRole(user) {
-      return user.keys().hasAll(['roles'])
-        ? (user.roles is list
-          ? (user.roles.size() == 1
-            ? user.roles[0] == 'manager'
-            : false)
-          : false)
-        : false;
-    }
-
-    function hasValidOutsourcerIdentityClaims(companyId) {
-      return isAuthenticated()
-        ? (request.auth.token.keys().hasAll(['email_verified', 'companyId', 'isSuperUser'])
-          ? (request.auth.token.companyId is string
-            ? request.auth.token.email_verified is bool
-              && request.auth.token.email_verified == true
-              && request.auth.token.companyId.size() > 0
-              && request.auth.token.companyId == companyId
-              && request.auth.token.isSuperUser is bool
-            : false)
-          : false)
-        : false;
-    }
-
-    function isActiveOutsourcerWriter(companyId, user) {
-      return user.keys().hasAll(['companyId', 'isTemporary', 'disabled', 'isAdmin'])
-        ? user.companyId is string
-          && user.companyId == companyId
-          && user.isTemporary is bool
-          && user.isTemporary == false
-          && user.disabled is bool
-          && user.disabled == false
-          && user.isAdmin is bool
-          && (user.isAdmin == true
-            || (request.auth.token.isSuperUser == false
-              && hasExactOutsourcerManagerRole(user)))
-        : false;
-    }
-
-    function canWriteOutsourcer(companyId) {
-      let userPath = /databases/$(database)/documents/Companies/$(companyId)/Users/$(request.auth.uid);
-      return hasValidOutsourcerIdentityClaims(companyId)
-        && exists(userPath)
-        && isActiveOutsourcerWriter(companyId, get(userPath).data);
-    }
-
-    function isValidOutsourcerTokenMap(value) {
-      return value == null
-        || (value is map
-          && value.size() <= 512
-          && value.values().hasOnly([true]));
-    }
-
-    function isValidOutsourcer(data, docId) {
-      return data.keys().hasAll([
-          'docId', 'uid', 'createdAt', 'updatedAt', 'code', 'name',
-          'nameKana', 'displayName', 'contractStatus', 'remarks', 'tokenMap'
-        ])
-        && data.keys().hasOnly([
-          'docId', 'uid', 'createdAt', 'updatedAt', 'code', 'name',
-          'nameKana', 'displayName', 'contractStatus', 'remarks', 'tokenMap'
-        ])
-        && isRequiredString(data.docId, 128)
-        && data.docId == docId
-        && isRequiredString(data.uid, 128)
-        && data.createdAt is timestamp
-        && data.updatedAt is timestamp
-        && isNullableString(data.code, 10)
-        && isRequiredString(data.name, 20)
-        && isRequiredString(data.nameKana, 40)
-        && isRequiredString(data.displayName, 6)
-        && data.contractStatus in ['ACTIVE', 'TERMINATED']
-        && isNullableString(data.remarks, 200)
-        && isValidOutsourcerTokenMap(data.tokenMap);
-    }
-
-    function isValidOutsourcerCreate(docId) {
-      return isValidOutsourcer(request.resource.data, docId)
-        && request.resource.data.contractStatus == 'ACTIVE'
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
-    }
-
-    function isValidOutsourcerUpdate(docId) {
-      let changed = request.resource.data.diff(resource.data).affectedKeys();
-      let businessFields = [
-        'code', 'name', 'nameKana', 'displayName', 'contractStatus', 'remarks'
-      ];
-      let allowedFields = [
-        'code', 'name', 'nameKana', 'displayName', 'contractStatus', 'remarks',
-        'tokenMap', 'uid', 'updatedAt'
-      ];
-      return isValidOutsourcer(request.resource.data, docId)
-        && request.resource.data.docId == resource.data.docId
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.updatedAt == request.time
-        && changed.hasAny(businessFields)
-        && changed.hasOnly(allowedFields)
-        && (!changed.hasAny(['tokenMap'])
-          || changed.hasAny(['name', 'nameKana', 'displayName']));
-    }
-
     function hasValidSiteCustomerCreate(companyId, data) {
       return hasUnsetCustomerReference(data)
         ? (data.isTemporary is bool && data.isTemporary == true)
@@ -682,14 +578,16 @@ service cloud.firestore {
     // --- Rules for 'Outsourcers' subcollection under 'Companies' ---
     // OutsourcersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // 読取りは同一tenantに維持し、作成・更新は会社管理者または
-    // non-super-userのexact manager presetだけに許可する。削除は拒否する。
+    // 読取り・作成・更新は同一tenantの有効な本登録Userへrole非依存で許可する。
+    // 作成・更新はmodelの通常保存を使用し、client deleteは許可しない。
     match /Companies/{companyId}/Outsourcers/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create: if canWriteOutsourcer(companyId)
-                    && isValidOutsourcerCreate(docId);
-      allow update: if canWriteOutsourcer(companyId)
-                    && isValidOutsourcerUpdate(docId);
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && request.resource.data.uid == request.auth.uid;
       allow delete: if false;
     }
 

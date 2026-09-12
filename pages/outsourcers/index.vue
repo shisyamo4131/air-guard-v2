@@ -36,7 +36,7 @@ const {
   <AppViewportContainer>
     <OutsourcersManager
       class="fill-height"
-      :docs="items"
+      :model-value="items"
       v-model:search="search"
       :items-per-page="20"
       hide-default-footer
