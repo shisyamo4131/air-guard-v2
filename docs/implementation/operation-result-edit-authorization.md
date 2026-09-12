@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: Local実装済み・Dev未反映
+- 状態: Dev反映・正常経路受入れ済み
 - 対象checkpoint: `FGA-06-RESULT-EDIT-NORMAL-AUTH-02`
 - 最終確認日: 2026-09-12
 - 根拠file: `functions/apis/saveOperation.js`、`functions/modules/auth/resolveCallableAuthIdentity.js`、`functions/modules/operations/saveOperation.js`、`functions/shared/operationWriteContract.js`、関連domain test
@@ -29,10 +29,10 @@ clientのroute・button・role差はUXとして維持しており、このcheckp
 
 ## 互換性・data・rollback
 
-schema、保存field、document path、Firestore Rules、UI、既存dataを変更していないためdata migrationは不要である。rollbackは`functions/shared/operationWriteContract.js`のtenant共通result edit判定と対応test・文書を直前の確認済み状態へ戻す。Devへ未反映の間はremote製品挙動に変更はない。
+schema、保存field、document path、Firestore Rules、UI、既存dataを変更していないためdata migrationは不要である。rollbackは製品commit `d759409c63b5fbbeb9f9814488f50e5382571278`をrevertし、FunctionsをGitHub ActionsでDevへ再反映する。
 
 ## 検証と未確認範囲
 
-許可・拒否・tenant・User状態・identity再照合・lock・最新状態・batch atomicityはdomain testと独立security reviewで確認した。実行結果は[Local検証記録](../verification/fga-06-result-edit-normal-auth-local.md)を参照する。
+許可・拒否・tenant・User状態・identity再照合・lock・最新状態・batch atomicityはdomain testと独立security reviewで確認した。実行結果は[Local検証記録](../verification/fga-06-result-edit-normal-auth-local.md)を参照する。release commit `4bd80e3f1bf96ad888b2f6721111e5d0e06fdad0`をFunctionsへDev反映し、認証済みChromeで基本情報の備考変更と再表示を確認した。[Dev受入れ記録](../verification/fga-06-result-edit-normal-auth-dev.md)を参照する。
 
-Local Emulator、UI、build、Dev・Prod、remote Firestore、実data、deployed Functionは未確認である。Firestore Dev targetは既存記録でStandard edition / Native modeだが、今回remote freshnessを再確認していない。本変更はedition固有API、query、Rulesへ依存しない。
+別actor、roleを持たないUser、別tenant、無効・仮User、lock中・競合時の拒否、従業員・外注先明細編集、applicationを介さないrequestはDevで再実行していない。これらはLocal自動検証を正とする。Firestore Dev targetのedition freshness、派生documentとtrigger log、Prodは未確認である。本変更はedition固有API、query、Rulesへ依存しない。
