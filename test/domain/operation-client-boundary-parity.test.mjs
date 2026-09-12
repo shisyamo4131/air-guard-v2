@@ -190,15 +190,28 @@ test("client date and notification projections retain Functions parity", () => {
   assert.deepEqual(encoded(clientNotifications.prepareNotificationState(notification, input, now)), encoded(serverNotifications.prepareNotificationState(notification, input, now)));
 });
 
-test("operation UX policy matches the Callable policy without becoming an authorization boundary", () => {
+test("schedule CUD uses tenant-wide server authorization while restricted operations retain the UX role matrix", () => {
   const identity = { uid: "actor", companyId: "company", isSuperUser: false };
   const base = { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: false, roles: [] };
+  const scheduleCud = ["create", "duplicate", "overview", "workers", "order", "delete"]
+    .map((action) => ({ kind: "schedule", action }));
+  const restrictedSchedule = [{ kind: "schedule", action: "notify" }, { kind: "schedule", action: "convert" }];
+  const result = { kind: "result", action: "overview" };
+  const billing = { kind: "billing", action: "adjusted" };
   for (const roles of [[], ["controller"], ["accountant"], ["human-resource"], ["unknown"]]) {
     const user = { ...base, roles };
-    assert.equal(operationUxAllowed(identity, user), serverCommands.operationAllowed(identity, user, false));
-    assert.equal(operationUxAllowed(identity, user, { billing: true }), serverCommands.operationAllowed(identity, user, true));
+    for (const command of scheduleCud) assert.equal(serverCommands.operationAllowed(identity, user, command), true, `${roles}: ${command.action}`);
+    for (const command of restrictedSchedule) assert.equal(serverCommands.operationAllowed(identity, user, command), operationUxAllowed(identity, user), `${roles}: ${command.action}`);
+    assert.equal(serverCommands.operationAllowed(identity, user, result), operationUxAllowed(identity, user), `${roles}: result`);
+    assert.equal(serverCommands.operationAllowed(identity, user, billing), operationUxAllowed(identity, user, { billing: true }), `${roles}: billing`);
   }
+  const superIdentity = { ...identity, isSuperUser: true };
+  for (const command of scheduleCud) assert.equal(serverCommands.operationAllowed(superIdentity, base, command), true, `super: ${command.action}`);
+  for (const command of [...restrictedSchedule, result, billing]) assert.equal(serverCommands.operationAllowed(superIdentity, base, command), false, `super: ${command.kind}/${command.action}`);
   const admin = { ...base, isAdmin: true };
   assert.equal(operationUxAllowed(identity, admin), true);
-  assert.equal(serverCommands.operationAllowed(identity, admin), true);
+  for (const command of [...scheduleCud, ...restrictedSchedule, result, billing]) assert.equal(serverCommands.operationAllowed(identity, admin, command), true);
+  for (const user of [{ ...base, disabled: true }, { ...base, isTemporary: true }, { ...base, companyId: "other" }]) {
+    for (const command of scheduleCud) assert.equal(serverCommands.operationAllowed(identity, user, command), false);
+  }
 });

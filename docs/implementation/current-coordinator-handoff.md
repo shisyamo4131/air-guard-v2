@@ -16,7 +16,7 @@
 
 ## 次の作業
 
-現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-05 Outsourcer管理まで完了し、phase全体は80%である。`FGA-05-OUTSOURCER-MANAGER-LWW-01`では、単数／複数形Manager、通常CREATE・UPDATE、Rulesをtenant共通権限とdocument last-write-winsへ揃え、旧専用dialog、role policy、部分transaction writer、競合拒否を撤去した。Local自動検証と固定commit `fed8449e`のUI buildに合格し、release commit `dc6c6b76`をFirestore Rules・HostingへDev反映した。Codex専用tenantでは合成Outsourcerの作成、契約終了・備考更新、再読込、1文字検索、見た目を受入れた。次はFGA-06の残るtransaction系機能をread-onlyで棚卸しし、最初の小checkpointを提示する。[Local検証](../verification/fga-05-outsourcer-manager-lww-local.md)と[Dev受入れ](../verification/fga-05-outsourcer-manager-lww-dev.md)を参照する。
+現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-05 Outsourcer管理まで完了し、phase全体は80%である。FGA-06は`FGA-06-SCHEDULE-NORMAL-AUTH-01`を開始し、現場稼働予定の作成・複製・基本情報変更・配置作業員変更・表示順変更・削除だけをtenant共通のserver権限へ揃える。関連documentを同時に整える`saveOperation` Callableは維持し、配置通知作成、稼働実績への確定、稼働実績・請求は今回変更しない。Local実装・検証、固定commitのFunctions Dev反映・受入れまでが同checkpointの残作業であり、完了までは80%から加点しない。[FGA roadmap](../roadmaps/foundational-governance-alignment.md)を正とする。
 
 FGA-02-CUSTOMER-UPDATE-01のlocal実装はcommit `6bf82e5264f72b39c540eb68c96b18690385198e`へ固定した。旧domain Manager分類はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`、Customer初回実装はcommit `9bd4d43c23bf113790add10691dc91b7445a99d4`である。分類基準は[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とcommit `b89e5c86`で訂正し、Customer実装もcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`へ訂正した。現行のManager分類はFirestore上の通常のmaster data全般へ適用し、Customer・Site・Employee・Outsourcerを最初の適用例とする。Company・User等の例外境界は維持する。
 

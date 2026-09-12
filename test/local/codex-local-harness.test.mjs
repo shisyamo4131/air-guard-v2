@@ -4169,6 +4169,45 @@ test("SITE-04 Schedule dedicated writer requires atomic Site revisions and prese
   await emp05SaveAs(actor, [emp05Command((await deleteRef.get()).data(), "delete")]); assert.equal((await deleteRef.get()).exists, false);
 });
 
+test("FGA-06 active role-less users can create, update, duplicate and delete schedules but cannot mix in restricted operations", async () => {
+  const actor = await seedSiteLifecycleTransportActor({ uid: "fga06-schedule-roleless", roles: [] });
+  const companyId = actor.companyId, admin = getAdminFirestore(), root = `Companies/${companyId}`;
+  const customerId = "fga06-schedule-customer", siteId = "fga06-schedule-site";
+  const firstId = "fga06-schedule-first", copyId = "fga06-schedule-copy";
+  const entries = [
+    ["Customers", customerId], ["Sites", siteId],
+    ["SiteOperationSchedules", firstId], ["SiteOperationSchedules", copyId],
+  ];
+  try {
+    await admin.doc("System/system").set({ isMaintenance: false });
+    await admin.doc(`${root}/Customers/${customerId}`).set({ docId: customerId });
+    await admin.doc(`${root}/Sites/${siteId}`).set(emp05SiteData({ docId: siteId, uid: actor.uid, customerId, customer: {}, isTemporary: false, agreementsV2: [] }));
+    await emp05SaveAs(actor, [emp05Command(null, "create", emp05Overview(siteId), { documentId: firstId, siteStatuses: { [siteId]: "ACTIVE" } })]);
+    const firstRef = admin.doc(`${root}/SiteOperationSchedules/${firstId}`), copyRef = admin.doc(`${root}/SiteOperationSchedules/${copyId}`);
+    let first = (await firstRef.get()).data();
+    await emp05SaveAs(actor, [emp05Command(first, "overview", { remarks: "roleに依存しない更新" })]);
+    first = (await firstRef.get()).data(); assert.equal(first.remarks, "roleに依存しない更新");
+    await emp05SaveAs(actor, [emp05Command(first, "duplicate", { dateAt: "2028-05-02" }, { documentId: copyId, sourceId: firstId, siteStatuses: { [siteId]: "ACTIVE" } })]);
+    const copy = (await copyRef.get()).data(); assert.equal(copy.docId, copyId);
+
+    const mixed = emp05SaveAs(actor, [
+      emp05Command(first, "overview", { remarks: "保存されない更新" }),
+      emp05Command(copy, "notify", { shouldNotify: false }),
+    ]);
+    await assertCallableError(mixed, "permission-denied");
+    assert.equal((await firstRef.get()).data().remarks, "roleに依存しない更新");
+    await assertCallableError(emp05SaveAs(actor, [emp05Command(copy, "convert", {}, { notifications: {} })]), "permission-denied");
+
+    await emp05SaveAs(actor, [emp05Command(first, "delete")]);
+    await emp05SaveAs(actor, [emp05Command(copy, "delete")]);
+    assert.equal((await firstRef.get()).exists, false); assert.equal((await copyRef.get()).exists, false);
+  } finally {
+    await Promise.all(entries.map(([collectionName, docId]) => admin.doc(`${root}/${collectionName}/${docId}`).delete()));
+    await admin.doc(`${root}/Users/${actor.uid}`).delete();
+    await getAdminAuth().deleteUser(actor.uid);
+  }
+});
+
 test("SITE-04 maintenance state fails closed for client Site revision and schedule writes", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-lifecycle-maintenance-admin";

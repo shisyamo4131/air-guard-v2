@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- FGA-06の最初のcheckpointとして、現場稼働予定の作成・複製・基本情報変更・配置作業員変更・表示順変更・削除を、同じtenantの有効な本登録Userへroleに依存せず許可するserver認可へ変更した。関連documentを同時に整える`saveOperation` Callable、Site revision、配置通知の取消し、実績化済み予定の変更・削除拒否は維持する。配置通知の作成、稼働実績への確定、稼働実績・請求のactor条件、画面上のrole別表示は変更していない。既存data、schema、Rules、Prodは変更していない。
+
 - FGA-05 Outsourcer管理を完了した。単数`OutsourcerManager`を`AirItemManager`、複数形`OutsourcersManager`を`AirArrayManager`へ揃え、通常CREATE・UPDATEをOutsourcer modelの標準保存とdocument last-write-winsへ統一した。旧専用dialog、role policy、部分transaction writer、同一field競合拒否を撤去した。Rulesは同一tenantの有効な本登録Userへrole非依存で通常保存を許可し、actor UID、tenant、active/registered、client delete、archive CUDの境界を維持する。検索入力を1〜40文字へ統一し、Firestore Rules・HostingをDev反映した。Codex専用tenantで合成Outsourcerの作成、契約終了・備考更新、再読込、1文字検索、見た目を確認した。Functions、Prod、既存dataの一括変換、schema packageは変更していない。[Local検証記録](docs/verification/fga-05-outsourcer-manager-lww-local.md)と[Dev受入れ記録](docs/verification/fga-05-outsourcer-manager-lww-dev.md)を参照。
 
 - FGA-04 Employee管理を完了した。通常作成・基本・国籍・警備員・資格・3保険をtenant共通権限とdocument last-write-winsへ揃え、旧通常保存Function 6件をsourceとDevから撤去した。Firestore・Functions・Hosting反映後、Codex専用tenantの認証済みChromeで合成Employeeの作成、全通常保存、再読込後の再表示を確認した。合成EmployeeはUser未連携・在職中で残し、Prod・既存dataの一括変換は行っていない。[Dev受入れ記録](docs/verification/fga-04-employee-manager-lww-dev.md)を参照。

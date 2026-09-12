@@ -4,16 +4,16 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-023、SPEC-DEEP-036、SPEC-DEEP-037、SPEC-DEEP-038、SPEC-DEEP-039b、SPEC-DEEP-041
-- 最終確認日: 2026-08-12（SPEC-DEEP-015で配置管理component本文、SPEC-DEEP-031でOperationSchedules component本文、SPEC-DEEP-036〜037でSiteOperationSchedule component本文を再確認）
-- 根拠ファイル: `pages/operation-schedules/index.vue`、`components/SiteOperationSchedule/**`、`components/SiteOperationSchedules/**`、`components/Arrangements/Manager/useIndex.js`、`composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js`、`useSiteOperationScheduleDuplicator.js`、range data layer、`firestore.rules`、schemas `SiteOperationSchedule.js`、`SiteOperationScheduleDetail.js`、直接のArrangementNotification/OperationResult境界
+- 最終確認日: 2026-09-12（FGA-06-SCHEDULE-NORMAL-AUTH-01で正式保存境界とactor条件を再確認）
+- 根拠ファイル: `functions/apis/saveOperation.js`、`functions/modules/operations/saveOperation.js`、`functions/shared/operationWriteContract.js`、`utils/auth/policies/operationActorPolicy.js`、`composables/application/operation/**`、`composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js`、`firestore.rules`、関連domain／Local Emulator test
 
 ## 入口・権限
 
 Schedule/Arrangement 2pageの公開契約とresponsive・manager委譲境界のfile単位確認は[Operation・Schedule・Billing pages deep review](operation-schedule-billing-pages-deep-review.md)を、`components/OperationSchedules/**` 11 filesのtable/row action、range、order dialog、accessibilityの公開契約は[OperationSchedules components deep review](operation-schedules-components-deep-review.md)を参照する。
 
-- `/operation-schedules`は`site-operation-schedules:read`で表示し、予定管理managerを提供する。`/arrangements-manager`と上下番確定も同じread権限を使う。
-- calendar/配置管理から作成・編集・削除・worker並べ替え・通知・複製へ到達する。write/delete/notify別のUI権限はない。
-- Rulesは`Companies/{companyId}/SiteOperationSchedules/{docId}`について同一会社認証Userまたはsuper-userへ全read/writeを許す。field、操作、status、参照先の検証はない。
+- `/operation-schedules`は`site-operation-schedules:read`で表示し、予定管理managerを提供する。`/arrangements-manager`と上下番確定も同じread権限を使う。画面・route・buttonのrole差はUXとして維持する。
+- calendar／配置管理から作成・編集・削除・worker並べ替え・通知・複製へ到達する。正式保存は`saveOperation` Callableへ集約され、Firestore Rulesは`SiteOperationSchedules`のclient writeを拒否する。
+- FGA-06-SCHEDULE-NORMAL-AUTH-01では、現場稼働予定の`create`、`duplicate`、`overview`、`workers`、`order`、`delete`だけを、同一tenantの有効な本登録Userへrole非依存で許可する。`notify`、`convert`、OperationResult、billingは現行actor条件を維持する。複数commandの一件でも許可されなければtransaction開始時に全体を拒否する。
 
 ## データ契約
 
@@ -27,12 +27,12 @@ Schedule/Arrangement 2pageの公開契約とresponsive・manager委譲境界のf
 
 ## CRUD・validation
 
-- createは同一siteId/shiftType/dateの最大displayOrderをqueryし、+1して作成する。同groupの複数予定は許容され、displayOrderで順序を表す。
+- createとduplicateは`saveOperation` transaction内で同一siteId/shiftType/dateの最大displayOrderをqueryし、+1して作成する。同groupの複数予定は許容され、displayOrderで順序を表す。
 - 基本入力はSite、日付、勤務区分、開始/終了、翌日開始、休憩、規定実働、必要人数、資格要否、作業内容、備考。
-- Site存在、status、仮登録の検証は通常create/updateの直接経路では確認できず、仮登録拒否はOperationResult同期時に行う。
+- create、duplicate、Siteまたは日付を変えるupdateはlive Siteの存在・状態と`Site.scheduleRevision`を同じtransactionで確認・更新する。実績化済み予定のupdate/deleteはserverで拒否する。
 - worker配列は従業員/外注を分け、同じ配列内のworkerId重複を追加methodで拒否する。OJTはassignedPersonnelCountから除外し、資格要否は表示/flagだが、資格者人数の充足をschemaで強制する処理は直接確認できない。
 - operationResultIdが更新前dataにあればschemaのupdate/deleteを拒否し、managerもbuttonをdisableする。
-- 複数予定のdrag/order更新はsiteId/shiftType/date/displayOrderを正規化し、1 transaction内で各schedule.updateを呼ぶ。
+- 複数予定のdrag/order更新は`saveOperation`へ複数`order` commandを渡し、1 transaction内で保存する。
 
 ## worker・outsourcer
 
@@ -66,9 +66,8 @@ Schedule/Arrangement 2pageの公開契約とresponsive・manager委譲境界のf
 
 ## Rules・tenant境界
 
-- path companyIdだけが通常Userのtenant境界。document内siteId、employee/outsourcer ID、通知・実績IDが同一会社に属することはRulesで検証しない。
-- operationResultId lock、通知flag、worker field、displayOrder、日付・時間validation、cascade deleteはclient schema/method依存で、直接writeから迂回できる。
-- ArrangementNotification/OperationResultは別Rules境界を持つが、schedule methodのtransactionはclient権限で各documentを書き込む。
+- Callableは受理されたAuth token、確認済みemail、現在のAuth account、同一tenantの有効な本登録Userを確認する。現場稼働予定C/U/Dではroleをallow条件にせず、通知作成・実績化・OperationResult・billingでは現行role条件を維持する。
+- `SiteOperationSchedules`と`OperationResults`のclient writeはRulesで拒否し、Admin SDKを使う`saveOperation`が正式保存境界となる。対象Site・追加Employee・通知・実績等の参照と整合性はtransaction内で確認する。
 
 ## 失敗・並行性
 
