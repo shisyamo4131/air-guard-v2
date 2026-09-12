@@ -24,7 +24,7 @@
 | FGA-03 Site管理 | 18 | 18 | Completed | Customer完了後、Siteの全通常operationと例外を同条件で完了する |
 | FGA-04 Employee管理 | 18 | 18 | Completed | Site完了後、Employeeの情報分類を確定し、通常operationと例外を同条件で完了する |
 | FGA-05 Outsourcer管理 | 16 | 16 | Completed | Employee完了後、Outsourcerの全通常operationと例外を同条件で完了する |
-| FGA-06 その他transaction系機能 | 20 | 0 | Not started | master完了後、残るtransaction、Rules、Callable、data互換を小checkpointで整合し、Dev受入れとphase closeoutを完了する |
+| FGA-06 その他transaction系機能 | 20 | 0 | In progress | master完了後、残るtransaction、Rules、Callable、data互換を小checkpointで整合し、Dev受入れとphase closeoutを完了する |
 
 ## 現在地
 
@@ -39,6 +39,7 @@
 - FGA-04-EMPLOYEE-CLASSIFICATION-01では、利用者回答により健康保険、厚生年金、雇用保険の番号・状態・日付・理由・履歴を機微・機密情報の例外にせず、Employee本体documentの通常業務情報と確定した。保険専用documentへの分割と既存data migrationは行わない。在職Employeeの通常情報はrole非依存のtenant共通read・編集へ揃え、退職後編集禁止を維持する。保険の状態遷移条件は情報の機密性とは分けて維持し、専用保存・世代値の必要範囲は実装checkpointで確認する。[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)を参照する。この分類checkpointは製品実装・進捗加点・Dev反映を含まない。次は通常EmployeeのManager、reader、writer、Rulesをdocument last-write-winsへ揃える実装checkpointとする。
 - FGA-04-EMPLOYEE-MANAGER-LWW-02では、在職一覧の作成と詳細の基本・国籍・警備員・資格・3保険をEmployee modelの通常`create`／`update`へ接続し、資格・保険画面から専用Callable、最新値比較、競合拒否、role制限を外した。保険は加入・喪失等の状態遷移条件だけを維持する。通常Employeeの一覧・詳細・Rulesは同一tenantの有効な本登録Userへrole非依存で開き、退職後の通常更新、client delete、archive、退職・誤退職訂正、User/Authの専用境界を維持した。Customer、Site、EmployeeのManagerは単数instance／同一domain instance配列の入力契約へ揃えた。到達不能な旧通常保存Callable 6件と専用sourceを撤去し、製品commit `56694837`をrelease commit `49001e06`のGitHub ActionsでFirestore Rules・Functions・HostingへDev反映して旧6 Functionだけを削除した。Local自動検証に加え、Codex専用tenantの認証済みChromeで合成Employeeの作成、基本・国籍・警備員・資格・3保険の保存、再読込後の再表示を確認した。合成EmployeeはUser未連携・在職中で残し、Prod・既存dataの一括変換は行っていない。[Local検証](../verification/fga-04-employee-manager-lww-local.md)と[Dev受入れ](../verification/fga-04-employee-manager-lww-dev.md)を根拠にFGA-04を18点で完了し、phase全体を64%とした。
 - FGA-05-OUTSOURCER-MANAGER-LWW-01では、Outsourcerの単数／複数形Managerをbase Air Managerへ揃え、通常CREATE・UPDATEをmodel標準保存とdocument last-write-winsへ移した。会社管理者／exact manager制限、旧専用dialog・writer・部分transaction・競合拒否を撤去し、Rulesは同一tenantの有効な本登録Userとactor UIDを通常write境界とした。live deleteとarchive CUD拒否、既存の表示・配置・通知・実績・請求・帳票、data shapeを維持し、1文字検索を仕様へ揃えた。対象test 8件、全domain 1,448件、Local Emulator 178件、固定commit `fed8449e`の専用Local UI buildに合格した。release commit `dc6c6b76`をGitHub Actions #27でFirestore Rules・HostingへDev反映し、Codex専用tenantの認証済みChromeで合成Outsourcerの作成、契約終了・備考更新、再読込、1文字検索、見た目を確認した。合成Outsourcerは契約終了状態で残し、Functions、Prod、既存dataの一括変換は行っていない。[Local検証記録](../verification/fga-05-outsourcer-manager-lww-local.md)と[Dev受入れ記録](../verification/fga-05-outsourcer-manager-lww-dev.md)を根拠にFGA-05を16点で完了し、phase全体を80%とした。次はFGA-06の残るtransaction系機能を調査し、最初の小checkpointを提案する。
+- FGA-06-SCHEDULE-NORMAL-AUTH-01は、現場稼働予定の作成・複製・基本情報変更・配置作業員変更・表示順変更・削除を通常業務としてtenant共通のserver権限へ揃える最初のcheckpointである。関連documentを同時に整える`saveOperation` Callable、Site revision、通知取消し、実績化済み予定の変更・削除拒否は維持する。配置通知の作成、稼働実績への確定、稼働実績・請求の操作は対象外として現行actor条件を維持する。Local実装と検証を完了しても固定commitのDev反映・受入れまでは進捗加点しない。
 
 ## FGA-02 Customer内部checkpoint
 
@@ -75,6 +76,12 @@
 | Checkpoint | 状態 | 範囲・完了条件 |
 |---|---|---|
 | FGA-05-OUTSOURCER-MANAGER-LWW-01 | Completed | 両Manager、通常CREATE・UPDATE、Rulesをtenant共通権限とdocument last-write-winsへ揃え、旧専用保存経路を撤去した。Local自動検証、固定commitのUI build、Firestore Rules・HostingのDev反映、Codex専用tenantの作成・更新・再読込・1文字検索・見た目受入れを完了した |
+
+## FGA-06 transaction系内部checkpoint
+
+| Checkpoint | 状態 | 範囲・完了条件 |
+|---|---|---|
+| FGA-06-SCHEDULE-NORMAL-AUTH-01 | In progress | 現場稼働予定のC/U/Dだけをtenant共通のserver権限へ揃え、通知作成・実績化・稼働実績・請求のactor条件と、複数documentを整えるCallableを維持する。自動検証、固定commitのFunctions Dev反映、同一tenantの通常actorによる作成・更新・削除のDev受入れまで完了する |
 
 ## 完了条件
 

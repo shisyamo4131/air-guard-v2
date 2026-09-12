@@ -31,7 +31,7 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
       return readCache.get(path);
     }
     const user = await read(`${root}/Users/${identity.uid}`);
-    for (const command of commands) if (!operationAllowed(current, user, command.kind === "billing")) fail("permission-denied");
+    for (const command of commands) if (!operationAllowed(current, user, command)) fail("permission-denied");
     if (commands.some((command) => command.kind === "schedule")) {
       const system = await read("System/system");
       if (system?.isMaintenance !== false) fail("failed-precondition", "メンテナンス中は予定を変更できません。");

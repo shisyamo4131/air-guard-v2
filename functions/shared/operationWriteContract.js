@@ -12,13 +12,15 @@ export const WORKER_PARENT_FIELDS = Object.freeze(["siteId", "dateAt", "shiftTyp
 const BOOL_FIELDS = new Set(["isStartNextDay", "qualificationRequired", "isQualified", "isOjt", "useAdjusted", "desiredLocked"]);
 const NUMBER_FIELDS = new Set(["breakMinutes", "regulationWorkMinutes", "requiredPersonnel", "price", "quantity", "displayOrder", ...ADJUSTED_FIELDS.slice(1)]);
 const ACTIONS = new Set(["create", "duplicate", "overview", "workers", "articles", "order", "delete", "notify", "convert", "agreement", "adjusted", "lock"]);
+const SCHEDULE_CUD_ACTIONS = new Set(["create", "duplicate", "overview", "workers", "order", "delete"]);
 export function rejectInput() { throw new OperationWriteError("invalid-argument"); }
 export function exactKeys(value, keys) { if (!plain(value) || Object.keys(value).some((key) => !keys.includes(key))) rejectInput(); }
-export function operationAllowed(identity, user, billing = false) {
+export function operationAllowed(identity, user, command) {
   if (!identifier(identity.uid) || !identifier(identity.companyId) || typeof identity.isSuperUser !== "boolean" || !plain(user)
     || user.docId !== identity.uid || user.companyId !== identity.companyId || user.disabled !== false || user.isTemporary !== false || typeof user.isAdmin !== "boolean") return false;
-  return user.isAdmin || (identity.isSuperUser === false && Array.isArray(user.roles) && user.roles.length <= EMPLOYEE_ROLES.length
-    && user.roles.every((role) => EMPLOYEE_ROLES.includes(role)) && user.roles.some((role) => (billing ? ["manager", "accountant"] : ["manager", "controller"]).includes(role)));
+  if (user.isAdmin || (command?.kind === "schedule" && SCHEDULE_CUD_ACTIONS.has(command.action))) return true;
+  return identity.isSuperUser === false && Array.isArray(user.roles) && user.roles.length <= EMPLOYEE_ROLES.length
+    && user.roles.every((role) => EMPLOYEE_ROLES.includes(role)) && user.roles.some((role) => (command?.kind === "billing" ? ["manager", "accountant"] : ["manager", "controller"]).includes(role));
 }
 
 export function parseOperationCommand(input) {

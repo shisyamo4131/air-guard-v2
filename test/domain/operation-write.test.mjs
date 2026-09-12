@@ -199,10 +199,10 @@ test("same-value and reorder use no Employee read; deleting remains zero-read", 
   assert.equal(state.employeesRead().length, 0);
 });
 
-test("actor, current identity, maintenance, raw corruption and missing added Employee all refuse write", async () => {
+test("invalid actor state, current identity, maintenance, raw corruption and missing added Employee all refuse write", async () => {
   const raw = operation();
   const changes = command(raw, "workers", { id: "employee-missing" }, { rowAction: "add", array: "employees", position: 0 });
-  for (const options of [{ actor: { roles: ["accountant"] } }, { actor: { roles: ["controller", "invented"] } }, { actor: { disabled: true } }, { actor: { isTemporary: true } }, { identity: (count) => count === 2 ? { ...identity, companyId: "other" } : identity }]) {
+  for (const options of [{ actor: { disabled: true } }, { actor: { isTemporary: true } }, { identity: (count) => count === 2 ? { ...identity, companyId: "other" } : identity }]) {
     const state = harness(raw, options);
     await assert.rejects(state.save(changes), { code: "permission-denied" }); assert.equal(state.writes.length, 0);
   }
@@ -210,6 +210,38 @@ test("actor, current identity, maintenance, raw corruption and missing added Emp
     const state = harness(raw); corrupt(state);
     await assert.rejects(state.save(changes), { code: "failed-precondition" }); assert.equal(state.writes.length, 0);
   }
+});
+
+test("active same-tenant users can update and delete schedules while restricted commands still reject the whole batch", async () => {
+  const actorCases = [
+    { actor: { roles: [] } },
+    { actor: { roles: ["accountant"] } },
+    { actor: { roles: ["controller", "invented"] } },
+    { actor: { roles: [] }, identity: () => ({ ...identity, isSuperUser: true }) },
+  ];
+  for (const options of actorCases) {
+    const raw = operation(), state = harness(raw, options);
+    await state.save(command(raw, "overview", { remarks: "tenant-wide schedule edit" }));
+    const saved = state.records.get(path("schedule"));
+    assert.equal(saved.remarks, "tenant-wide schedule edit");
+    await state.save(command(saved, "delete"));
+    assert.equal(state.records.has(path("schedule")), false);
+  }
+
+  for (const action of ["notify", "convert"]) {
+    const raw = operation(), state = harness(raw, { actor: { roles: [] } });
+    await assert.rejects(state.save(command(raw, action, action === "notify" ? { shouldNotify: false } : {}, action === "convert" ? { notifications: {} } : {})), { code: "permission-denied" });
+    assert.equal(state.writes.length, 0);
+  }
+
+  const raw = operation(), result = operation("result"), mixed = harness(raw, { actor: { roles: [] } });
+  mixed.records.set(path("result"), result);
+  await assert.rejects(mixed.save(
+    command(raw, "overview", { remarks: "must not commit" }),
+    command(result, "overview", { remarks: "restricted result" }, { kind: "result" }),
+  ), { code: "permission-denied" });
+  assert.equal(mixed.writes.length, 0);
+  assert.notEqual(mixed.records.get(path("schedule")).remarks, "must not commit");
 });
 
 test("billing edits may run locked but accounting cannot edit workers; lock is desired-state with raw expected", async () => {
