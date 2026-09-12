@@ -16,11 +16,11 @@
 
 ## 次の作業
 
-現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-05 Outsourcer管理を進行中で、phase全体は64%のままである。`FGA-05-OUTSOURCER-MANAGER-LWW-01`のLocal実装では、単数／複数形Manager、通常CREATE・UPDATE、Rulesをtenant共通権限とdocument last-write-winsへ揃え、旧専用dialog、role policy、部分transaction writer、競合拒否を撤去した。対象test 8件、全domain 1,448件、Local Emulator 178件、固定commit `fed8449e`の専用Local UI buildに合格した。次は別承認でGitHub ActionsからFirestore Rules・HostingをDevへ反映して、Codex専用tenantで作成・更新・再読込・見た目を確認する。[Local検証](../verification/fga-05-outsourcer-manager-lww-local.md)を参照する。
+現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-05 Outsourcer管理まで完了し、phase全体は80%である。`FGA-05-OUTSOURCER-MANAGER-LWW-01`では、単数／複数形Manager、通常CREATE・UPDATE、Rulesをtenant共通権限とdocument last-write-winsへ揃え、旧専用dialog、role policy、部分transaction writer、競合拒否を撤去した。Local自動検証と固定commit `fed8449e`のUI buildに合格し、release commit `dc6c6b76`をFirestore Rules・HostingへDev反映した。Codex専用tenantでは合成Outsourcerの作成、契約終了・備考更新、再読込、1文字検索、見た目を受入れた。次はFGA-06の残るtransaction系機能をread-onlyで棚卸しし、最初の小checkpointを提示する。[Local検証](../verification/fga-05-outsourcer-manager-lww-local.md)と[Dev受入れ](../verification/fga-05-outsourcer-manager-lww-dev.md)を参照する。
 
 FGA-02-CUSTOMER-UPDATE-01のlocal実装はcommit `6bf82e5264f72b39c540eb68c96b18690385198e`へ固定した。旧domain Manager分類はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`、Customer初回実装はcommit `9bd4d43c23bf113790add10691dc91b7445a99d4`である。分類基準は[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とcommit `b89e5c86`で訂正し、Customer実装もcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`へ訂正した。現行のManager分類はFirestore上の通常のmaster data全般へ適用し、Customer・Site・Employee・Outsourcerを最初の適用例とする。Company・User等の例外境界は維持する。
 
-FGA-02 Customer、FGA-03 Site、FGA-04 Employeeを各18点で完了した。FGA-05はLocal実装中で、Dev受入れ前のため未加点である。Site従属cacheはFGA-03で実装せず、[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)のサインアウト／session切替cleanupへ統合した。
+FGA-02 Customer、FGA-03 Site、FGA-04 Employeeを各18点、FGA-05 Outsourcerを16点で完了した。FGA-06は未着手である。Site従属cacheはFGA-03で実装せず、[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)のサインアウト／session切替cleanupへ統合した。
 
 1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。
@@ -46,7 +46,7 @@ FGA-02 Customer、FGA-03 Site、FGA-04 Employeeを各18点で完了した。FGA-
 - [x] Customer: archive APIと3参照writer／Rulesの整合、exact対象のactive／same-ID archive／参照確認をNo.6へ固定した。既存flat archive等は自動変換せず、今回の変更だけを理由にCustomer全件保存形式検査を反復しない。[archive roadmap](../roadmaps/customer-archive-safety.md)を参照する。
 - [x] Site: 自動終了候補をACTIVE＋工期終了日時へ限定し、候補に関係する予定field、必要index、公開時期をNo.6・No.7へ固定した。`runDailySiteTermination`はdata確認・snapshot・別承認後まで未公開とする。
 - [x] Site: Site query field、工期派生値、任意revision、archive形状／同ID、埋込みCustomer、直接5参照の確認範囲をNo.6へ固定した。日次snapshotを過去値として推測backfillしない。[Site roadmap](../roadmaps/site.md)を参照する。
-- [x] Outsourcer: 旧Dev受入れではstatus非制限の一覧・選択、会社管理者／exact manager、重複配置、archive／delete入口なしを前提にexact保存を確認した。会社管理者／exact manager制限と部分保存はFGA-05のLocal実装でtenant共通権限・document LWWへ置換中であり、Devは未反映である。全件scan・migrationは行わない。[Outsourcer roadmap](../roadmaps/outsourcer.md)と[FGA roadmap](../roadmaps/foundational-governance-alignment.md)を参照する。
+- [x] Outsourcer: 旧Dev受入れの会社管理者／exact manager制限と部分保存を、FGA-05でtenant共通権限・document LWWへ置換し、Firestore Rules・HostingのDev反映とCodex専用tenantの通常作成・更新・再読込・検索受入れまで完了した。全件scan・migrationは行っていない。[Dev受入れ記録](../verification/fga-05-outsourcer-manager-lww-dev.md)と[FGA roadmap](../roadmaps/foundational-governance-alignment.md)を参照する。
 - [x] Employee: 通常archive APIを`MASTER-DEV-PREFLIGHT-01`のNo.2で通常indexへlocal接続し、No.3で公開契約・正常/拒否・専用demo分離を検証した。通常用許可設定は既定空集合のまま維持する。実測は[Dev反映前Local検証記録](../verification/employee-dev-preflight-local.md)を参照し、remote公開・tenant開放は別承認とする。
 - [x] Employee: 選択tenantの予定・実績・通知・日次2種・Billingをraw明細から完全走査し、6 collectionすべての取得完了と参照索引一致を要求する範囲をNo.6へ固定した。不一致時は開放せず、導出可能な不足だけを別承認の補完候補とし、dry-run単独ではarchiveを開放しない。
 - [x] Employee: 参照writer、背景再生成処理、旧Employee削除triggerのUser/Auth連鎖削除を無作用にする処理を反映対象候補へ含めた。exact Functions deploy closureと順序はNo.5で確定する。[No.4 release surface inventory](master-dev-release-surfaces.md#functions)を参照する。

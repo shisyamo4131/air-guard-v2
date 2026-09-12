@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- FGA-05 Outsourcer管理のLocal実装として、単数`OutsourcerManager`を`AirItemManager`、複数形`OutsourcersManager`を`AirArrayManager`へ揃え、通常CREATE・UPDATEをOutsourcer modelの標準保存とdocument last-write-winsへ統一した。旧専用dialog、role policy、部分transaction writer、同一field競合拒否を撤去した。Rulesは同一tenantの有効な本登録Userへrole非依存で通常保存を許可し、actor UID、tenant、active/registered、client delete、archive CUDの境界を維持する。作成時の`ACTIVE`、既存の項目・一覧・配置・通知・実績・請求・帳票・storage形状は変更せず、検索入力を仕様どおり1〜40文字へ統一した。Local自動検証まで完了し、Dev・Prod、既存data、Functions、schema packageは変更していない。[Local検証記録](docs/verification/fga-05-outsourcer-manager-lww-local.md)を参照。
+- FGA-05 Outsourcer管理を完了した。単数`OutsourcerManager`を`AirItemManager`、複数形`OutsourcersManager`を`AirArrayManager`へ揃え、通常CREATE・UPDATEをOutsourcer modelの標準保存とdocument last-write-winsへ統一した。旧専用dialog、role policy、部分transaction writer、同一field競合拒否を撤去した。Rulesは同一tenantの有効な本登録Userへrole非依存で通常保存を許可し、actor UID、tenant、active/registered、client delete、archive CUDの境界を維持する。検索入力を1〜40文字へ統一し、Firestore Rules・HostingをDev反映した。Codex専用tenantで合成Outsourcerの作成、契約終了・備考更新、再読込、1文字検索、見た目を確認した。Functions、Prod、既存dataの一括変換、schema packageは変更していない。[Local検証記録](docs/verification/fga-05-outsourcer-manager-lww-local.md)と[Dev受入れ記録](docs/verification/fga-05-outsourcer-manager-lww-dev.md)を参照。
 
 - FGA-04 Employee管理を完了した。通常作成・基本・国籍・警備員・資格・3保険をtenant共通権限とdocument last-write-winsへ揃え、旧通常保存Function 6件をsourceとDevから撤去した。Firestore・Functions・Hosting反映後、Codex専用tenantの認証済みChromeで合成Employeeの作成、全通常保存、再読込後の再表示を確認した。合成EmployeeはUser未連携・在職中で残し、Prod・既存dataの一括変換は行っていない。[Dev受入れ記録](docs/verification/fga-04-employee-manager-lww-dev.md)を参照。
 

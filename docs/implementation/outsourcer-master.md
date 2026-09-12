@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: FGA-05通常保存整合のLocal実装・検証完了 / Dev未反映
+- 状態: FGA-05通常保存整合のLocal実装・Dev反映・通常操作受入れ完了
 - 対象セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 最終確認日: 2026-09-12
 - 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcer/Manager/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcer/CustomInput.vue`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`composables/dataLayers/outsourcer/useOutsourcerListPagination.js`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、`test/domain/outsourcer-ui-source-contract.test.mjs`、`test/local/codex-local-harness.test.mjs`、schemas `src/Outsourcer.js`、client adapterの標準`create`／`update`
@@ -30,7 +30,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - Rulesはlive create/updateを同一tenantの有効な本登録Userへrole非依存で許可し、actor UIDの一致を要求する。live deleteとarchive writeは全て拒否し、live/archive readの既存tenant境界を維持する。
 - OUT-05は対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了したlocal実装である。OUT-01/02のRules・保存契約を維持し、Dev/Prod Rulesと実dataは未変更・未確認である。
 - OUT-06は対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了したlocal実装である。Rules・index・schema・package・migration・dataは変更していないため、local Emulator suiteはverification policyに基づき省略した。
-- FGA-05では通常CREATE・UPDATEを共通Managerとmodel標準保存へ戻し、role制限、専用writer、部分transaction、競合拒否を撤去した。対象test 8件、domain 1,448件、Local Emulator 178件、固定commit `fed8449e`の専用Local UI buildに合格した。Dev／Prodとremote dataは未変更である。
+- FGA-05では通常CREATE・UPDATEを共通Managerとmodel標準保存へ戻し、role制限、専用writer、部分transaction、競合拒否を撤去した。対象test 8件、domain 1,448件、Local Emulator 178件、固定commit `fed8449e`の専用Local UI buildに合格した。GitHub Actions #27でFirestore Rules・HostingをDevへ反映し、Codex専用tenantで合成Outsourcerの作成、契約終了・備考更新、再読込、1文字検索、見た目を受入れた。Functions、Prod、既存dataの一括変換は行っていない。
 
 ## データ契約
 
@@ -121,4 +121,4 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - 実データの重複、archive、参照件数、既存の外注警備員管理運用。
 - 実Firestore transaction上の通知作成・実績化、実browser DOM、帳票表示。
 - Dev/Prodでの旧client併存、既存document適合性、複数browserによる同時操作の実UI再現、復元用保守手順。
-- FGA-05のDev反映とCodex専用tenantでの作成・更新・再読込・見た目確認。
+- 別actor、別tenant、applicationを介さないrequest、複数browserの同時操作のDev実UI再現。
