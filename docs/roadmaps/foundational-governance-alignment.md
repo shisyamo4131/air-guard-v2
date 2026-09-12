@@ -2,7 +2,7 @@
 
 - 状態: In progress
 - 開始日: 2026-09-09
-- 現在の進捗: 46%
+- 現在の進捗: 64%
 - 目的: 利用者が提示するプロジェクト固有の根本ルールを正本へ反映し、既存機能を新ルールへ小さく安全に整合させる。
 - 実装順: Customer管理 → Site管理 → Employee管理 → Outsourcer管理 → その他transaction系機能。
 - 進捗方式: milestone weightは工程完了の比率であり工数見積りではない。合計100。各機能milestoneは、着手時に利用者と合意した小checkpointへweightを配分し、各checkpointの実装、必須検証、必要なmigration、固定commitのDev反映・受入れが完了した場合だけ部分加点できる。ルール整理だけ、local実装だけ、未承認Dev待ちは製品milestoneへ加点しない。
@@ -22,7 +22,7 @@
 | FGA-01 新ルールの検証・ガバナンス反映 | 10 | 10 | Completed | 利用者が提示完了を明示し、全ルールの正本、相互整合、置換ADR、実装差、検証が揃う |
 | FGA-02 Customer管理 | 18 | 18 | Completed | Customerの全通常operationと例外を小checkpointで整合し、必要なdata処置とDev受入れまで完了する |
 | FGA-03 Site管理 | 18 | 18 | Completed | Customer完了後、Siteの全通常operationと例外を同条件で完了する |
-| FGA-04 Employee管理 | 18 | 0 | In progress | Site完了後、Employeeの情報分類を確定し、通常operationと例外を同条件で完了する |
+| FGA-04 Employee管理 | 18 | 18 | Completed | Site完了後、Employeeの情報分類を確定し、通常operationと例外を同条件で完了する |
 | FGA-05 Outsourcer管理 | 16 | 0 | Not started | Employee完了後、Outsourcerの全通常operationと例外を同条件で完了する |
 | FGA-06 その他transaction系機能 | 20 | 0 | Not started | master完了後、残るtransaction、Rules、Callable、data互換を小checkpointで整合し、Dev受入れとphase closeoutを完了する |
 
@@ -37,7 +37,7 @@
 - Customer Managerの最終簡素化はmerge commit `7d82996652d2d65448cf7eff9cd7e1ecc5457ae2`へ固定し、GitHub Actions run #11でHostingへDev反映した。会社管理者の外部Chromeで一覧CREATE、詳細READ、単数Manager UPDATE、listener反映、専用Callable archive、一覧からの消失を確認した。[最終Dev受入れ記録](../verification/fga-02-customer-manager-simplification-dev.md)を参照する。Autocompleteのcreatable callerは現行routeにないためruntime未確認だが、source contractと自動testを満たす将来の未提供経路であり、現行Customer操作の完了を阻害しない。FGA-02を18点で完了し、次をFGA-03 Site管理とする。[訂正Dev受入れ記録](../verification/fga-02-customer-manager-dev.md)、[訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)、[旧Local検証記録](../verification/fga-02-customer-manager-user-local.md)は履歴証拠として保持する。
 - FGA-03-SITE-MANAGER-LWW-05では、Site通常CREATE・UPDATEを単数／複数形ManagerからSite modelの標準`create`／`update`へ直接接続し、listener由来instanceのdocument単位last-write-winsへ揃えた。作成は履歴で確認した3ステップ入力を維持し、Customer未登録でも取引先名だけで仮登録できる。通常保存用の`useSiteActions`、専用writer、埋込みCustomerのexact 6-field要件を撤去した。取極めUIをremote履歴どおりの画面内表示へ戻し、取極めにも通常`Site.update()`とlast-write-winsを採用して、専用Callable、baseline比較、競合拒否を撤去した。終了・再有効化・archiveは専用操作を維持する。最新製品commit `89bdd51a`をGitHub Actions #16・#18・#19でFirestore Rules、Functions、HostingへDev反映し、旧`updateSiteAgreements` Callableを削除した。Codex専用合成tenantで通常操作とAgreement再表示を確認し、2026-09-12に利用者がDevの使用感・見た目を受入れた。別actorのDev実操作は未実施だが、role非依存境界のLocal自動検証を代替証拠として利用者承認により完了条件から外した。tenant拒否とapplicationを介さないrequestは今回想定しない範囲である。既存dataの一括変換、schema、package、Prodは変更していない。[Local検証記録](../verification/fga-03-site-manager-lww-local.md)と[Dev受入れ記録](../verification/fga-03-site-manager-lww-dev.md)を参照し、FGA-03を18点で完了、phase全体を46%とする。次はFGA-04 Employee管理の現行挙動と全reader／writerを調査し、機微情報と例外操作を分けた最初のcheckpointを提案する。
 - FGA-04-EMPLOYEE-CLASSIFICATION-01では、利用者回答により健康保険、厚生年金、雇用保険の番号・状態・日付・理由・履歴を機微・機密情報の例外にせず、Employee本体documentの通常業務情報と確定した。保険専用documentへの分割と既存data migrationは行わない。在職Employeeの通常情報はrole非依存のtenant共通read・編集へ揃え、退職後編集禁止を維持する。保険の状態遷移条件は情報の機密性とは分けて維持し、専用保存・世代値の必要範囲は実装checkpointで確認する。[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)を参照する。この分類checkpointは製品実装・進捗加点・Dev反映を含まない。次は通常EmployeeのManager、reader、writer、Rulesをdocument last-write-winsへ揃える実装checkpointとする。
-- FGA-04-EMPLOYEE-MANAGER-LWW-02のLocal実装はcommit `6d43c03d`と`86b8a1c3`へ固定した。在職一覧の作成と詳細の基本・国籍・警備員・資格・3保険をEmployee modelの通常`create`／`update`へ接続し、資格・保険画面から専用Callable、最新値比較、競合拒否、role制限を外した。保険は加入・喪失等の状態遷移条件だけを維持する。通常Employeeの一覧・詳細・Rulesは同一tenantの有効な本登録Userへrole非依存で開き、退職後の通常更新、client delete、archive、退職・誤退職訂正、User/Authの専用境界を維持した。公開schema packageにない既存の保険操作世代値はlocal Employee schemaで保持し、新規作成時だけ初期化する。既存dataの一括変換は行わない。全domain 1,550件、Local Emulator 182件、通常build、固定commitのLocal UI build、文書検証を通過した。[Local検証記録](../verification/fga-04-employee-manager-lww-local.md)を参照する。後続補正ではCustomer、Site、EmployeeのManagerが`modelValue`をpropとして宣言し、単数形は対象instance、複数形は全要素が対象instanceの配列だけを受ける共通契約へ揃えた。未移行Managerは各機能checkpointで段階適用する。さらに、到達不能となった旧通常保存Callable 6件と専用API・保存module・旧EditorをLocal sourceから撤去した。製品commit `56694837`をrelease commit `49001e06`のGitHub ActionsでFirestore Rules・Functions・HostingへDev反映し、承認済みの旧6 Functionだけを削除した。[Dev反映記録](../verification/fga-04-employee-manager-lww-dev.md)を参照する。Codex専用tenantの認証済み画面操作と利用者受入れが未実施のため、このcheckpointと進捗加点は未完了である。
+- FGA-04-EMPLOYEE-MANAGER-LWW-02では、在職一覧の作成と詳細の基本・国籍・警備員・資格・3保険をEmployee modelの通常`create`／`update`へ接続し、資格・保険画面から専用Callable、最新値比較、競合拒否、role制限を外した。保険は加入・喪失等の状態遷移条件だけを維持する。通常Employeeの一覧・詳細・Rulesは同一tenantの有効な本登録Userへrole非依存で開き、退職後の通常更新、client delete、archive、退職・誤退職訂正、User/Authの専用境界を維持した。Customer、Site、EmployeeのManagerは単数instance／同一domain instance配列の入力契約へ揃えた。到達不能な旧通常保存Callable 6件と専用sourceを撤去し、製品commit `56694837`をrelease commit `49001e06`のGitHub ActionsでFirestore Rules・Functions・HostingへDev反映して旧6 Functionだけを削除した。Local自動検証に加え、Codex専用tenantの認証済みChromeで合成Employeeの作成、基本・国籍・警備員・資格・3保険の保存、再読込後の再表示を確認した。合成EmployeeはUser未連携・在職中で残し、Prod・既存dataの一括変換は行っていない。[Local検証](../verification/fga-04-employee-manager-lww-local.md)と[Dev受入れ](../verification/fga-04-employee-manager-lww-dev.md)を根拠にFGA-04を18点で完了し、phase全体を64%とする。次はFGA-05 Outsourcer管理の現行挙動と全reader／writerを調査する。
 
 ## FGA-02 Customer内部checkpoint
 
@@ -67,7 +67,7 @@
 | Checkpoint | 状態 | 範囲・完了条件 |
 |---|---|---|
 | FGA-04-EMPLOYEE-CLASSIFICATION-01 | Completed | 保険番号・状態・日付・理由・履歴を通常Employee情報と確定し、role非依存のtenant共通read・編集、退職後編集禁止、状態遷移条件の維持、別document化・既存data migration不要を仕様・ADRへ反映した。製品code・Rules・data・Dev・Prodは変更せず、進捗加点なし |
-| FGA-04-EMPLOYEE-MANAGER-LWW-02 | In progress | Local実装として、一覧作成、基本・国籍・警備員・資格・3保険、両Manager、通常reader／Rulesをtenant共通権限とdocument last-write-winsへ揃え、到達不能な旧通常保存Callable 6件と専用sourceを撤去した。保険は状態遷移条件だけを残し、退職・誤退職訂正・archive・User/Authは専用操作を維持する。Local差分のcommit固定、Dev上の6 Function削除、新Hosting反映・受入れが残るため未完了 |
+| FGA-04-EMPLOYEE-MANAGER-LWW-02 | Completed | 一覧作成、基本・国籍・警備員・資格・3保険、両Manager、通常reader／Rulesをtenant共通権限とdocument last-write-winsへ揃えた。退職・復職・archive・User/Authは専用操作を維持する。旧通常保存Callable 6件をsourceとDevから撤去し、Local自動検証、Firestore・Functions・Hosting反映、Codex専用tenantでの通常作成・更新・再読込を完了した |
 
 ## 完了条件
 

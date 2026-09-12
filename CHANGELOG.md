@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- FGA-04 Employee管理を完了した。通常作成・基本・国籍・警備員・資格・3保険をtenant共通権限とdocument last-write-winsへ揃え、旧通常保存Function 6件をsourceとDevから撤去した。Firestore・Functions・Hosting反映後、Codex専用tenantの認証済みChromeで合成Employeeの作成、全通常保存、再読込後の再表示を確認した。合成EmployeeはUser未連携・在職中で残し、Prod・既存dataの一括変換は行っていない。[Dev受入れ記録](docs/verification/fga-04-employee-manager-lww-dev.md)を参照。
+
 - FGA-04 Employeeの通常保存をmodel直接保存へ統一した後始末として、現行画面から到達しない`createEmployee`、`updateEmployeeBasic`、`updateEmployeeNationality`、`updateEmployeeSecurity`、`updateEmployeeCertifications`、`transitionEmployeeInsurance`の6 Callableと、その専用API・保存module・旧EditorをLocal sourceから撤去した。Employee archive、退職・再雇用、Employee連携User作成は維持する。Dev上の既存6 Function削除、新Hosting反映、Prod・data変更は未実施である。[Local検証記録](docs/verification/fga-04-employee-manager-lww-local.md)を参照。
 
 - Customer、Site、Employeeの単数・複数形Managerで`modelValue`を明示的なpropに揃え、単数形は対象domain instance、複数形は全要素が対象domain instanceの配列であることを検査するようにした。今後新設または改修する`AirItemManager`／`AirArrayManager`のdomain wrapperにも同じ入力契約を適用し、未移行Managerは各機能checkpointで段階的に揃える。正しいinstanceを渡す既存画面の保存処理、schema、Rules、dataは変更していない。[判断](docs/decisions/0069-domain-manager-editable-state-ownership.md)を参照。

@@ -5,7 +5,7 @@
 - 製品commit: `56694837561afc1b45ca91f988cab251a726f460`
 - release commit: `49001e06e150637b7930d7d7d767b3daa3c3e3ea`
 - Firebase project: `air-guard-v2-dev`
-- 状態: Firestore Rules・Functions・HostingのDev反映完了。認証済み画面の技術smokeと利用者受入れは未実施
+- 状態: Firestore Rules・Functions・HostingのDev反映と、認証済みChromeによる通常操作の受入れ完了
 
 ## 反映範囲
 
@@ -58,11 +58,16 @@ Local実装と旧Callable撤去後のdomain・Emulator検証は[Local検証記�
 | `pwsh -NoProfile -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` | 成功 | 0 |
 | `git diff --check` | errorなし | 0 |
 
-## 未実施と次の受入れ
+## 認証済みChromeによるDev受入れ
 
-実行環境に操作可能なChromeまたはin-app browserが接続されていなかったため、Codex専用合成tenantでの認証済みEmployee画面操作は未実施である。次は同tenantだけで、在職一覧、作成、詳細の基本・国籍・警備員・資格・3保険の保存と再読込後表示を確認する。退職、復職、archive、User／Authentication、利用者・実在Employee、別tenant、applicationを介さないrequestは操作しない。見た目・使用感は利用者がDevで確認する。
+利用者の指示でTerra／Mediumの別タスク「テスター（AirGuardV2）-01」を作成し、既存Chromeの管理者sessionとCodex専用合成tenantだけを使うread-only実装担当として検証を委任した。テスターは文書、code、Gitを変更せず、結果をWaitThread方式でcoordinatorへ返した。
 
-この画面受入れが終わるまでcheckpoint完了と進捗加点を行わない。
+1. 在職Employee一覧を表示し、通常UIから合成Employee `FGA04D0926 / 検証花子`を作成した。架空住所を使い、既存のgeocoding経路を通常どおり実行した。
+2. 詳細画面で基本情報、国籍、警備員情報、資格、雇用保険、健康保険、厚生年金を順に通常保存し、すべて成功表示と画面反映を確認した。
+3. 詳細画面の再読込後、全保存値が再表示されることと、在職一覧へ作成Employeeが表示されることを確認した。
+4. 一覧、詳細、各編集dialog、保存完了表示に明確な崩れやerror表示は確認されなかった。
+
+合成EmployeeはUser未連携・在職中のまま残した。退職、復職、archive、User／Authentication、別tenant、applicationを介さないrequest、保険の喪失・復元、geocoding結果そのものは操作・確認していない。これらは今回変更していない専用または対象外経路であり、通常作成・更新の受入れを妨げない。Local自動検証、Dev反映、認証済み通常操作が揃い、指定範囲に追加改修を要する問題はないと判断した。
 
 ## Rollback
 
