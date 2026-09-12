@@ -82,6 +82,7 @@
 | Checkpoint | 状態 | 範囲・完了条件 |
 |---|---|---|
 | FGA-06-SCHEDULE-NORMAL-AUTH-01 | Completed | 現場稼働予定のC/U/Dだけをtenant共通のserver権限へ揃え、通知作成・実績化・稼働実績・請求のactor条件と、複数documentを整えるCallableを維持した。自動検証、固定commitのFunctions Dev反映、同一tenantの管理者sessionによる作成・更新・複製・削除のDev受入れを完了した。role非依存の認可はLocal自動検証を根拠とする |
+| FGA-06-RESULT-EDIT-NORMAL-AUTH-02 | Approved / not started | 未確定かつlockされていない現場稼働実績の基本情報と従業員・外注先明細の編集だけをtenant共通のserver権限へ揃える。`saveOperation` Callable、最新状態との照合、lock拒否、関連document更新を維持する。実績の作成・複製・削除、予定からの確定、配置通知、稼働外売上、請求操作、UI、Rules、schema、data migration、Dev・Prodは対象外とする |
 
 ## 完了条件
 
