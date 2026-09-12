@@ -5,7 +5,7 @@
 - 対象: role、permission、通常業務data、Firestore Rules、Callable、段階移行
 - 関連仕様: [テナントと認証](../specification.md#テナントと認証)
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
-- 一部置換: ADR 0053・0056・0058・0059、および現行仕様にある通常業務のrole・permission別server認可。Company、Auth/User管理、機微・機密情報、archive・復旧・master物理削除、Stripe操作のactor境界は置換しない。
+- 一部置換: ADR 0003の稼働実績通常編集actor、ADR 0053・0056・0058・0059、および現行仕様にある通常業務のrole・permission別server認可。稼働実績の作成・複製・削除・請求操作、Company、Auth/User管理、機微・機密情報、archive・復旧・master物理削除、Stripe操作のactor境界は置換しない。
 
 ## 背景
 

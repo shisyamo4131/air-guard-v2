@@ -132,6 +132,7 @@
 - [Operation・Schedule・Billing pages deep review](operation-schedule-billing-pages-deep-review.md)
 
 - [OperationResult生成](operation-result-generation.md)
+- [稼働実績編集のserver認可](operation-result-edit-authorization.md)
 - [OperationResult一覧・詳細・汎用CSV](operation-result-ui-export.md)
 - [OperationResult components deep review](operation-result-components-deep-review.md)
 - [OperationResult削除event chain](operation-result-delete-chain.md)

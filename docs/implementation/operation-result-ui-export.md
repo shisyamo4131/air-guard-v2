@@ -1,5 +1,7 @@
 # OperationResult一覧・詳細・汎用CSV出力（実装調査）
 
+> 現在のOperationResult server保存・認可境界は[稼働実績編集のserver認可](operation-result-edit-authorization.md)を正とする。以下のCRUD・Rules記述は2026-08-12時点のUI・CSV調査であり、現在のserver認可を表さない。
+
 ## CSV/service utility最終確認（SPEC-DEEP-045a/045b）
 
 - CSVはmaster由来文字列をformula neutralizationせず出す。filenameは`new Date().toISOString()`のUTC日付であり、JST深夜帯には利用者の暦日とずれ得る。customer、billingDate、snapshot revisionはfilenameに含めない。
