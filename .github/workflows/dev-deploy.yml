@@ -18,6 +18,11 @@ on:
           - firestore
           - storage
           - database
+      delete_legacy_employee_save_functions:
+        description: Delete the six approved retired Employee save Functions
+        required: true
+        default: false
+        type: boolean
 permissions:
   contents: read
   id-token: write
@@ -137,6 +142,20 @@ jobs:
 
       - name: Firebase deployment dry run
         run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --dry-run --non-interactive
+
+      - name: Delete approved retired Employee save Functions
+        if: github.event_name == 'workflow_dispatch' && inputs.delete_legacy_employee_save_functions && contains(needs.select-targets.outputs.targets, 'functions')
+        run: >-
+          npx -y firebase-tools@15.29.0 functions:delete
+          createEmployee
+          updateEmployeeBasic
+          updateEmployeeNationality
+          updateEmployeeSecurity
+          updateEmployeeCertifications
+          transitionEmployeeInsurance
+          --project "$FIREBASE_PROJECT_ID"
+          --region "$NUXT_PUBLIC_FIREBASE_REGION"
+          --force
 
       - name: Deploy selected services
         run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --non-interactive
