@@ -16,7 +16,7 @@
 
 ## 次の作業
 
-現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-05 Outsourcer管理を進行中で、phase全体は64%のままである。`FGA-05-OUTSOURCER-MANAGER-LWW-01`のLocal実装では、単数／複数形Manager、通常CREATE・UPDATE、Rulesをtenant共通権限とdocument last-write-winsへ揃え、旧専用dialog、role policy、部分transaction writer、競合拒否を撤去した。対象test 8件、全domain 1,448件、Local Emulator 178件に合格した。次は固定commitのLocal UI buildを完了し、その後に別承認でGitHub ActionsからFirestore Rules・HostingをDevへ反映して、Codex専用tenantで作成・更新・再読込・見た目を確認する。[Local検証](../verification/fga-05-outsourcer-manager-lww-local.md)を参照する。
+現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-05 Outsourcer管理を進行中で、phase全体は64%のままである。`FGA-05-OUTSOURCER-MANAGER-LWW-01`のLocal実装では、単数／複数形Manager、通常CREATE・UPDATE、Rulesをtenant共通権限とdocument last-write-winsへ揃え、旧専用dialog、role policy、部分transaction writer、競合拒否を撤去した。対象test 8件、全domain 1,448件、Local Emulator 178件、固定commit `fed8449e`の専用Local UI buildに合格した。次は別承認でGitHub ActionsからFirestore Rules・HostingをDevへ反映して、Codex専用tenantで作成・更新・再読込・見た目を確認する。[Local検証](../verification/fga-05-outsourcer-manager-lww-local.md)を参照する。
 
 FGA-02-CUSTOMER-UPDATE-01のlocal実装はcommit `6bf82e5264f72b39c540eb68c96b18690385198e`へ固定した。旧domain Manager分類はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`、Customer初回実装はcommit `9bd4d43c23bf113790add10691dc91b7445a99d4`である。分類基準は[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とcommit `b89e5c86`で訂正し、Customer実装もcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`へ訂正した。現行のManager分類はFirestore上の通常のmaster data全般へ適用し、Customer・Site・Employee・Outsourcerを最初の適用例とする。Company・User等の例外境界は維持する。
 

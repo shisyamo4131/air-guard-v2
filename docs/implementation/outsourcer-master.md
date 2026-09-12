@@ -30,7 +30,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - Rulesはlive create/updateを同一tenantの有効な本登録Userへrole非依存で許可し、actor UIDの一致を要求する。live deleteとarchive writeは全て拒否し、live/archive readの既存tenant境界を維持する。
 - OUT-05は対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了したlocal実装である。OUT-01/02のRules・保存契約を維持し、Dev/Prod Rulesと実dataは未変更・未確認である。
 - OUT-06は対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了したlocal実装である。Rules・index・schema・package・migration・dataは変更していないため、local Emulator suiteはverification policyに基づき省略した。
-- FGA-05では通常CREATE・UPDATEを共通Managerとmodel標準保存へ戻し、role制限、専用writer、部分transaction、競合拒否を撤去した。対象test 8件、domain 1,448件、Local Emulator 178件に合格した。UI buildはclean commitだけを許可するため、固定commit後に実行する。Dev／Prodとremote dataは未変更である。
+- FGA-05では通常CREATE・UPDATEを共通Managerとmodel標準保存へ戻し、role制限、専用writer、部分transaction、競合拒否を撤去した。対象test 8件、domain 1,448件、Local Emulator 178件、固定commit `fed8449e`の専用Local UI buildに合格した。Dev／Prodとremote dataは未変更である。
 
 ## データ契約
 

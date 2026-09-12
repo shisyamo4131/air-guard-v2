@@ -1,7 +1,7 @@
 # FGA-05 Outsourcer Manager・通常保存 Local検証記録
 
 - 対象: `FGA-05-OUTSOURCER-MANAGER-LWW-01`のLocal実装
-- 判定: Localの主要自動検証は合格。固定commitのUI buildとDev受入れは未完了
+- 判定: Local実装・必須自動検証は合格。checkpoint全体はDev受入れ前のため未完了
 - 測定日: 2026-09-12（Asia/Tokyo）
 
 ## 確認した範囲
@@ -21,10 +21,11 @@
 | 対象Outsourcer UI・保存契約 | `node --test test/domain/outsourcer-ui-source-contract.test.mjs` | 8件合格 | 0 |
 | domain-full | `node --test test/domain/*.test.mjs` | 1,448件合格 | 0 |
 | local-emulator-suite | `npm run test:local` | 178件合格 | 0 |
+| local-ui-build | `npm run test:local:ui:build` | 固定commit `fed8449e`の専用Local UI build合格 | 0 |
 
 Local Emulatorは`demo-air-guard-v2-codex`、loopback限定、合成dataだけで実行した。利用者保存dataは変更せず、専用seedはread-onlyだった。
 
-`npm run test:local:ui:build`の最初の実行は、製品errorではなく「cleanな固定commitだけをbuildする」という事前条件によりexit status 1で停止した。変更をcommitした後に同じcommandを再実行する。
+`npm run test:local:ui:build`の最初の実行は、製品errorではなく「cleanな固定commitだけをbuildする」という事前条件によりexit status 1で停止した。変更をcommit `fed8449e`へ固定した後に同じcommandを再実行し、exit status 0で合格した。Browserslist dataの更新案内、既存のchunk size、sourcemap、Node非推奨警告は出たが、build失敗ではない。
 
 ## Security Rules監査
 
@@ -34,7 +35,6 @@ Local Emulatorは`demo-air-guard-v2-codex`、loopback限定、合成dataだけ�
 
 ## 未実施・残作業
 
-- clean固定commitを対象にした専用Local UI build。
 - DevへのFirestore Rules・Hosting反映と、Codex専用tenantでの作成・更新・再読込・見た目確認。
 - Prod、既存dataの一括変換、Functions、schema packageは対象外で、変更していない。
 
