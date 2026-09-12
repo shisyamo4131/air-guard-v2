@@ -2641,3 +2641,16 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 必須の将来対応: 機能順にpage/root/childを整理し、pageでorigin、子でinjectを使う。主対象はlistener、従属補完は共有cache優先とし、不存在・取得不能を「取得できなかった」旨へ置換する。従属CRUは存在確認なしを既定とし、物理削除時に既知従属を検査する。既存の厳格なbarrierは機能checkpointで維持または簡素化を明示する。
 - 必要なテスト: origin／inject同一性、画面・tenant間cache分離、主対象listener更新、従属cache hit・miss・取得失敗、画面継続、物理削除の従属あり／検査失敗write 0、採用する例外barrier。
 - ユーザー判断が必要な事項: 単純pageの階層例外、各機能で維持する厳格barrier、missing表示の共通component／文言、物理削除を実際に提供する範囲は実装checkpoint前に確認する。
+
+## FUT-0190 現場稼働予定入力内の現場新規登録を復旧する
+
+- 状態: Open
+- 実施先: FGA-06とは分離したSite入力回帰の小checkpointとして扱う。
+- 重大度: High
+- 発見セグメント: `FGA-06-SCHEDULE-NORMAL-AUTH-01` Dev受入れ
+- 対象ファイル・シンボル: `components/Site/Autocomplete.vue`のcreatable activator、`SiteManager.toCreate`、現場稼働予定の`SiteOperationScheduleCustomInput`。
+- 確認済み実装事実: Devの現場稼働予定入力で`現場を新規登録`を押しても、Siteの3ステップ作成dialogが開かなかった。通常の現場一覧にある`現場を新規登録`からは3ステップ入力を使い、取引先未登録の名称を入力して合成Siteを作成できた。sourceではSite Autocompleteだけがbuttonのclick eventを`@click="toCreate"`でそのまま渡し、Customer／Outsourcer Autocompleteは`@click="() => toCreate()"`で引数なしに呼び出している。
+- 想定影響と発生条件: 現場稼働予定の入力中に必要な現場が未登録だった場合、その場で3ステップ作成へ進めず、現場一覧へ移動してから作成する必要がある。利用者が重視する、取引先が未登録でも予定入力の流れを止めずに現場を作る既存経路を満たしていない。
+- 推奨する将来対応: Site AutocompleteのactivatorからDOM eventを渡さず`toCreate()`を呼び、`rememberCreateCompany`、3ステップ入力、取引先候補なしの仮登録、作成結果のAutocomplete選択を維持する。見た目と通常の現場一覧作成は変更しない。
+- 必要なテスト: activatorからDOM eventをitemとして渡さないこと、予定入力内で3ステップdialogが開くこと、取引先既存／未登録の両方で作成結果が選択されること、取消・失敗時の予定入力保持、通常現場一覧作成の非回帰、固定commitのDev受入れ。
+- ユーザー判断が必要な事項: 修正checkpointの開始、Dev反映、受入れは別途承認する。今回のFGA-06予定C/U/D受入れでは実装しない。

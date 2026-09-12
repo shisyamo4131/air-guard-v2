@@ -34,6 +34,7 @@
 | FGA-05 Outsourcer Manager・document LWWのLocal検証 | [FGA-05 Outsourcer Manager・document LWW Local検証記録](fga-05-outsourcer-manager-lww-local.md) |
 | FGA-05 Outsourcer Manager・document LWWのDev反映・受入れ | [FGA-05 Outsourcer Manager・document LWW Dev反映・受入れ記録](fga-05-outsourcer-manager-lww-dev.md) |
 | FGA-06 現場稼働予定の通常C/U/D認可 Local検証 | [FGA-06 現場稼働予定の通常C/U/D認可 Local検証記録](fga-06-schedule-normal-auth-local.md) |
+| FGA-06 現場稼働予定の通常C/U/D認可 Dev反映・受入れ | [FGA-06 現場稼働予定の通常C/U/D認可 Dev反映・受入れ記録](fga-06-schedule-normal-auth-dev.md) |
 | Customer archive safety CAS-04 local実装・画面受入れ | [Customer archive safety local acceptance verification receipt](customer-archive-local-acceptance.md) |
 | Site SITE-05/06 archive・取極め local実装 | [SITE-05/06 Codex専用local検証記録](site-05-06-local.md) |
 | Site SITE-07 一覧・検索・UI整合 local実装 | [SITE-07 Codex専用local検証記録](site-07-local.md) |

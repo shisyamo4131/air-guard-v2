@@ -16,11 +16,11 @@
 
 ## 次の作業
 
-現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-05 Outsourcer管理まで完了し、phase全体は80%である。FGA-06は`FGA-06-SCHEDULE-NORMAL-AUTH-01`を開始し、現場稼働予定の作成・複製・基本情報変更・配置作業員変更・表示順変更・削除だけをtenant共通のserver権限へ揃える。関連documentを同時に整える`saveOperation` Callableは維持し、配置通知作成、稼働実績への確定、稼働実績・請求は今回変更しない。Local実装・検証、固定commitのFunctions Dev反映・受入れまでが同checkpointの残作業であり、完了までは80%から加点しない。[FGA roadmap](../roadmaps/foundational-governance-alignment.md)を正とする。
+現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)の`FGA-06-SCHEDULE-NORMAL-AUTH-01`まで完了し、phase全体は80%である。現場稼働予定の通常C/U/DはDev受入れまで完了した。FGA-06全体の次checkpointは、残るtransaction系機能から対象と対象外を利用者と合意して決める。予定入力内の現場新規登録不具合は[FUT-0190](future-actions.md#fut-0190-現場稼働予定入力内の現場新規登録を復旧する)へ分離しており、未承認のまま修正しない。[FGA roadmap](../roadmaps/foundational-governance-alignment.md)を正とする。
 
 FGA-02-CUSTOMER-UPDATE-01のlocal実装はcommit `6bf82e5264f72b39c540eb68c96b18690385198e`へ固定した。旧domain Manager分類はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`、Customer初回実装はcommit `9bd4d43c23bf113790add10691dc91b7445a99d4`である。分類基準は[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とcommit `b89e5c86`で訂正し、Customer実装もcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`へ訂正した。現行のManager分類はFirestore上の通常のmaster data全般へ適用し、Customer・Site・Employee・Outsourcerを最初の適用例とする。Company・User等の例外境界は維持する。
 
-FGA-02 Customer、FGA-03 Site、FGA-04 Employeeを各18点、FGA-05 Outsourcerを16点で完了した。FGA-06は未着手である。Site従属cacheはFGA-03で実装せず、[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)のサインアウト／session切替cleanupへ統合した。
+FGA-02 Customer、FGA-03 Site、FGA-04 Employeeを各18点、FGA-05 Outsourcerを16点で完了した。FGA-06は最初の現場稼働予定checkpointを完了したが、残るtransaction系機能があるため未加点である。Site従属cacheはFGA-03で実装せず、[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)のサインアウト／session切替cleanupへ統合した。
 
 1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。
