@@ -2,9 +2,9 @@
 
 ## メタデータ
 
-- 状態: SITE-09 Dev受入れ完了。FGA-03通常認可はcommit `ec46497a`へ固定し、通常Site Rules簡素化とSite Manager／document LWWはLocal検証済み・Dev受入れ前
+- 状態・適用証拠: [FGAロードマップ](../roadmaps/foundational-governance-alignment.md)と[FGA-03 Dev受入れ記録](../verification/fga-03-site-manager-lww-dev.md)を正とする。以下は通常保存と専用操作の実装記録であり、live remoteの再確認結果ではない。
 - 対象セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034、SPEC-DEEP-035
-- 最終確認日: 2026-09-11
+- 最終確認日: 2026-09-12（既存FGA-03完了記録への文書整合）
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/dataLayers/site/useSiteUiReads.js`、`composables/domain/site/siteUiPresentation.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所
 
 ## 入口・書込み権限
@@ -74,7 +74,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 ## Rules・tenant境界
 
-- SITE-08時点では、旧dataの欠損へ限定した互換検査と、通常Siteのexact field・型・長さ・派生値検査をRulesに置いていた。FGA-03の通常Rules簡素化がこの実装を置き換える。
+- SITE-08時点では、旧dataの欠損へ限定した互換検査と、通常Siteのexact field・型・長さ・派生値検査をRulesに置いていた。FGA-03の通常Rules簡素化で置換済み。適用証拠は冒頭の正本を参照する。
 - `Companies/{companyId}/Sites/{docId}`は同一tenantの有効な本登録Userにreadを許可する。通常create/updateはmaintenance off、確認済みemail、canonical User `docId`、tenant claim・User所属tenant・path tenantの一致、有効・本登録Userを必須とし、role、permission、会社管理者、super-user区分をallow条件にしない。予定競合用revisionだけは同一tenantの予定writerがatomicに+1できる。client deleteは拒否する。
 - 通常Siteの必須field、型・長さ・enum、exact field集合、通常timestamp、派生値、埋込みCustomerのexact projectionは、Schemas packageと正規application writerが検査し、Rulesでは重複検査しない。Rulesはpathとdocument ID、actor UID、ACTIVE、Agreement、`scheduleRevision`、状態変更field、同一会社のlive Customer存在、Customer未設定への巻戻し禁止、`isTemporary`相関を保護する。予定作成は`operationResultId=null`とSite revisionの同時更新、実績化は整合するOperationResultとの同時更新だけを許可し、偽参照・置換・巻戻しを拒否する。
 - 製品が提供するSite操作は正規application経路を前提とする。正規applicationを介さない同一tenant Userの直接requestでは通常fieldの不正値をRulesが拒否しないが、利用者判断により本phaseの対応対象にせず、archive形式やFunctionsは変更しない。この前提を変更する場合はRulesの通常field検査とarchive互換を同時に再検討する。

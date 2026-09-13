@@ -8,11 +8,126 @@
 
 2026-09-09の[ADR 0066](../decisions/0066-pre-production-document-level-last-write-wins.md)により、通常CRUDのfield限定保存、同一field競合拒否・再読込、AirItemManager・AirArrayManager排除を推奨する過去の記述は、実装調査時点の履歴または置換対象として読む。例外operationの固有競合制御、schema・tenant・data保護、managerのdisable・validation・error・loading等の独立不具合は維持する。
 
+## 状態別の参照
+
+各項目の本文に記録された状態から辿る索引。実装・remoteの現在状態を再検証した結果ではない。本文の状態を変更するときは、この索引の所属も同時に更新し、件数や回答本文を複写しない。
+
+Local completed、Resolved、Superseded等は記録された限定条件のまま読む。製品全体の完了やDev受入れを意味せず、本文の残作業・未確認点と[roadmap](../roadmaps/README.md)を照合する。
+
+### Open
+
+[FUT-0005](#fut-0005-サインアウト完了条件へmodel-cleanupを含める) · [FUT-0006](#fut-0006-通知クリックを安全なpayload遷移と既存client再利用へ変更する) · [FUT-0007](#fut-0007-fcm-client-listenerと表示の重複を検証cleanupする) · [FUT-0008](#fut-0008-fcm-token-lifecycleと登録失敗の再試行を設計する) · [FUT-0009](#fut-0009-tokenとuser情報をログへ出さない) · [FUT-0010](#fut-0010-fcmtokens-rulesのtenant所有権field検証を強化する)
+
+[FUT-0011](#fut-0011-fcm-error分類で有効tokenを削除しない) · [FUT-0012](#fut-0012-通知配送を冪等再試行可能にする) · [FUT-0013](#fut-0013-休眠test通知handlerを除去または保護する) · [FUT-0014](#fut-0014-batch送信の500件超切捨てを明示修正する) · [FUT-0015](#fut-0015-recipient重複時の集計token-owner対応を一貫させる) · [FUT-0016](#fut-0016-service-worker更新ライフサイクルを検証する)
+
+[FUT-0017](#fut-0017-authentication削除時token-cleanup失敗を回収する) · [FUT-0018](#fut-0018-arrangementnotificationからの通知生成をrolefield入力で制限する) · [FUT-0019](#fut-0019-notificationrecipientsのclient権限をschema契約と一致させる) · [FUT-0020](#fut-0020-user-document-idとauthentication-uidの不変条件を保護する) · [FUT-0021](#fut-0021-arrangementnotificationの状態遷移とtimestampを強制する) · [FUT-0022](#fut-0022-arrangementnotificationの実勤務日時休憩計算を修正する)
+
+[FUT-0023](#fut-0023-arrangementnotification直接削除によるschedule-flag不整合を防ぐ) · [FUT-0024](#fut-0024-notify-transaction失敗時のclient-instance-rollbackを保証する) · [FUT-0025](#fut-0025-arrangementnotification-uiの未使用prop遷移apiを整理する) · [FUT-0026](#fut-0026-arrangementnotification遷移notifyの多重実行と利用者向け失敗処理を確認する) · [FUT-0027](#fut-0027-上下番確定の通知更新とoperationresult作成を再開可能にする) · [FUT-0028](#fut-0028-配置通知作成失敗時の上下番確定方針を決める)
+
+[FUT-0029](#fut-0029-agreementなしoperationresult確定とbilling保留を正式化する) · [FUT-0030](#fut-0030-operationresult後続triggerの部分成功と再試行を検証する) · [FUT-0033](#fut-0033-請求稼働一覧の無効create操作とbilling集約競合を解消する) · [FUT-0035](#fut-0035-dailyattendance同期をoperationresultids逆引きへ移行する) · [FUT-0036](#fut-0036-dailyattendance詳細を従業員明細だけに限定する) · [FUT-0037](#fut-0037-dailyattendance開始終了を実日時で集約する)
+
+[FUT-0039](#fut-0039-dailyattendancesのfunctions専用write境界を正式化する) · [FUT-0040](#fut-0040-freee勤怠管理plus向けcsv互換性を検証する) · [FUT-0041](#fut-0041-dailyoperationsbyemployeeのclientアクセス境界を正式化する) · [FUT-0042](#fut-0042-siteemployeehistory削除失敗を成功扱いにしない) · [FUT-0044](#fut-0044-siteemployeehistoriesのclientアクセス境界を正式化する) · [FUT-0046](#fut-0046-非請求operationresult削除でbilling同期を失敗させない)
+
+[FUT-0047](#fut-0047-billingの同一key追加更新削除をatomic化する) · [FUT-0048](#fut-0048-billing-adjustmentの使用課税契約を決める) · [FUT-0050](#fut-0050-operationbilling-lock-toggleの失敗多重実行を安全にする) · [FUT-0052](#fut-0052-請求書pdfの発行必須項目とstatus別発行を仕様化する) · [FUT-0053](#fut-0053-請求書pdf入力masterfilenameを検証する) · [FUT-0054](#fut-0054-請求書pdfのlayout改page金額整合をrender検証する)
+
+[FUT-0055](#fut-0055-customer-crudの暫定権限を正式化する) · [FUT-0056](#fut-0056-customerの重複検索status条件を定義する) · [FUT-0058](#fut-0058-customer変更時の請求snapshot境界を確定する) · [FUT-0059](#fut-0059-customerの住所status編集とgeocoding境界を整備する) · [FUT-0061](#fut-0061-siteとcustomerの所属埋込み整合を保証する) · [FUT-0063](#fut-0063-site-archiveと参照guardを競合安全にする)
+
+[FUT-0064](#fut-0064-site変更時の下流snapshotlive境界を確定する) · [FUT-0071](#fut-0071-schedule-displayordersiteshifttypeorder同時編集を競合安全にする) · [FUT-0072](#fut-0072-scheduleのoperationresult-lockをserver境界で強制する) · [FUT-0073](#fut-0073-schedule通知flagcascade失敗復旧を保証する) · [FUT-0076](#fut-0076-employeeuser-1対1と退職削除cleanupを保証する) · [FUT-0077](#fut-0077-employee雇用状態将来退職復職workflowを確定する)
+
+[FUT-0080](#fut-0080-userauth管理のserver認可とfield制約を実装する) · [FUT-0081](#fut-0081-authfirestoreclaimsの部分状態を回復可能にする) · [FUT-0082](#fut-0082-user-doc-id仮登録emailemployee-linkの不変条件を強制する) · [FUT-0083](#fut-0083-userauth同期triggerの失敗と遅延を可視化修復する) · [FUT-0091](#fut-0091-companyauth-tenant作成の部分状態とidentityを回復可能にする) · [FUT-0092](#fut-0092-company設定のvalidationと編集fieldを整合させる)
+
+[FUT-0093](#fut-0093-company-master変更と帳票計算の再現性を保証する) · [FUT-0094](#fut-0094-companyscheduleorderaddの未定義class参照を修正する) · [FUT-0095](#fut-0095-maintenanceをroute表示だけでなくwrite-gateとquiet-procedureへ拡張する) · [FUT-0096](#fut-0096-maintenance初期化購読断のfail-safeと復旧を実装する) · [FUT-0097](#fut-0097-systemcompany-maintenance-field契約と表示を統一する) · [FUT-0098](#fut-0098-maintenance例外operator操作と退出導線を実装する)
+
+[FUT-0099](#fut-0099-stripe-functionsの公開状態と環境別有効化を整備する) · [FUT-0100](#fut-0100-checkout作成を認可済みserver-apiへ移し入力を固定する) · [FUT-0101](#fut-0101-stripe-customersession作成を冪等競合安全にする) · [FUT-0102](#fut-0102-webhookの重複順序逆転再契約を安全に処理する) · [FUT-0104](#fut-0104-checkout成功判定customer-mappingerror情報を堅牢化する) · [FUT-0105](#fut-0105-警備日報storageをテナント権限で分離する)
+
+[FUT-0107](#fut-0107-警備日報画像の検証と安全な変換境界を実装する) · [FUT-0109](#fut-0109-警備日報画像thumbnail索引の整合回復を保証する) · [FUT-0110](#fut-0110-警備日報操作の失敗表示再試行大量件数を整備する) · [FUT-0112](#fut-0112-usefetchのlogger相対importを修正しbuildで保証する) · [FUT-0113](#fut-0113-汎用fetchの並行loadingerror契約を正確にする) · [FUT-0115](#fut-0115-共通icon操作とdrag-uiのaccessibilityを整備する)
+
+[FUT-0116](#fut-0116-autocompleteの外注表示作成失敗契約を統一する) · [FUT-0117](#fut-0117-共通actionの多重実行と属性分配を明示する) · [FUT-0118](#fut-0118-shell-route名と戻るnavigationを安全にする) · [FUT-0119](#fut-0119-shell-icon操作drawerfocusのaccessibilityを整備する) · [FUT-0120](#fut-0120-usersetting解決logout多重実行global-feedbackを検証する) · [FUT-0121](#fut-0121-article-crudの権限validation重複をserverで強制する)
+
+[FUT-0125](#fut-0125-certificationのidentity重複期限状態を堅牢化する) · [FUT-0126](#fut-0126-従業員資格機微情報の操作別権限と監査を実装する) · [FUT-0130](#fut-0130-勤怠月次snapshot取得の競合失敗stateを制御する) · [FUT-0133](#fut-0133-routenavigationcomponentのadminspecial-role判定を統一する) · [FUT-0134](#fut-0134-rolepermission語彙とunknown処理をcentral-validationする) · [FUT-0136](#fut-0136-error型伝播user-feedbackretry契約を統一する)
+
+[FUT-0137](#fut-0137-global-loadingをownerreference-count取消し対応にする) · [FUT-0139](#fut-0139-layout間のsnackbarとerrorsmessages-lifecycleを統一する) · [FUT-0140](#fut-0140-geocoding-callableの認証濫用quota境界を実装する) · [FUT-0141](#fut-0141-geocoding失敗location整合0座標を正しく扱う) · [FUT-0144](#fut-0144-server-adapterのhasmany-field契約をschemaclientと一致させる) · [FUT-0145](#fut-0145-restoreのactive-conflicttransactionvalidationtriggerを安全化する)
+
+[FUT-0147](#fut-0147-admin-backupのscope-catalogとcoverageをversion管理する) · [FUT-0148](#fut-0148-admin-restoreをpreflight復旧点rollbacktrigger-safeにする) · [FUT-0149](#fut-0149-backup-artifactと復旧credentialを機密integrity管理する) · [FUT-0150](#fut-0150-admin-backup-cli公開apireadmeの実行契約を一致させる) · [FUT-0151](#fut-0151-callableのactortenantapp-checkabuse境界を強制する) · [FUT-0152](#fut-0152-functions-deployment-surfaceをmanifestとcontract-testで固定する)
+
+[FUT-0153](#fut-0153-function-runtimeretryidempotencyfailure観測契約を標準化する) · [FUT-0155](#fut-0155-dashboardのquery-gatingn1limitstale-stateを改善する) · [FUT-0159](#fut-0159-insurance履歴監査validation遷移を正式化する) · [FUT-0160](#fut-0160-roundsettingをtenantclientfunctions間で一貫させる) · [FUT-0162](#fut-0162-taxcutoffdate支払条件のvalidationとsnapshotを統一する) · [FUT-0163](#fut-0163-super-user保守uiを対象確認監査再実行可能にする)
+
+[FUT-0164](#fut-0164-test-development-routeをproduction-surfaceから隔離する) · [FUT-0165](#fut-0165-auth-onboardingの二重送信poll部分状態回復uxを統一する) · [FUT-0166](#fut-0166-enumfield-validationunknown表示を単一contractへ揃える) · [FUT-0167](#fut-0167-date-rangedebouncetimer-lifecycleを安全な共通contractへ揃える) · [FUT-0168](#fut-0168-未使用の運転日報pdf-utilityを用途確定後に削除または正式化する) · [FUT-0169](#fut-0169-arrangementsmanager-speeddialの親action接続を修正する)
+
+[FUT-0170](#fut-0170-一覧componentのcreateselectionpagination集計table契約を一致させる) · [FUT-0171](#fut-0171-articledetailの非同期選択を最新値失敗安全にする) · [FUT-0172](#fut-0172-legacy-notification-chipの到達性とunknown-status表示を整理する) · [FUT-0173](#fut-0173-atoms-inputdisplayの防御的contractとdead候補を整理する) · [FUT-0174](#fut-0174-operationbilling専用入力の結線と明細表示契約を修正する) · [FUT-0175](#fut-0175-operationresultscheduleのsite変更時securitytypeを最新選択へ収束させる)
+
+[FUT-0176](#fut-0176-operationschedules-tableのrow-actionを到達可能かつ操作可能にする) · [FUT-0177](#fut-0177-adminusers-collectionの用途tenantactorfield境界を確定しrulesを閉じる) · [FUT-0178](#fut-0178-firebasenuxt-plugin初期化順とruntimeconfig型をfail-fastで検証する) · [FUT-0179](#fut-0179-firemodel-adapterconfigをrequesttenant単位へscopeしclientserver契約を統一する) · [FUT-0180](#fut-0180-firemodelのcreateupdateserializationvalidation契約を明示しデータ損失を防ぐ) · [FUT-0181](#fut-0181-air-managerのdisablevalidationsingle-flightを永続化前に強制する)
+
+[FUT-0182](#fut-0182-共通入力のdebounce非同期検索datetimeaccessibility契約を統一する) · [FUT-0183](#fut-0183-admin-operatorclaimscompany破壊migrationを承認監査再開可能な境界へ移す) · [FUT-0187](#fut-0187-firestoreの機微機密情報を本体documentから分離する) · [FUT-0188](#fut-0188-通常crudをdocument単位last-write-winsへ段階移行する) · [FUT-0189](#fut-0189-component階層usefetch従属参照を機能単位で整合する) · [FUT-0190](#fut-0190-現場稼働予定入力内の現場新規登録を復旧する)
+
+### Needs decision
+
+[FUT-0031](#fut-0031-請求稼働管理のreadwrite権限境界を分離する) · [FUT-0034](#fut-0034-請求手動調整値の許容範囲を定義検証する) · [FUT-0045](#fut-0045-確定支払済みbillingの自動再集計境界を強制する) · [FUT-0049](#fut-0049-billing-status支払取消の画面workflowを実装する) · [FUT-0068](#fut-0068-agreement-snapshotと再適用境界を明示検証する) · [FUT-0069](#fut-0069-agreementv2の保存モデルと旧classを整理する)
+
+[FUT-0070](#fut-0070-siteoperationschedule操作権限とrulesを一致させる) · [FUT-0074](#fut-0074-schedule複製過去変更worker充足validationを確定する) · [FUT-0075](#fut-0075-employee個人情報の閲覧編集権限を最小化する) · [FUT-0078](#fut-0078-employee-archiveと全参照保持復元を設計する) · [FUT-0079](#fut-0079-employee-code派生氏名候補statusの整合を保証する) · [FUT-0103](#fut-0103-subscriptioncustomertypeemployeelimit契約を整合させる)
+
+[FUT-0106](#fut-0106-警備報告のデータモデルと提出ライフサイクルを定義する) · [FUT-0108](#fut-0108-警備日報の削除保持監査を定義し強制する) · [FUT-0111](#fut-0111-operation抽象型とstorage-namespaceの用語path境界を明確化する) · [FUT-0114](#fut-0114-汎用cacheのfreshness更新cleanup契約を整備する) · [FUT-0122](#fut-0122-articlearticledetailの金額数量税単位契約を定義する) · [FUT-0123](#fut-0123-過去請求のarticle表示をsnapshotarchive安全にする)
+
+[FUT-0124](#fut-0124-保有資格から配置資格判定へ追跡可能な契約を設ける) · [FUT-0127](#fut-0127-ojt計算flagと警備教育履歴modelを分離定義する) · [FUT-0128](#fut-0128-ojt-overrideの根拠actorsnapshotを監査可能にする) · [FUT-0129](#fut-0129-ojtの人数勤怠売上請求効果を一貫させる) · [FUT-0131](#fut-0131-勤怠閲覧のresponsive詳細accessibility契約を整備する) · [FUT-0132](#fut-0132-手動勤怠休暇操作の所有権と監査を設計する)
+
+[FUT-0135](#fut-0135-claimuser-role変更の反映と失効を保証する) · [FUT-0138](#fut-0138-production-loggingredactionmonitoring相関を設計する) · [FUT-0142](#fut-0142-住所fieldfulladdress郵便番号正規化契約を統一する) · [FUT-0143](#fut-0143-個人住所座標のprovider送信とlog-privacyを統制する) · [FUT-0146](#fut-0146-archive-audit-metadataretentionpurgerulesを共通設計する) · [FUT-0154](#fut-0154-operationresult-csvの安全性意味再現性契約を確立する)
+
+[FUT-0156](#fut-0156-dashboardのaudiencecalendar稼働数kpiempty-experienceを仕様化する) · [FUT-0157](#fut-0157-配置表pdfのfield日時要員属性再現性layout契約を確立する) · [FUT-0158](#fut-0158-配置表pdfの生成権限file-identity失敗情報保護を整備する)
+
+### In progress
+
+[FUT-0065](#fut-0065-agreement編集権限とrules-validationを正式化する) · [FUT-0084](#fut-0084-未認証の事前登録照会を列挙abuseから保護する) · [FUT-0085](#fut-0085-outsourcer-crudの正式権限とrulesを一致させる) · [FUT-0090](#fut-0090-company-rootの認可field-ownership削除禁止を強制する) · [FUT-0161](#fut-0161-site自動終了を競合安全再試行可能にする)
+
+### In progress（CAS-02/03/04 local完了・CAS-05 deferred）
+
+[FUT-0057](#fut-0057-customer-archiveと参照整合復元を実装する)
+
+### Partially resolved（2026-09-08）
+
+[FUT-0002](#fut-0002-ページファイルとpagesettingsの不一致を解消自動検出する)
+
+### Hypothesis
+
+[FUT-0038](#fut-0038-embedded集約の重複容量並行性を検証する) · [FUT-0043](#fut-0043-siteemployeehistory再構築の並行性と決定性を保証する) · [FUT-0051](#fut-0051-billing-client編集とaggregation更新の競合を防ぐ)
+
+### Local completed
+
+[FUT-0066](#fut-0066-agreementの単価時間締日validationを確定する) · [FUT-0067](#fut-0067-適用済みagreementのrevision削除policyを決める)
+
+### Resolved
+
+[FUT-0032](#fut-0032-手動agreement適用の有効日勤務区分整合を保証する) · [FUT-0086](#fut-0086-外注会社と外注警備員個人のデータモデルを決定する) · [FUT-0087](#fut-0087-outsourcer終了archive参照保持を整合させる) · [FUT-0088](#fut-0088-outsourcer候補のactive制約を利用経路で統一する) · [FUT-0089](#fut-0089-outsourcer-validation検索表示の不整合を整理する)
+
+### Resolved（2026-09-08 Local実装）
+
+[FUT-0001](#fut-0001-ページアクセスをfail-closedへ変更する) · [FUT-0003](#fut-0003-認証初期化の処理完了と利用可能状態を分離する) · [FUT-0004](#fut-0004-user切替時の購読置換を保証する)
+
+### Completed
+
+[FUT-0060](#fut-0060-site-crudstatusの暫定権限を正式化する) · [FUT-0184](#fut-0184-codex専用uiのブラウザ直接郵便番号通信を遮断する)
+
+### Completed（単純な楽観的更新、client境界分離、予定削除のUI導線、Local確認、Dev接続受入れ、main統合を完了）
+
+[FUT-0186](#fut-0186-配置管理の楽観的更新回帰を復旧する)
+
+### Superseded by FGA-03
+
+[FUT-0062](#fut-0062-site-status-lifecycleと検索編集境界を統一する)
+
+### Open（4マスターUI改修完了後の必須phase）
+
+[FUT-0185](#fut-0185-firestore-rulesの責務と式数を段階的に整理する)
+
+<details>
+<summary>過去の再照合・集計記録</summary>
+
 ## 2026-08-12 調査統合
 
 [2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md)で、認証・Rules・Functions、schema/base/adapters、共通UI、Admin SDKを再照合した。既存原因はFUT-0003、FUT-0004、FUT-0008〜0012、FUT-0018〜0031、FUT-0045〜0052、FUT-0080〜0084、FUT-0090、FUT-0105〜0109、FUT-0113〜0117、FUT-0136〜0153、FUT-0160、FUT-0165〜0167へ統合した。独立した未登録原因だけFUT-0177〜FUT-0183として追加した。
 
 確認済みの主な追加証拠は、verified email前のinvitation takeover、偽造User doc IDからglobal Authへの作用、cross-tenant SecurityReport object操作、unauthenticated history rebuild、locked OperationResultのmodel/Rules/UI bypass、full-set/upsertとprocess-global adapter/config、通知token log、UI managerのdisabled非強制、限定的で平文のAdmin backup/restoreである。runtime・remote・実dataでの発生頻度は未確認のまま保持する。
+
+</details>
 
 ## FUT-0001 ページアクセスをfail-closedへ変更する
 

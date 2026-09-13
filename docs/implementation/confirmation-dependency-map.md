@@ -1,10 +1,19 @@
 # 要確認事項 dependency / reconciliation map
 
-- 状態: 台帳再照合
+- 状態: Historical — 2026-08-28時点の台帳再照合記録
 - 対象チェックポイント: SPEC-RECONCILE-001
 - 最終確認日: 2026-08-28
 - 根拠: `pending-confirmations.md`全138件、`future-actions.md`の関連CONF/判断欄、各CONFが直接指定するimplementation文書の該当section、coverage索引
 - 制約: 新規runtime、外部環境、実dataは確認していない。2026-08-28のCCB質疑でCONF-0074〜0082の回答とCONF-0083〜0087の保留を反映し、既存IDは変更していない。
+
+## 現在の確認先
+
+現在の回答・保留・統合関係は[確認事項台帳](pending-confirmations.md#状態別の参照)、実装課題は[将来対応台帳](future-actions.md#状態別の参照)を正とする。本書は当時対象とした138件の分類・提示順の記録であり、後続追加IDを含む全件一覧ではない。
+
+以下のOpen件数、canonical group、質問の提示順、CCB・Stripeの扱いは記録時点に限定する。後続回答を上書きしたり、回答済み事項を再質問したりする根拠にしない。過去のgroup関係は保持するが、現在の採否は台帳へ照合する。
+
+<details>
+<summary>SPEC-RECONCILE-001の分類・依存関係・未確認範囲</summary>
 
 ## disposition contract
 
@@ -215,3 +224,5 @@ coverage inventoryは531 filesについてUncovered 0、Partially covered 0、un
 - code/runtime/実data/外部環境は再調査していない。
 - groupは提示順と重複排除の索引であり、上位回答が全memberを暗黙に承認するものではない。
 - FUT本文内の自然文による全CONF参照をsemanticに書き換えていない。既存Related FUT IDs/ユーザー判断欄は保持した。
+
+</details>

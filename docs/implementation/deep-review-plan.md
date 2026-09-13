@@ -1,13 +1,15 @@
 # 531-file deep review plan
 
-> Current progress (2026-08-12): SPEC-DEEP-045a/045b and schema checkpoints 046〜054 completed. Cumulative B/C→A promotions: 513; A 519, B 0, C 0, D 11, E 1, Unknown 0; remaining B/C 0 files in 0 execution checkpoints.
+> Historical source-review result (2026-08-12): SPEC-DEEP-045a/045b and schema checkpoints 046〜054 completed. Cumulative B/C→A promotions: 513; A 519, B 0, C 0, D 11, E 1, Unknown 0; remaining B/C 0 files in 0 execution checkpoints.
 
-- 状態: 詳細精査計画
+- 状態: Historical — 2026-08-12の固定inventoryに対する詳細精査計画・完了記録
 - 対象チェックポイント: SPEC-DEEP-AUDIT-001
 - 最終確認日: 2026-08-12
 - 対象: app `pages/components/composables/stores/plugins/middleware/utils/services/functions` 456 files、schemas `src` 75 files
 - 根拠: `rg --files` path inventory、既存implementation文書のSource/Scope/checkpoint証拠
 - 制約: このcheckpointではcode本文を読んでいない。分類は過去調査証拠だけに基づく。
+
+以降の件数・分類・manifest・終了条件は当時の531 filesだけに適用する。その後の追加・変更・削除や依存更新の再精査を免除しない。現在の調査対象は[文書案内](../README.md)と[開発workflow](../runbooks/development-workflow.md)から選ぶ。過去の計画を再開指示として扱わず、新しい差分に必要な確認を行う。
 
 ## depth判定
 
@@ -22,6 +24,8 @@
 
 ## 現在の分類
 
+2026-08-12時点の分類。見出しは既存linkのため保持する。
+
 | depth | count |
 | --- | ---: |
 | A | 519 |
@@ -34,7 +38,7 @@
 
 進捗: SPEC-DEEP-045a/045bとschema source reviewがSPEC-DEEP-046〜054を満たした。累計513 filesをB/C→Aへ昇格し、残B/Cは0 files、残execution checkpointsは0。
 
-### A: 再読不要（代表manifestとcompleted rows）
+### A: 当時の精査済み対象（代表manifestとcompleted rows）
 
 - `composables/useDateUtil.js`
 - `composables/useDateRange.js`
@@ -125,6 +129,8 @@ globの`*`は直下file、`**`は全子fileを表す。各rowはA/D/E manifest�
 
 ## 文書更新規則
 
+当時の固定inventoryを完了するための規則。現在の文書更新・質問提示はproject rulesを適用する。
+
 - 既存60 domain文書を同じ責務で増殖させない。deep review結果は原則として既存domain文書の「公開契約」「error/side effect」「未確認範囲」を更新する。
 - 横断contractまたは複数domainにまたがる新しい責務だけ、新規implementation文書を許す。
 - segment完了時に対象fileをAへ昇格し、当文書とcoverage audit/inventoryのdepth count・残segmentを機械更新する。
@@ -132,6 +138,8 @@ globの`*`は直下file、`**`は全子fileを表す。各rowはA/D/E manifest�
 - 質問は全B/CがAまたはD/Eへ到達した後に再reconcileし、それまでは提示しない。
 
 ## 終了条件
+
+以下は当時のsource reviewの終了条件であり、製品や現行repository全体の受入れ条件ではない。
 
 1. 531 filesがexactly oneのA/D/Eとなり、B/C/Unknownが0。
 2. 各実行segmentで全対象fileのresponsibility/public API/主要分岐/error/side effect/direct callerを記録。
@@ -142,5 +150,4 @@ globの`*`は直下file、`**`は全子fileを表す。各rowはA/D/E manifest�
 ## 未確認範囲
 
 - このcheckpointではcode本文を再読しておらず、B/Cの個別品質・bugを判定していない。
-- runtime、UI、Emulator、外部環境、実data、build artifact。
 - runtime、UI、Emulator、remote環境、実data、build artifactは、このsource本文精査の完了によって検証済みにはならない。

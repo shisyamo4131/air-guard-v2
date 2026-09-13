@@ -2,27 +2,15 @@
 
 2026-09-06、会社管理者・統括の通常業務更新方針を採用した。[仕様](../specification.md#company設定とtenant-lifecycle)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。以下の会社管理者限定の保存経路・過去検証は新要件へ未反映の実装事実であり、後続整合対象とする。システム利用料の課金操作は会社管理者専用で、顧客向け請求振込先とは異なる。
 
-> 2026-08-30 CCB restart: ADR 0025/0028/0029の8 document・runtime互換・全設定revision/audit設計はADR 0031により置換された。以下の実装観測は現行codeの事実として保持するが、旧目標設計はhistoricalである。新設計はCompany全体setの廃止、operation別exact field update、real-time listener、根拠のある場合だけの分割・強い競合制御を採用し、Stripe関連情報を現段階の対象から除外する。
->
-> 2026-09-01 STRIPE-02 local implementation: Schemas `3.0.0-dev.1`をroot/Functionsへ導入し、checkout page/route、legacy customer type readerとCompanyStore導出、未公開Stripe Functions、Stripe依存packageを削除した。`StripeData`は全actor・全階層でread/write拒否とし、既存Company rootのlegacy fieldと既存`StripeData`のdata削除は後続migrationまで未実施である。以下の2026-08-27以前のStripe runtime観測はhistorical baselineとして読む。
->
-> 2026-08-30 corrective rollback: runtime compatible reader、8-target migration/restore tooling、pre-containment Rulesと専用testを主repositoryから除去した。現在のapplicationは再びlegacy Company rootを直接読み、Rulesは同社Userのroot updateを許可しつつclient create/deleteを拒否する。Schemas `.167` pinとAdmin SDK guardは保持している。次の変更対象は以下に記録したwhole-document writerである。
->
-> 2026-08-30 adopted editor boundary: `AirItemManager`・`AirArrayManager`をFirestore CRUDの既定componentから外し、Companyをoperation固有editorへ段階移行する。Class schemaによるdocument共通validationは維持し、operation contractを加えて最新live Companyへ変更fieldを重ねたcandidateを検証する。入力中のdraftはlistenerから独立させ、保存は実際に変更されたoperation所有fieldと更新metadataだけに限定する。最初の対象はCompany基本情報である。
->
-> 2026-08-30 Company profile implementation: 基本情報10 fieldを`CompanyProfileEditor`と`updateCompanyProfile` Callableへ移行した。変更fieldだけを最新Companyへ重ね、Schemas `.167`でclient/serverの両方が検証する。client直接profile変更はRulesで拒否し、振込先・通常設定・取極め・表示順は後続移行まで旧writerを継続する。
->
-> 2026-08-31 Company billing acceptance: 振込先5 fieldを同じCompany rootに維持し、同社の有効な本登録User read、非super-user会社管理者だけの専用Callable write、all-null/all-complete相関、変更fieldだけの保存、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票を実装した。local自動検証とCodex in-app UI smokeに加え、会社管理者での保存・clear・復元・二画面競合、一般ユーザーの画面拒否、実請求PDFの口座情報出力を実際の利用環境で確認し、最終UI acceptanceを完了した。
->
-> 2026-08-30 Company operations implementation: 通常設定4 fieldを同じCompany rootに維持し、`CompanyOperationsEditor`と`updateCompanyOperations` Callableへ移行した。legacy保存値は維持して共有canonical parserへ写像し、欠損時は検証上だけ既定値を補う。local自動検証、Codex in-app UI smoke、利用者の実際の利用環境での最終UI acceptanceを完了した。
->
-> 2026-08-31 Company arrangement acceptance: Company既定取極めUI/writer撤去と表示順専用更新を実装し、自動検証に加えて、項目1〜14、一般利用者の画面非表示、二画面競合、終了済み現場の表示を利用者が実際の利用環境で確認した。
->
-> 2026-08-31 CPU-05 acceptance: 静的caller 0を再確認した旧`CompanyManager`と`useSiteOrderManager`を削除し、Company rootのclient create/update/deleteを全面拒否した。同社Userのreadと4つの専用Callableは維持する。全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5が成功した。Codex in-app UI smokeは起動templateのNuxt `ECONNRESET`で停止したが、利用者承認の会社管理者Chromeで会社設定・稼働予定管理・配置管理、3 editor、2表示順dialog、未変更時の保存無効、キャンセル、console error 0件をCodexが確認し、local受入れを完了した。データ保存は行っていない。
+## 現行仕様・実装記録への案内
 
-> 2026-08-31 SuperUser兼会社管理者対応: Devで会社管理者accountに`isSuperUser=true`も設定され、表示順入口がclientで止まっていた。表示順だけについて、同社の有効な本登録会社管理者ならSuperUser兼任でも許可し、会社管理者でないSuperUser、他社、不正identityはclientとCallableの両方で拒否するよう揃えた。生claimのboolean妥当性をclient sessionで別管理し、欠損・型不正時は入口を出さない。対象16件、全domain 727件、隔離Emulator 107件、security review GOを確認した。Rules、Company data、remote claim、他のCompany設定権限は変更していない。
->
-> 2026-08-31 CPU-06 Dev release acceptance: `DEV-COMPANY-PARTIAL-UPDATE-RELEASE-001`でDev PITR 7日を確認し、Company専用Callable 4件、固定commitの静的生成物、Firestore Rulesをmaintenance・migrationなしで選択deployした。4件は東京・Node.js 22・ACTIVEでbrowser CORSに成功し、Hosting artifact一致、Rules compile/releaseも成功した。Hosting cache headerの適用順を`firebase.json`だけで補正し、index・Service Workerのno-cacheとversion assetのimmutableを実応答で確認した。利用者は会社管理者で通常設定を15分→20分→15分へ保存し、Codexは新規一般Userの新しいChrome tabで管理者入口非表示、直接URL拒否、app error 0件を確認した。Company部分更新roadmapは100%で完了した。
+| 確認する内容 | 正本 |
+|---|---|
+| 現行の権限、保存・分割、Stripe除外 | [Company仕様](../specification.md#company設定とtenant-lifecycle) |
+| 部分更新の実装・受入れと後続改修 | [Company部分更新ロードマップ](../roadmaps/company-partial-updates.md)と[親roadmap](../roadmaps/airguard-v2.md#次の作業) |
+| Stripe撤去・data削除の実行結果 | [STRIPE-05検証記録](../verification/stripe-05-dev-release.md) |
+
+以下の本文はCPU完了までの保存経路と旧調査の記録であり、後続仕様の実装済み一覧ではない。基本情報・振込先・通常設定・表示順の専用更新とCompany rootのclient CUD拒否はCPUの記録として読む。旧root update許可は途中rollback時点、旧8 document設計・Stripe field・package pinは各時点の履歴として末尾に分離する。現在の権限・分割要件との適合は上の正本へ照合し、文書整理を実装・migration完了としない。
 
 ## メタデータ
 
@@ -32,6 +20,8 @@
 - 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/OperationsEditor.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`composables/application/company/useCompanyOperationsUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/apis/updateCompanyOperations.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`functions/modules/company/updateCompanyOperations.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`、`test/domain/company-legacy-writer-removal.test.mjs`
 
 ## 入口・権限
+
+CPU完了時点の実装契約。後続の会社管理者・統括方針などの適用状態は冒頭の正本へ照合する。
 
 - `/settings/company`はpageSettingsで`ADMIN` access policyを参照する。一般pageの互換規則により会社管理者とsuper-userを許可し、navigationも同じpolicyを使用する。
 - 画面は基本情報、口座情報、設定情報を専用editor/Callableで編集する。会社既定取極めの編集入口は撤去済みで、Site固有取極めは維持する。
@@ -149,6 +139,67 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - hidden server-owned候補fieldと利用者編集fieldは同一documentに残る。client writeは閉じたが、read分離が必要かは具体的な閲覧制約に基づいて後続判断する。
 - Company旧`agreements` accessorは常に空/無処理で残存する。
 
+## 将来要対応
+
+以下は各調査checkpoint時点の記録。現行の要件・課題・回答状態は[Company仕様](../specification.md#company設定とtenant-lifecycle)、[将来対応台帳](future-actions.md)、[確認事項台帳](pending-confirmations.md)へ照合する。
+
+- FUT-0090〜FUT-0094を`future-actions.md`へ登録した。CCBの確定契約はFUT本文より現行仕様とADR 0025を優先する。
+
+## 要確認事項
+
+以下は各調査checkpoint時点の記録。現行の要件・課題・回答状態は[Company仕様](../specification.md#company設定とtenant-lifecycle)、[将来対応台帳](future-actions.md)、[確認事項台帳](pending-confirmations.md)へ照合する。
+
+- CONF-0074〜CONF-0078は2026-08-28に回答済みである。maintenanceのCONF-0079〜0082も回答済み、StripeのCONF-0083〜0087は正式release直前まで明示保留とした。
+
+## 未確認範囲
+
+以下は各調査checkpoint時点の記録。現行の要件・課題・回答状態は[Company仕様](../specification.md#company設定とtenant-lifecycle)、[将来対応台帳](future-actions.md)、[確認事項台帳](pending-confirmations.md)へ照合する。
+
+### SPEC-DEEP-020 addendum
+
+- CompanyManager only type-checks `doc` as object, delegates update to `item.update(item)`, and relies on AirItemManager for loading/error/dirty/double-submit behavior. The three icon edit activators add no role/loading/disabled guard.
+- Active Activators expose distinct included-key lists; hidden Company integration fields are not editor keys but remain in the same broadly writable document. The three legacy `Company/Table/*Info.vue` files have no static caller.
+- SettingInfo's weekday display directly dereferences an indexed constant and has no unknown fallback, unlike the active Setting activator. Full component-level evidence is in [Company components deep review](company-components-deep-review.md).
+
+### SPEC-DEEP-039a addendum
+
+- company pluginはCompany変更ごとにVuetifyのprocess-global defaultsとschema `RoundSetting` global modeを直接更新する。`minuteInterval`が0/null/falsyなら全minuteを許し、負数・小数・NaNのfail-closed validationはない。これはpicker候補制御であって保存値・計算丸めの強制ではない。
+- user pluginもAuth UserのtagSizeからVuetify global defaultsを更新する。logout/account切替時にdefaultへ明示resetするbranchはなく、次Userがtruthyな既知値を持たない場合は以前のsizeが残り得る。
+- `useConstants`はCompany colorDefinitionsをlive computedへ反映するが、空文字colorは`||`でdefaultへ戻す。`DEFAULT_DEFINITIONS`とWEEK_COLORSを参照のまま公開し、callerによるprocess内mutationを防がない。enum allowlistやpersisted value validationは別途必要である。
+
+- 実Company/Stripe/subscriptionデータ、外部geocoding、Rules/Emulator、同時更新の再現。
+- Subscription/Stripe/Billing/税計算、PDF layout、maintenance middlewareの内部。
+- Company停止・解約・法的保持・tenant移転の現行運用、provider repairのexact手順。
+
+## 過去の設計・移行・実装観測
+
+<details>
+<summary>2026-08-27〜09-01の経緯（各日付時点の記録）</summary>
+
+当時の「現在」「次」「未完了」やrollbackは当該日付に限定する。現行の実行手順・package・data状態を確定する根拠にはしない。
+
+> 2026-08-30 CCB restart: ADR 0025/0028/0029の8 document・runtime互換・全設定revision/audit設計はADR 0031により置換された。以下の実装観測は現行codeの事実として保持するが、旧目標設計はhistoricalである。新設計はCompany全体setの廃止、operation別exact field update、real-time listener、根拠のある場合だけの分割・強い競合制御を採用し、Stripe関連情報を現段階の対象から除外する。
+>
+> 2026-09-01 STRIPE-02 local implementation: Schemas `3.0.0-dev.1`をroot/Functionsへ導入し、checkout page/route、legacy customer type readerとCompanyStore導出、未公開Stripe Functions、Stripe依存packageを削除した。`StripeData`は全actor・全階層でread/write拒否とし、既存Company rootのlegacy fieldと既存`StripeData`のdata削除は後続migrationまで未実施である。以下の2026-08-27以前のStripe runtime観測はhistorical baselineとして読む。
+>
+> 2026-08-30 corrective rollback: runtime compatible reader、8-target migration/restore tooling、pre-containment Rulesと専用testを主repositoryから除去した。現在のapplicationは再びlegacy Company rootを直接読み、Rulesは同社Userのroot updateを許可しつつclient create/deleteを拒否する。Schemas `.167` pinとAdmin SDK guardは保持している。次の変更対象は以下に記録したwhole-document writerである。
+>
+> 2026-08-30 adopted editor boundary: `AirItemManager`・`AirArrayManager`をFirestore CRUDの既定componentから外し、Companyをoperation固有editorへ段階移行する。Class schemaによるdocument共通validationは維持し、operation contractを加えて最新live Companyへ変更fieldを重ねたcandidateを検証する。入力中のdraftはlistenerから独立させ、保存は実際に変更されたoperation所有fieldと更新metadataだけに限定する。最初の対象はCompany基本情報である。
+>
+> 2026-08-30 Company profile implementation: 基本情報10 fieldを`CompanyProfileEditor`と`updateCompanyProfile` Callableへ移行した。変更fieldだけを最新Companyへ重ね、Schemas `.167`でclient/serverの両方が検証する。client直接profile変更はRulesで拒否し、振込先・通常設定・取極め・表示順は後続移行まで旧writerを継続する。
+>
+> 2026-08-31 Company billing acceptance: 振込先5 fieldを同じCompany rootに維持し、同社の有効な本登録User read、非super-user会社管理者だけの専用Callable write、all-null/all-complete相関、変更fieldだけの保存、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票を実装した。local自動検証とCodex in-app UI smokeに加え、会社管理者での保存・clear・復元・二画面競合、一般ユーザーの画面拒否、実請求PDFの口座情報出力を実際の利用環境で確認し、最終UI acceptanceを完了した。
+>
+> 2026-08-30 Company operations implementation: 通常設定4 fieldを同じCompany rootに維持し、`CompanyOperationsEditor`と`updateCompanyOperations` Callableへ移行した。legacy保存値は維持して共有canonical parserへ写像し、欠損時は検証上だけ既定値を補う。local自動検証、Codex in-app UI smoke、利用者の実際の利用環境での最終UI acceptanceを完了した。
+>
+> 2026-08-31 Company arrangement acceptance: Company既定取極めUI/writer撤去と表示順専用更新を実装し、自動検証に加えて、項目1〜14、一般利用者の画面非表示、二画面競合、終了済み現場の表示を利用者が実際の利用環境で確認した。
+>
+> 2026-08-31 CPU-05 acceptance: 静的caller 0を再確認した旧`CompanyManager`と`useSiteOrderManager`を削除し、Company rootのclient create/update/deleteを全面拒否した。同社Userのreadと4つの専用Callableは維持する。全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5が成功した。Codex in-app UI smokeは起動templateのNuxt `ECONNRESET`で停止したが、利用者承認の会社管理者Chromeで会社設定・稼働予定管理・配置管理、3 editor、2表示順dialog、未変更時の保存無効、キャンセル、console error 0件をCodexが確認し、local受入れを完了した。データ保存は行っていない。
+
+> 2026-08-31 SuperUser兼会社管理者対応: Devで会社管理者accountに`isSuperUser=true`も設定され、表示順入口がclientで止まっていた。表示順だけについて、同社の有効な本登録会社管理者ならSuperUser兼任でも許可し、会社管理者でないSuperUser、他社、不正identityはclientとCallableの両方で拒否するよう揃えた。生claimのboolean妥当性をclient sessionで別管理し、欠損・型不正時は入口を出さない。対象16件、全domain 727件、隔離Emulator 107件、security review GOを確認した。Rules、Company data、remote claim、他のCompany設定権限は変更していない。
+>
+> 2026-08-31 CPU-06 Dev release acceptance: `DEV-COMPANY-PARTIAL-UPDATE-RELEASE-001`でDev PITR 7日を確認し、Company専用Callable 4件、固定commitの静的生成物、Firestore Rulesをmaintenance・migrationなしで選択deployした。4件は東京・Node.js 22・ACTIVEでbrowser CORSに成功し、Hosting artifact一致、Rules compile/releaseも成功した。Hosting cache headerの適用順を`firebase.json`だけで補正し、index・Service Workerのno-cacheとversion assetのimmutableを実応答で確認した。利用者は会社管理者で通常設定を15分→20分→15分へ保存し、Codexは新規一般Userの新しいChrome tabで管理者入口非表示、直接URL拒否、app error 0件を確認した。Company部分更新roadmapは100%で完了した。
+
 ## 2026-08-27 横断再調査
 
 - Company documentは会社プロフィールだけでなく、請求元・口座、丸め・勤怠方式、取極め、Site/Schedule表示順、maintenance、Stripe/subscription、tenant初期化を共有する。確認済みの現在影響は本実装調査、改修順と進捗は[Company設定改修ロードマップ](../roadmaps/company-settings.md)を参照する。
@@ -185,28 +236,5 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - この再調査により、local pre-containment Rules候補はdeploy可能状態ではないと訂正した。その後、全既存callerをoperation別Client/Server writerへ移し、CPU-05で旧whole-document writer 0件の静的検査とCompany root client CUD全面拒否のlocal回帰を完了した。remote Rules deployは別承認である。
 - 先行writerは同じ4 Callableのmarker-aware contractとする。LEGACYは編集開始時のscope別expected value一致時だけlegacy rootをpartial updateし、reserved field・root whole-set・新path writeを0件とする。STAGEDはmaintenance中だけ存在して通常設定write/signupを拒否し、ACTIVEはSettings revisionと必要なauditを同一transactionで扱う。dual-writeは行わない。
 
-## 将来要対応
 
-- FUT-0090〜FUT-0094を`future-actions.md`へ登録した。CCBの確定契約はFUT本文より現行仕様とADR 0025を優先する。
-
-## 要確認事項
-
-- CONF-0074〜CONF-0078は2026-08-28に回答済みである。maintenanceのCONF-0079〜0082も回答済み、StripeのCONF-0083〜0087は正式release直前まで明示保留とした。
-
-## 未確認範囲
-
-### SPEC-DEEP-020 addendum
-
-- CompanyManager only type-checks `doc` as object, delegates update to `item.update(item)`, and relies on AirItemManager for loading/error/dirty/double-submit behavior. The three icon edit activators add no role/loading/disabled guard.
-- Active Activators expose distinct included-key lists; hidden Company integration fields are not editor keys but remain in the same broadly writable document. The three legacy `Company/Table/*Info.vue` files have no static caller.
-- SettingInfo's weekday display directly dereferences an indexed constant and has no unknown fallback, unlike the active Setting activator. Full component-level evidence is in [Company components deep review](company-components-deep-review.md).
-
-### SPEC-DEEP-039a addendum
-
-- company pluginはCompany変更ごとにVuetifyのprocess-global defaultsとschema `RoundSetting` global modeを直接更新する。`minuteInterval`が0/null/falsyなら全minuteを許し、負数・小数・NaNのfail-closed validationはない。これはpicker候補制御であって保存値・計算丸めの強制ではない。
-- user pluginもAuth UserのtagSizeからVuetify global defaultsを更新する。logout/account切替時にdefaultへ明示resetするbranchはなく、次Userがtruthyな既知値を持たない場合は以前のsizeが残り得る。
-- `useConstants`はCompany colorDefinitionsをlive computedへ反映するが、空文字colorは`||`でdefaultへ戻す。`DEFAULT_DEFINITIONS`とWEEK_COLORSを参照のまま公開し、callerによるprocess内mutationを防がない。enum allowlistやpersisted value validationは別途必要である。
-
-- 実Company/Stripe/subscriptionデータ、外部geocoding、Rules/Emulator、同時更新の再現。
-- Subscription/Stripe/Billing/税計算、PDF layout、maintenance middlewareの内部。
-- Company停止・解約・法的保持・tenant移転の現行運用、provider repairのexact手順。
+</details>

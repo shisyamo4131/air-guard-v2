@@ -5,6 +5,73 @@
 - 対象: `docs/implementation/*.md` と `future-actions.md` に残る、実装検証だけでは確定できないユーザー判断
 - 運用: 同一判断は既存CONFへ証拠・関連FUTを追記する。回答後はStatusをAnsweredへ変更し、Answerへ日付と回答を記録する。実装だけで確認できる未検証事項は登録しない。
 
+本文のStatus・Answerを判断記録の正本とし、確認済み要件は[現行仕様](../specification.md)へ照合する。下の再照合記録・集計は記載時点の履歴として保持する。
+
+## 状態別の参照
+
+各項目の本文に記録された状態から辿る索引。実装・remoteの現在状態を再検証した結果ではない。本文の状態を変更するときは、この索引の所属も同時に更新し、件数や回答本文を複写しない。
+
+質問を提示する前に本文のAnswerと[dependency map](confirmation-dependency-map.md)のcanonical・保留・統合関係を照合する。StatusとDispositionは別分類であり、Openを一律に再質問しない。mapに未掲載のIDについて関係を推測しない。
+
+### Open
+
+[CONF-0001](#conf-0001-pagesettings-fail-closed時の未設定route処理) · [CONF-0019](#conf-0019-請求稼働の正式な閲覧調整lock権限) · [CONF-0021](#conf-0021-請求手動調整値の負数0上限精度) · [CONF-0033](#conf-0033-billing-status確定後の再集計削除規則) · [CONF-0035](#conf-0035-billingの支払記録部分入金paid判定) · [CONF-0054](#conf-0054-agreement-snapshot再適用手動override)
+
+[CONF-0055](#conf-0055-agreementv2独立collectionと旧agreementの存廃) · [CONF-0056](#conf-0056-siteoperationscheduleの正式操作権限) · [CONF-0057](#conf-0057-schedule同時編集と表示順の競合ux) · [CONF-0058](#conf-0058-operationresult作成後scheduleのlock修復主体) · [CONF-0059](#conf-0059-schedule通知失敗時の利用者向け再試行契約) · [CONF-0060](#conf-0060-schedule複製過去変更不足許容規則)
+
+[CONF-0067](#conf-0067-事前登録招待account-setupの正式workflow) · [CONF-0083](#conf-0083-stripe機能の有効環境公開条件) · [CONF-0085](#conf-0085-companystripe-customersubscriptionの一意性と再契約) · [CONF-0086](#conf-0086-subscription-statustrialgraceemployeelimit仕様) · [CONF-0087](#conf-0087-checkout成功条件表示情報保存期間) · [CONF-0088](#conf-0088-警備報告を写真共有または構造化提出書類のどちらとするか)
+
+[CONF-0089](#conf-0089-警備日報の閲覧追加削除提出actor) · [CONF-0090](#conf-0090-警備日報の保持削除親稼働削除時の扱い) · [CONF-0091](#conf-0091-警備日報画像の形式上限件数品質) · [CONF-0092](#conf-0092-警備報告の作成者署名改訂監査) · [CONF-0093](#conf-0093-operationを抽象概念のまま維持するか独立entity化するか) · [CONF-0094](#conf-0094-master取得cacheのfreshnessと共有範囲)
+
+[CONF-0095](#conf-0095-汎用取得失敗を画面とcallerへどう通知するか) · [CONF-0096](#conf-0096-共通uiのaccessibility対応基準) · [CONF-0097](#conf-0097-autocompleteでの新規master作成とerrorempty表示) · [CONF-0098](#conf-0098-shellの戻る操作を履歴または設定済み親のどちらとするか) · [CONF-0099](#conf-0099-user-menulogoutglobal-shell-feedbackの正式範囲) · [CONF-0100](#conf-0100-article-masterの管理actor重複archive運用)
+
+[CONF-0101](#conf-0101-articleの単価数量単位税契約) · [CONF-0102](#conf-0102-article情報の請求snapshot時点とmaster変更影響) · [CONF-0103](#conf-0103-配置で要求判定する資格の粒度とmanual-override) · [CONF-0104](#conf-0104-certification-identity期限更新履歴) · [CONF-0106](#conf-0106-airguardで管理する警備教育ojt履歴の範囲) · [CONF-0107](#conf-0107-ojtの人数勤怠給与請求外注費の扱い)
+
+[CONF-0108](#conf-0108-ojt指定override実績訂正のactorと監査) · [CONF-0109](#conf-0109-手動勤怠訂正振替休日代休休暇のworkflowと保存先) · [CONF-0110](#conf-0110-勤怠閲覧画面のresponsive詳細表示要件) · [CONF-0112](#conf-0112-複数required-permissionadmin-overridedenyの判定意味) · [CONF-0113](#conf-0113-roleclaim変更の反映時期とcompany切替方針) · [CONF-0114](#conf-0114-利用者feedbackerror伝播route-resetの標準)
+
+[CONF-0115](#conf-0115-production-log監視privacy保持基準) · [CONF-0116](#conf-0116-global-loadingのblockingpriority取消し契約) · [CONF-0118](#conf-0118-郵便番号検索provider正規化候補選択契約) · [CONF-0119](#conf-0119-fulladdressの粒度と建物郵便番号正規化住所の扱い) · [CONF-0124](#conf-0124-正式backup-scope復旧時点rporto) · [CONF-0125](#conf-0125-差分選択完全復旧の正式semanticsとtrigger方針)
+
+[CONF-0126](#conf-0126-backup-artifact仮credentialの保存と破棄) · [CONF-0127](#conf-0127-prod復旧の実行権限承認auditdrill) · [CONF-0128](#conf-0128-cloud-functionsの正式deployment-surface管理) · [CONF-0129](#conf-0129-匿名管理callableのactortenantapp-check方針) · [CONF-0130](#conf-0130-function別runtimeretryslo再実行運用) · [CONF-0131](#conf-0131-operationresult汎用csvのconsumersource列監査契約)
+
+[CONF-0132](#conf-0132-dashboardの対象actorwidgetcalendar稼働数定義) · [CONF-0133](#conf-0133-配置表pdfの利用者必須field配布保存監査契約) · [CONF-0134](#conf-0134-roundsettingの正式な適用単位時点履歴契約) · [CONF-0136](#conf-0136-test-development-routeのproduction運用方針) · [CONF-0137](#conf-0137-enumのunknowndeprecated旧data互換方針) · [CONF-0138](#conf-0138-共通日付範囲のtimezone包含境界最大期間更新ux)
+
+### Partially answered
+
+[CONF-0061](#conf-0061-employee個人情報の閲覧編集保持権限) · [CONF-0063](#conf-0063-将来退職復職再雇用の状態model) · [CONF-0064](#conf-0064-employee退職archive匿名化restore-policy) · [CONF-0069](#conf-0069-未認証事前登録確認の列挙abuse防御) · [CONF-0072](#conf-0072-外注先の契約終了archive過去参照policy) · [CONF-0084](#conf-0084-subscription購入管理actorとplan選択)
+
+[CONF-0105](#conf-0105-従業員資格警備員登録機微情報の閲覧編集actor) · [CONF-0111](#conf-0111-正式なrolepermission-matrixとspecial-roleの意味) · [CONF-0117](#conf-0117-geocoding失敗時の保存可否とlocation必須用途) · [CONF-0120](#conf-0120-employee個人住所geocodingの目的同意保持) · [CONF-0121](#conf-0121-active同id存在時のrestore-conflict-policy) · [CONF-0122](#conf-0122-archiverestore時のfunctions-triggerと副作用契約)
+
+[CONF-0123](#conf-0123-共通archive-metadata保持匿名化purge運用) · [CONF-0139](#conf-0139-ccb-schemasadmin-sdkのcross-repository-release境界)
+
+### Answered
+
+[CONF-0002](#conf-0002-認証初期化のready条件とfcm失敗時ux) · [CONF-0003](#conf-0003-user切替と認証cleanup失敗時の扱い) · [CONF-0004](#conf-0004-通知click-destinationと既存tab再利用) · [CONF-0005](#conf-0005-foreground通知の二重表示ux) · [CONF-0006](#conf-0006-fcm-tokenの所有移管sign-outcleanup責務) · [CONF-0007](#conf-0007-fcm-token診断logの許容範囲)
+
+[CONF-0008](#conf-0008-notification配送のretry重複結果count契約) · [CONF-0009](#conf-0009-remote-dev通知test-endpointの存廃) · [CONF-0010](#conf-0010-service-worker更新時の利用者体験) · [CONF-0011](#conf-0011-auth-user削除時token-cleanupの回収方式) · [CONF-0012](#conf-0012-arrangementnotificationのactorfieldpayload認可) · [CONF-0013](#conf-0013-notificationrecipients履歴の閲覧手動作成保持)
+
+[CONF-0014](#conf-0014-registered-user-id不変条件と管理者変更範囲) · [CONF-0015](#conf-0015-arrangementnotification逆遷移時のtimestamp再通知) · [CONF-0016](#conf-0016-actual勤務日時と既定休憩の規則) · [CONF-0017](#conf-0017-arrangementnotification直接削除の業務規則) · [CONF-0018](#conf-0018-operationresult後続trigger失敗の監視再処理主体) · [CONF-0020](#conf-0020-請求稼働の手動新規作成要否)
+
+[CONF-0022](#conf-0022-dailyattendance逆引き修正時の既存stale-data回復) · [CONF-0023](#conf-0023-employeeoutsourcer-id-namespace) · [CONF-0024](#conf-0024-dailyattendance-aggregate-startendの将来用途) · [CONF-0025](#conf-0025-日次集約へfull-operationresult-snapshotを保持する価値) · [CONF-0026](#conf-0026-dailyattendanceの将来clientアクセス境界) · [CONF-0027](#conf-0027-freee勤怠管理plus-csvの対象formatと正式運用条件)
+
+[CONF-0028](#conf-0028-dailyoperationsbyemployeeの閲覧修復権限) · [CONF-0029](#conf-0029-siteemployeehistoriesの閲覧修復保持) · [CONF-0030](#conf-0030-arrangementnotification-uiの遷移失敗再試行ux) · [CONF-0031](#conf-0031-上下番確定時のleaved確定rollback境界) · [CONF-0032](#conf-0032-siteemployeehistory同日複数実績の代表id) · [CONF-0034](#conf-0034-billing-adjustmentの使用課税契約)
+
+[CONF-0036](#conf-0036-billing入金予定日の手動変更監査) · [CONF-0037](#conf-0037-operationbilling-lockの対象範囲) · [CONF-0038](#conf-0038-請求書pdfの必須項目番号status別発行) · [CONF-0039](#conf-0039-請求書pdfの統合税負数adjustment表示) · [CONF-0040](#conf-0040-請求書pdfのfilename欠損master方針) · [CONF-0041](#conf-0041-customer-crudの正式権限)
+
+[CONF-0042](#conf-0042-customerの重複検索無効候補) · [CONF-0043](#conf-0043-customerのarchive参照restore-policy) · [CONF-0044](#conf-0044-customer情報の請求snapshot時点) · [CONF-0045](#conf-0045-customerのterminatedとarchiveの使い分け) · [CONF-0046](#conf-0046-site-crud取極め終了の正式権限) · [CONF-0047](#conf-0047-siteのcustomer所属変更と仮登録解消)
+
+[CONF-0048](#conf-0048-site終了後の操作と再有効化) · [CONF-0049](#conf-0049-site終了archiverestoreの使い分け) · [CONF-0050](#conf-0050-site情報の下流snapshot時点) · [CONF-0051](#conf-0051-agreementの正式編集承認権限) · [CONF-0052](#conf-0052-agreement数値fieldの許容範囲) · [CONF-0053](#conf-0053-適用済みagreementの訂正削除履歴)
+
+[CONF-0062](#conf-0062-employeeとuserauthの一意性削除主体) · [CONF-0065](#conf-0065-employee-code表示名退職者候補の規則) · [CONF-0066](#conf-0066-userauth管理の正式権限と本人操作範囲) · [CONF-0068](#conf-0068-無効化削除退職管理者移譲のaccount保持方針) · [CONF-0070](#conf-0070-outsourcerマスターの正式操作権限) · [CONF-0071](#conf-0071-外注警備員を個人単位で管理するか)
+
+[CONF-0073](#conf-0073-outsourcer-code検索終了済み候補の規則) · [CONF-0074](#conf-0074-company設定の正式権限とserver-owned-field) · [CONF-0075](#conf-0075-company停止削除tenant修復policy) · [CONF-0076](#conf-0076-company基本口座請求設定の必須validation) · [CONF-0077](#conf-0077-確定帳票でのcompany情報snapshotと再発行) · [CONF-0078](#conf-0078-company設定変更の監査同時編集方針)
+
+[CONF-0079](#conf-0079-maintenance中に停止するserver処理の範囲) · [CONF-0080](#conf-0080-maintenance中の例外actorroute復旧操作) · [CONF-0081](#conf-0081-systemcompany状態不明時のfail-openclosedと復旧ux) · [CONF-0082](#conf-0082-maintenance-metadata期間利用者表示) · [CONF-0135](#conf-0135-site自動終了の条件関連予定再有効化監査契約) · [CONF-0140](#conf-0140-ccb-staging-actormaintenance-mapping)
+
+[CONF-0141](#conf-0141-ccb-privatesettings-backup境界) · [CONF-0142](#conf-0142-ccb-settingaudits-restore境界) · [CONF-0143](#conf-0143-ccb-tenant物理削除境界) · [CONF-0144](#conf-0144-ccb-dev-4-tenantの用途分類read-scope) · [CONF-0145](#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint) · [CONF-0146](#conf-0146-再試験の合成認証準備を親タスクで担当する例外)
+
+<details>
+<summary>過去の再照合・集計記録</summary>
+
 ## reconciliation metadata
 
 SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本文を変更せず再照合した。2026-08-28のCCB質疑ではCONF-0074〜0082のStatus/AnswerとCONF-0083〜0087の保留Answerだけを更新した。`Disposition`、canonical question、dependency、superseded関係は[confirmation dependency map](confirmation-dependency-map.md)を正規の再照合索引とする。
@@ -29,9 +96,11 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 6. 非同期処理の部分失敗、重複、順序逆転をどう検知し再実行するか。
 7. 編集中競合、error/loading、日付時刻入力、accessibilityの共通UXをどうするか。
 
-対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
+対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。この節の件数は各記録時点の履歴であり、現在の本文Status集計ではない。
 
 2026-09-05のSite CONF-0050回答後、全146件の本文`Status`はOpen 74件、Answered 67件、Partially answered 5件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常archive／restoreを提供しないlive保持、CONF-0073はcode・検索・pagination・表示契約として回答済みである。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+
+</details>
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 

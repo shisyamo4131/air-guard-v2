@@ -1,27 +1,23 @@
 # Implementation coverage mechanical / review-depth audit
 
-> Current review-depth (2026-08-12): SPEC-DEEP-045a/045b and schema checkpoints 046〜054 completed — A 519, B 0, C 0, D 11, E 1, Unknown 0; remaining B/C 0 files in 0 execution checkpoints. This line supersedes earlier progress counters in this historical audit text.
 
-- 状態: 機械監査
+- 状態: Historical — 2026-08-12時点の機械監査・depth訂正記録
 - 対象チェックポイント: SPEC-AUDIT-001
 - 最終確認日: 2026-08-12
 - 対象: app `pages/`、`components/`、`composables/`、`stores/`、`plugins/`、`middleware/`、`utils/`、`services/`、`functions/`、schemas `src/`
 - 根拠: `rg --files`、import/export/route symbol、既存`docs/implementation/*.md`のfile/symbol mentionとcoverage scope
 - 制約: code本文の新規深読、runtime、外部環境、実dataは行っていない。
 
+現行repositoryの品質・精査完了を判定する文書ではない。以下の監査方法・母数・未被覆判定は当時の固定対象に限定し、後続変更を調査済みとは扱わない。現在の調査は[文書案内](../README.md)から対象を選ぶ。
+
 ## 重要なcoverage訂正（SPEC-DEEP-AUDIT-001）
 
 従来のCoveredはfile/domain対応を示すmechanical coverageであり、全公開API・主要分岐・error・side effect・callerを本文レベルで精査した意味ではない。利用者の「すべて確認」はreview-depthを要求するため、531 filesを次へ再分類した。割当根拠と排他的segmentは[deep review plan](deep-review-plan.md)を参照する。
 
-| depth | 件数 | 意味 |
-| --- | ---: | --- |
-| A Deep-reviewed | 519 | 本文、responsibility/public API、主要分岐、error/side effect、callerまで精査した証拠が明確。 |
-| B Flow-reviewed | 0 | 残件なし。 |
-| C Mapped-only | 0 | 残件なし。 |
-| D Generated/config/test/asset | 11 | test route、font asset、migration、Functions package metadata。 |
-| E External boundary | 1 | package re-export境界。 |
-| Unknown | 0 | なし。 |
-| **合計** | **531** | 重複0、欠落0。 |
+固定inventoryの最終分類・件数は[精査計画](deep-review-plan.md#現在の分類)を正とし、本書へ再掲しない。以下の件数推移は各精査checkpoint時点の履歴である。
+
+<details>
+<summary>各checkpointでのdepth訂正・昇格の経緯</summary>
 
 Aは初期6 filesにSPEC-DEEP-001〜003のFunctions 36 files、SPEC-DEEP-004のpage 12 files、SPEC-DEEP-005のstore/middleware 8 files、SPEC-DEEP-006のplugin 11 files、SPEC-DEEP-007のnotification Functions 5 files、SPEC-DEEP-008のSecurityReport Functions 6 files、SPEC-DEEP-009のgeocoding/Stripe/error Functions 4 files、SPEC-DEEP-010のArticle/Customer/Site pages 6 files、SPEC-DEEP-011のEmployee/Outsourcer/Attendance pages 6 files、SPEC-DEEP-012のOperation/Schedule/Billing pages 9 files、SPEC-DEEP-013のAgreement components 10 files、SPEC-DEEP-014のArrangementNotification components 10 files、SPEC-DEEP-015のArrangements components 10 files、SPEC-DEEP-016のArticle components 7 files、SPEC-DEEP-017のatoms buttons/chips 7 files、SPEC-DEEP-018のatoms core controls 9 files、SPEC-DEEP-019のenum/chart/Tag components 13 files、SPEC-DEEP-020のCompany/root components 8 files、SPEC-DEEP-021のCustomer components 10 files、SPEC-DEEP-022のBilling/OperationResult components 8 filesを加えた201 filesである。既存domain文書に記載があること、Flowで一部を読んだこと、mechanical CoveredであることだけではAへ昇格しない。
 
@@ -56,6 +52,8 @@ SPEC-DEEP-043でEmployee/Outsourcer/OperationResult/Schedule/SecurityReport/orde
 SPEC-DEEP-044でmaster fetch/cache、overlay、SecurityReport Storageのshared lifecycle 11 filesを追加でAへ昇格し、A 506、B 6、残B/C 13 filesとなった。
 
 SPEC-DEEP-045a/045bでPDF、CSV、attendance、authorization、page settings、Storage、subscription、format、operation serviceの13 filesを追加でAへ昇格し、A 519、B/C 0、残execution checkpoints 0となった。これにより531 filesはA/D/Eのいずれかへ排他的に分類され、B/C/Unknownは0となった。
+
+</details>
 
 ## 方法と分類基準
 

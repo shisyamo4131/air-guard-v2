@@ -2,11 +2,25 @@
 
 ## メタデータ
 
-- 状態: 実装調査
+- 状態: Historical — 2026-08-21のCallable・認可調査
 - 対象セグメント: SPEC-SEG-049
 - 最終確認日: 2026-08-21
 - 根拠ファイル: `functions/index.js`、`functions/apis/*.js`、`functions/triggers/auth.js`、`functions/modules/auth/*.js`、`test/domain/*user*.test.mjs`、`test/domain/*company-admin*.test.mjs`、`test/domain/transfer-company-admin.test.mjs`、`test/local/codex-local-harness.test.mjs`、`composables/auth/useAuthFunctions.js`、`composables/useCreateAdminUser.js`、`composables/useCreateNormalUser.js`、`pages/auth/sign-up*.vue`、`pages/settings/users.vue`、`components/Users/Manager/index.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`utils/pageSettings.js`、`firestore.rules`
 - 調査境界: entryから`functions/apis/index.js`経由でexportされるCallable 12件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認した。UWB-04はdomain単体test、SFC compile、専用Emulator、単独／Employee連携の正規UI作成・削除を確認した。Dev・remote・実dataは未確認である。
+
+## 現行境界への参照
+
+| 確認する内容 | 正本・後続記録 |
+|---|---|
+| User通常更新・role・本人設定・lifecycle・直接write制限 | [UWB実装ゲート](user-write-boundary.md#実装ゲート)と[Dev受入れ](user-write-boundary.md#dev環境受入れ) |
+| UWB完了後の対象外・未解決事項 | [UWB完了後も残る境界](user-write-boundary.md#uwb完了後も残る境界) |
+| Company専用保存・client CUD拒否と後続要件 | [Company実装記録](company-settings.md)・[Company部分更新ロードマップ](../roadmaps/company-partial-updates.md) |
+| 現行の確認済み要件 | [仕様](../specification.md) |
+
+以下の「通常updateはclient write」「Users/Companiesの広域write許可」「UWB-08まで迂回可能」は当時の観測であり、後続UWB・Company改修後の境界を表さない。古いCallable件数・actor・未確認事項も同様に時点を限定する。後続記録の成功はその受入れ範囲だけの証拠であり、全Callable・全環境の安全性やApp Check等の残件解消を意味しない。
+
+<details>
+<summary>SPEC-SEG-049のCallable・認可・失敗経路調査履歴</summary>
 
 ## Callable別認証・対象解決
 
@@ -98,3 +112,5 @@
 - 非管理者の合成test Userを対象に`disableUser`を実行し、画面上の操作が「無効化」から「有効化」へ変わることを確認した。続けて`enableUser`を実行し、「無効化」へ戻ることを確認した。
 - dashboardへ戻った後も認証状態を維持し、Chrome console errorは0件だった。既存の子menu role警告と、通常画面遷移に伴うFCM token登録logは残った。
 - 利用者のEmulatorはexport-on-exitなしで起動されており、この確認では停止・exportを行っていない。4 Callable以外のtransport、Auth削除event、Dev・remote・deploy・実dataは確認していない。
+
+</details>

@@ -2,17 +2,19 @@
 
 ## 共通仕様との対応（2026-09-06）
 
+表は後続のEMP実装記録を反映して2026-09-12に整理した。環境状態は記録時点の証拠を参照し、live remoteを再確認したものではない。
+
 確認済み原則は[現行仕様の共通節](../specification.md#ドキュメントのアーカイブと物理削除)を唯一の正本とする。以下の設計案・実装事実と、製品への適用済み状態を分ける。共通仕様をまとめても既存masterを一括移行しない。
 
-| 対象 | 現在の実装・提供 | 共通仕様への残対応 |
+| 対象 | 実装記録 | 提供条件・残対応 |
 |---|---|---|
 | Customer | 専用archive Callable、同transactionの従属検査、version付き原本・監査、参照writer guard、archive client read/CUD拒否 | 自動purge・通常restoreは提供しない。保持・運営者操作は固有仕様に従う |
 | Site | `functions/modules/sites/archiveSite.js`と`siteArchiveDocumentContract.js`。専用操作で同ID移動・監査・再送照合。参照5種類とwriter guard。archive readは同社の有効な本登録User、client CUD拒否 | 物理削除・通常restoreは未提供。Siteのfield・read・依存catalogを他masterへそのまま適用しない |
-| Employee | 専用archiveは未実装。旧generic modelの移動機能と削除triggerが残る | [EMP-01設計](employee-master.md#employeeのarchive設計)に沿いactor・依存・writer・trigger・snapshot・readを保護する |
+| Employee | [EMP-05実装記録](employee-master.md#emp-05での実装差分)に専用archive、従属参照保護、旧削除triggerの無作用化を記録済み | [EMP-09受入れ](../roadmaps/employee.md#emp-09-dev受入れ完了2026-09-07)では通常APIのtenant allowlistを空のまま維持し、archiveは未実行。実装とtenant開放を区別する。通常restore・purgeは未提供で、開放・data対応は別承認 |
 | Outsourcer | 通常製品でarchive・restore・物理削除を提供しない | 固有の非提供条件を維持する |
 | Article / generic adapter | 下記の旧共通基盤調査を参照 | metadata、参照検査、上書き、迂回、restoreの問題が未解決。新しい共通仕様の適用済み実装ではない |
 
-Customer/Siteの最新実装は各master文書とADR 0046/0051を参照する。以降のgeneric基盤の「metadataなし」「広域write」「UIからmodel.delete」等をCustomer/Siteの現在の専用経路へ当てはめない。共通処理の存在と、安全な製品入口の提供を区別する。
+Customer/Site/Employeeの実装・適用状態は各master文書とロードマップを参照する。以降のgeneric基盤の「metadataなし」「広域write」「UIからmodel.delete」等をCustomer/Site/Employeeの専用経路へ当てはめない。共通処理の存在と、安全な製品入口の提供を区別する。
 
 ## 物理削除の設計案
 
@@ -30,6 +32,11 @@ Customer/Siteの最新実装は各master文書とADR 0046/0051を参照する。
 subcollectionや別保存先を持つ対象は、原本文書のdeleteだけでそれらまで消える前提を置かない。対象ごとのcatalogに残存があれば拒否または別の承認済み処理へ分ける。backupから復旧する際も使用済みIDとの矛盾を点検し、旧documentを無条件に再投入しない。
 
 ## 旧generic基盤の調査（専用経路とは別）
+
+<details>
+<summary>SPEC-SEG-042の旧基盤調査・課題・未確認範囲</summary>
+
+以下は調査時点の観測である。専用操作の提供状態は上表、課題・回答の状態は[将来対応](future-actions.md)・[確認事項](pending-confirmations.md)を正とする。
 
 ## メタデータ
 
@@ -154,3 +161,5 @@ Company、User、OperationResult、Billing、DailyAttendance等は`logicalDelete
 - 実Firestore/Emulator、実archive件数、既存active/archive同ID、orphan subcollection、runtime transaction retry。
 - air-vuetify manager内部の全dialog、全schemaのhasMany、全Functions trigger、全Admin SDK backup/restore本文。
 - 法令上の保持期間、正式restore担当、事故対応・監査・匿名化運用。
+
+</details>

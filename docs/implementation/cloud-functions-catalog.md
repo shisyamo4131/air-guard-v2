@@ -1,12 +1,19 @@
 # Cloud Functions 稼働カタログ（実装調査）
 
-- 状態: 実装調査
+- 状態: Historical — 2026-08-20のentry調査と後続撤去記録への案内
 - 対象セグメント: SPEC-SEG-044
 - 最終確認日: 2026-08-20
 - 根拠ファイル: `functions/index.js`、`functions/package.json`、`functions/modules/firebase.init.js`、`functions/apis/*.js`、entryから直接re-exportされるmodules/triggers/apisの宣言部
 - 調査方法: entryのstar exportを起点にexport名を列挙し、各宣言のtrigger/optionsと入口認証の狭い範囲だけを確認した。業務処理本文は既存実装文書を参照し、再調査していない。
 
-> 2026-09-12 FGA-04追記: `createEmployee`、`updateEmployeeBasic`、`updateEmployeeNationality`、`updateEmployeeSecurity`、`updateEmployeeCertifications`、`transitionEmployeeInsurance`は、通常Employee保存をmodel直接保存へ戻したためLocal sourceの公開entryから撤去した。以下の件数と一覧は2026-08-20時点の調査記録であり、現在のdeployment surfaceの確定には使用しない。Dev上の既存Function削除は未実施である。
+> 2026-09-12 FGA-04追記: `createEmployee`、`updateEmployeeBasic`、`updateEmployeeNationality`、`updateEmployeeSecurity`、`updateEmployeeCertifications`、`transitionEmployeeInsurance`は、通常Employee保存をmodel直接保存へ戻したためLocal sourceの公開entryから撤去した。以下の件数と一覧は2026-08-20時点の調査記録であり、現在のdeployment surfaceの確定には使用しない。Dev上の旧6 Function削除は[FGA-04反映記録](../verification/fga-04-employee-manager-lww-dev.md#削除後の確認)で完了を確認済み。本書の整理でlive remoteを再取得したものではない。
+
+## 現行対象の確認先
+
+現在の反映範囲・完了状態は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)と対象機能の検証記録へ照合する。新しいreleaseでは[Dev runbook](../runbooks/dev-deployment.md)に従いactual sourceと対象環境を確認し、当時のexport一覧・件数・optionsを現在の稼働一覧として使わない。
+
+<details>
+<summary>SPEC-SEG-044のentry・export・trigger調査履歴</summary>
 
 ## entry / export構造
 
@@ -151,3 +158,5 @@ scheduled handlerはerrorを吸収する。onUpdateCustomerも内部同期error�
 ## 未確認範囲
 
 Firebase CLI、deploy、emulator、外部API、secret/env、実dataを使用していない。実deploy済みfunction一覧、Google Cloud側runtime overrides、IAM/invoker/App Check enforcement、retry policy、logs/metrics、traffic、cold start、quotaは未確認である。各handlerの業務algorithm、全error path、下流trigger完了順は既存個別文書の範囲を超えて再読していない。
+
+</details>

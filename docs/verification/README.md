@@ -6,6 +6,7 @@
 
 | 目的 | 証拠 |
 |---|---|
+| Project固有文書の正本・手順整理 | [文書正本整理の検証記録](document-spec-authority.md) |
 | 検証方針変更の比較本文 | [Governance verification benchmark](governance-verification-benchmark.md) |
 | 変更前の機械可読実測 | [Pre-migration benchmark JSON](governance-verification-benchmark-pre.json) |
 | 変更後の機械可読実測 | [Post-migration benchmark JSON](governance-verification-benchmark-post.json) |

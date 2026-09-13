@@ -83,7 +83,7 @@
 | Checkpoint | 状態 | 範囲・完了条件 |
 |---|---|---|
 | FGA-06-SCHEDULE-NORMAL-AUTH-01 | Completed | 現場稼働予定のC/U/Dだけをtenant共通のserver権限へ揃え、通知作成・実績化・稼働実績・請求のactor条件と、複数documentを整えるCallableを維持した。自動検証、固定commitのFunctions Dev反映、同一tenantの管理者sessionによる作成・更新・複製・削除のDev受入れを完了した。role非依存の認可はLocal自動検証を根拠とする |
-| FGA-06-RESULT-EDIT-NORMAL-AUTH-02 | Local implementation complete / Dev not accepted | 未確定かつlockされていない現場稼働実績の基本情報と従業員・外注先明細の編集だけをtenant共通のserver権限へ揃えた。`saveOperation` Callable、最新状態との照合、lock拒否、関連document更新を維持した。実績の作成・複製・削除、予定からの確定、配置通知、稼働外売上、請求操作、UI、Rules、schema、data migration、Dev・Prodは変更していない。自動検証と独立security reviewは完了し、固定commitのDev反映・受入れは未実施である |
+| FGA-06-RESULT-EDIT-NORMAL-AUTH-02 | Completed | 通常実績編集のtenant共通認可、維持するCallable・lock・関連更新と対象外は[実装記録](../implementation/operation-result-edit-authorization.md)を参照。自動検証・独立reviewは[Local記録](../verification/fga-06-result-edit-normal-auth-local.md)、固定commitのDev反映と基本情報編集の受入れ、別actor・明細編集・拒否経路のLocal証拠による扱いは[Dev記録](../verification/fga-06-result-edit-normal-auth-dev.md)を正とする。FGA-06全体の加点は行わない |
 
 ## 完了条件
 

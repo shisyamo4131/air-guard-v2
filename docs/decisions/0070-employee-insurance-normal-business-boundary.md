@@ -37,6 +37,12 @@ Employeeの保険情報は現在Employee本体documentにあり、保険番号�
 
 最初に通常Employeeのreader、Manager、writer、Rulesからrole別のserver制限を外す。通常の可逆編集はdocument単位last-write-winsへ揃える。保険操作は状態遷移の入力・保存・再送経路を確認し、必要な状態保護だけを残す。退職、誤退職訂正、archive、User/Authは専用操作のまま変更しない。既存保険documentの分割や一括変換は行わない。
 
+## FGA-04実装checkpointでの具体化
+
+分類後に実施したFGA-04の保存方式は、[実装記録](../implementation/employee-insurance.md#fga-04後の保存と検証境界)と[現行仕様](../specification.md#employeeの操作権限と保持)を参照する。通常保険保存はEmployee document単位のlast-write-winsへ統合し、専用Callableによるserver最新値との競合拒否を撤去した。保険の遷移・入力条件、世代値の保持とclient計算時の増加は残る。
+
+上の状態遷移保護と下の二重適用防止の確認は、遷移計算に用いた状態の検証・当該UIの処理中再入抑止と、複数端末間の整合性を区別して扱う。実装checkpointの通常保存は、世代値による複数端末間の原子的な競合拒否・単調増加を保証しない。server最新値の条件を再導入する場合は、既存方式の単なる文書復元とはせず、保存方式・互換性・検証を別途定める。この文書整理は順序違反・二重適用を許容する新しい承認ではなく、複数端末でその保護を満たすことは未検証として残す。退職・archive・User/Auth等の例外は変更しない。
+
 ## rollback
 
 この分類の文書変更は対象commitのGit revertで戻せる。後続実装はFGA-04 checkpoint単位で戻し、既存dataを別documentへ移動していない状態を維持する。すでに許可した通常actorの操作結果を、code rollbackだけで取り消せるとは扱わない。

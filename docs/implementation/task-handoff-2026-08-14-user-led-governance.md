@@ -1,5 +1,12 @@
 # 2026-08-14 利用者主導開発ガバナンス交代引継ぎ
 
+- 状態: Historical（各checkpoint時点の引継ぎ・実行記録）
+- 読み方: 以下のtask ID、callback、branch、baseline、進捗、承認、未確認事項は各記録時点の履歴であり、現在の指示・権限・再開条件・rollbackとして使用しない。後続追記を含むため、全本文を2026-08-14一時点の状態とは扱わない。
+- 現在の手順: [通常startup・task交代](../runbooks/project-coordination.md)、[project rules](../../governance/project-rules.md)。
+- 現在の製品作業: [製品再開案内](current-coordinator-handoff.md)、[roadmap](../roadmaps/README.md)。現行仕様は[specification](../specification.md)を参照する。
+
+## 当時の引継ぎ情報
+
 - 状態: local repository直結の新coordinator有効化済み・旧coordinator archive可能
 - new coordinator task: `01a003d9-8782-79b2-9419-682e582bb1ac` host `local`（PM（AirGuardV2）-03）
 - old coordinator task: `019ffe53-4eb9-7922-9012-34a526ebbbd4` host `local`（PM（AirGuardV2）-02）

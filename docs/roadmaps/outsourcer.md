@@ -6,6 +6,12 @@
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
 - 環境境界: OUT-01からOUT-07はlocal仕様・実装・検証、OUT-08は承認済みbounded Dev releaseと権限別受入れを対象とした。Prod、migration、全件scan、実data補正は含まない。
 
+## 現行仕様とこのロードマップの読み方
+
+OUT-01〜08の100%は当時の契約に対する達成実績として保持する。後続のFGA-05では通常作成・更新の旧role制限、部分更新・専用writer・同一field競合拒否を置換した。現行の要件は[外注先仕様](../specification.md#外注先)、実装経路は[Outsourcer実装記録](../implementation/outsourcer-master.md)、適用状態と次作業は[FGAロードマップ](foundational-governance-alignment.md)を正とする。
+
+以下の工程表・確定範囲・rollback・検証はOUT当時の記録であり、新しい作業への旧方式復元指示ではない。協力会社masterという業務定義、同一Outsourcerの複数配置、契約終了後の候補利用、archive・restore・物理削除の非提供条件は維持する。新しい検証は[policy](../../governance/verification-policy.json)から実diffに応じて選び、Prod・migration・実data操作の承認を過去工程から拡張しない。
+
 ## マイルストーン
 
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |

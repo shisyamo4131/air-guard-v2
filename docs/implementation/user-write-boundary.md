@@ -4,7 +4,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Completed（UWB-01〜10のlocal完了とDev cutover完了。認証済みDev/remote受入れは進行中）
+- 状態: Completed（UWB-01〜10とDev受入れの記録を保持。完了範囲は下記「Dev環境受入れ」、対象外は「UWB完了後も残る境界」を参照）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -24,11 +24,15 @@ Usersコレクションへの書込みを、同一会社であることだけに
 
 ## 現在の進捗
 
-| 区分 | 完了 | 総数 | 状態 |
-|---|---:|---:|---|
-| 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 10 | 10 | UWB-01〜10のlocal実装・検証・必要なUI受入れ完了 |
-| Dev環境受入れ | 0 | 1 | 進行中。cutover、signup、role/route、stale role、disabled復帰を確認。tenant拒否と非破壊lifecycle証拠が残る |
+UWBの工程結果は[実装ゲート](#実装ゲート)と[Dev環境受入れ](#dev環境受入れ)、製品全体の進捗は[正式運用ロードマップ](../roadmaps/airguard-v2.md)を参照する。旧冒頭集計のDev受入れ「0/1・進行中」は後段の完了記録と不一致だったため廃止した。UWBの完了から正式運用準備全体の完了を導かない。
+
+| 読む目的 | 参照先 |
+|---|---|
+| 現行の要件・actor・保存境界 | [現行仕様のテナントと認証](../specification.md#テナントと認証)、[User/Auth実装調査](user-auth-lifecycle.md) |
+| UWB時点の設計と不変条件 | [不変条件](#uwbで守る不変条件) |
+| 工程ごとの実装・検証・当時の承認 | [実装ゲート](#実装ゲート)、[変更記録](#変更記録) |
+| Dev受入れの結果と未実施操作 | [Dev環境受入れ](#dev環境受入れ) |
+| 完了後も残る対象外・将来対応 | [残る境界](#uwb完了後も残る境界) |
 
 実装ゲートは部分加点しない。各ゲートの完了条件と検証証拠を満たし、利用者が変更挙動、security境界、残存risk、rollbackを受け入れた時点で完了とする。利用者による全file・全行の確認は完了条件にしない。
 
@@ -45,6 +49,8 @@ Usersコレクションへの書込みを、同一会社であることだけに
 
 ## 現行の書込み経路
 
+以下はUWB設計・調査時点の経路を残した記録である。現在の実装確認には[User/Auth実装調査](user-auth-lifecycle.md)と対象sourceを使い、完了工程の移行前経路を現在の経路と扱わない。
+
 | 操作 | 現行経路 | UWBでの扱い |
 |---|---|---|
 | User一覧から仮User作成 | `createStandaloneTemporaryUser` Callable | UWB-04でserver境界へ移行し、Codex専用local UIで確認済み |
@@ -59,6 +65,8 @@ Usersコレクションへの書込みを、同一会社であることだけに
 現行のUsers専用Rulesは、同じ会社の有効な本登録Userに全fieldのread/writeを許可する。さらにCompanies配下の汎用matchもUsersへ一致するため、Users専用Rulesを変更するときは汎用matchから`Users`を除外しなければならない。
 
 ## UWBで守る不変条件
+
+以下はUWBで確定・段階適用した契約の記録。後続変更を含む確認済み要件は[現行仕様](../specification.md#テナントと認証)を優先し、後続ゲートとして記載した事項の実施結果は[実装ゲート](#実装ゲート)・[Dev環境受入れ](#dev環境受入れ)へ照合する。未確定事項をこの履歴だけで採用しない。
 
 ### 確定済み
 
@@ -111,6 +119,11 @@ UWBはUser管理UIへ大きく影響したため、次の手順を各application
 文書、test、local GitはCodexが管理する。main merge、push、deploy、Dev・remote data操作は別の明示承認を必要とする。
 
 ## 実装ゲート
+
+以下は各UWB checkpoint時点の実装・検証・承認の履歴であり、当時の「未実施」「未承認」「rollback」を現在の指示として使わない。Devの最終受入れは[後段の記録](#dev環境受入れ)、新しい作業の承認・手順は[project rules](../../governance/project-rules.md)と[開発workflow](../runbooks/development-workflow.md)に従う。
+
+<details>
+<summary>UWB-01〜10の工程記録</summary>
 
 ### UWB-01 操作・actor・field契約の確定
 
@@ -511,6 +524,8 @@ UWBはUser管理UIへ大きく影響したため、次の手順を各application
 - [x] 利用者がUWB-10のlocal確定を明示している。
 - [x] main統合対象は`bc4745970717514ef459ec8ae651e68ee0e0579b`、`40b6889d91efc529abf7f3dc8492f9acfd6a6baf`と本完了文書commitであり、差分、test、未確認事項を提示している。main merge・push・deployは未承認・未実施である。
 
+</details>
+
 ## Dev環境受入れ
 
 - 状態: Completed（DEV-UWB-RELEASE-001 cutoverと2026-08-27認証済み受入れを完了）
@@ -542,6 +557,8 @@ DEV-UWB-RELEASE-001ではrelease commit `52dd607d16e9b77f90ec238250eca1175754809
 - Prod deployと正式運用受入れ、Devでの継続監視。
 
 ## 変更記録
+
+各行は記載日の履歴であり、その日の未完了・未承認表現を現在状態として使用しない。
 
 | 日付 | 状態 | 内容 | Commit | 検証 |
 |---|---|---|---|---|

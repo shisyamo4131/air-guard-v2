@@ -48,21 +48,57 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Firestore 用モデルは `air-guard-v2-schemas`、基底実装は `air-firebase-v2`、クライアント注入は `air-firebase-v2-client-adapter` が提供する。
 - role presetの識別子、表示metadata、permission配列は`@shisyamo4131/air-guard-v2-schemas/constants`を環境非依存の単一正本とし、ルートアプリとCloud Functionsは同じ公開version・tarball・integrityを使用する。現在の確認済みversionはlegacy Stripe fieldをCompany schemaから除去したexact `3.0.0-dev.1`である。このpackage catalogはactor・tenant・target・request contextからallow/denyを決定せず、clientとFunctionsがそれぞれ認可policyを所有する。
 - Schemas packageを更新する前後は、当該turnでsource tag manifest、repository release evidence、AirGuardV2 root/Functionsのmanifest・lockにあるname、version、resolved、integrityを機械照合する。prompt、chat、要約、agent reportだけでpackage identityを確定せず、矛盾時はconsumer file変更・install・testを開始しない。`3.0.0-dev.1`はSTRIPE-02でroot/Functionsへ導入し、`PostAdoption`で同一version・tarball・integrityを確認済みである。旧`2.4.2-dev.167`はこのlocal checkpointのrollback baselineとして履歴保持する。
-- ドメイン上の操作可否をclientで事前検証する機能は、UI非依存の純粋policy、policyを適用して操作可否・拒否理由・実行処理を提供するapplication composable、結果を表示するcomponentへ責務を分離する。client判定はUX補助であり、serverの最終認可を代替しない。
+- 操作policy、application composable、componentの責務は[Client操作policyとcomposableの責務](#client操作policyとcomposableの責務)を参照する。
 - 登録済みpage routeは、`public`、`roles`、User管理固有fieldを個別に保持せず、Vue/Nuxt非依存の共有`accessPolicy` catalogを1件だけ参照する。route middlewareとnavigationは同じpolicy evaluatorを使用し、pathを持たないnavigation groupの表示はアクセス可能な子itemから導出する。未知policy、複製policy、旧fieldとの併記、不正なUser管理contextはclientでfail closedとする。
 - 認証済み業務pageの表示と遷移は、現在のAuthentication UID・company claim、メール確認状態、同じ会社のUser document、有効・本登録状態、会社管理者field、既知role／直接permission、および型が正しいspecial claimを一つのaccess contextとして判定する。保存User roleに`admin`、`super-user`、`developer`、`*`または不正な値が含まれる場合は許可根拠にせずfail closedとし、会社管理者・super-user・developerはそれぞれ正式fieldまたはboolean claimだけから導出する。Employee閲覧、User管理、User lifecycle等の個別に厳格なpolicyは一般permission判定へ緩和しない。
 - navigation、route middleware、表示中pageの再認可は同じaccess contextとpolicy evaluatorを使用する。権限外のmenuは表示せず、未登録routeまたは権限外pageへの遷移と、表示中のrole・無効状態・tenant・special claim変更による権限喪失はdashboardへ戻す。dashboardは認証session初期化失敗時を含む安全な遷移先とし、未認証、メール未確認・会社未確立、maintenanceは各専用経路を優先する。このclient判定はUX gateであり、Firestore Rulesまたはserver認可を代替しない。
 
 ### Pageとcomponentの構成
 
-- 認証済み業務pageは、原則として画面全体を制御する一つのroot componentを直接配置し、そのrootが一つ以上の機能単位の子componentを構成する。pageはroute parameter、page metadata、layout、画面rootの接続へ責務を絞る。
-- 従属先documentの名称等をIDから参照する画面は`composables/fetch/useFetch.js`を使用する。pageは`useFetch(componentName, true)`で画面配下専用instanceをprovideし、子側は`useFetch(componentName)`で同じinstanceをinjectする。子側のfallback生成を通常pageのorigin設置省略には使わない。
-- Firestore上の通常のmaster dataについて提供するdocument create・update・deleteは、編集可能stateの所有単位に対応するdomain Managerを画面上の共通入口とする。外部から渡された既存の単一instance、またはその場で生成した新規instanceを扱う場合は単数形domain Managerが`AirItemManager`をラップし、collection・list自身が配列と行選択のdispatchを所有する場合は複数形domain Managerが`AirArrayManager`をラップする。Customerの`CustomerManager`／`CustomersManager`、Siteの`SiteManager`／`SitesManager`、Employeeの`EmployeeManager`／`EmployeesManager`、Outsourcerの`OutsourcerManager`／`OutsourcersManager`を最初の適用例とする。選択UIであることだけでは複数形に分類しない。選択後は`AirArrayManager.beforeEdit`により、trueなら内部editor、詳細navigationを実行してfalseならdialog抑止を選べる。page・listはどちらの方式でも選択を複数形Managerへ渡す。単数・複数形Managerは相互に内包せず、各base Managerの責務を完結させ、同じdomain operation、schema、error・loading、listener正本契約を共有する。新設または改修するManagerは`modelValue`をpropとして明示し、単数形では対象domain classのinstance、複数形では全要素が対象domain classのinstanceである配列だけを受け入れる。未移行の既存Managerは各機能checkpointで段階的に揃える。
-- domain Managerはbase Managerの既定editor、form validation、loading、submit、edit mode管理を使用し、完成形ではManager固有の`customInput`が入力field、配置、順序を所有する。`includedKeys`はSchema定義順からfieldを絞る暫定機能とし、指定配列順を画面順序の契約にしない。Customerは段階移行中の例外として当面`includedKeys`を使用できる。baseで満たせない確認済み要件がない限り`editor` slot全体を上書きしない。base Managerのerror・error clear・loading eventはアプリ標準の通知・logging・loading経路へ接続し、domain Managerへ同じstateや表示を重複実装しない。既存helperはevent契約へ適合する場合に利用し、使用自体を必須としない。
-- 単数domain Managerはactivatorへ`toCreate`、`toUpdate`、提供する場合だけ`toDelete`をoperation別に公開し、callerが用途に対応するmethodを選ぶ。wrapper独自の`operation` propまたは単一`open`関数でbase Managerのmodeを再管理しない。fresh create instance、listener由来update instance、許可operationとdomain handlerはwrapperが薄く接続できる。複数形Managerはheader・tableの標準dispatchと`beforeEdit`を使う。
-- document選択UIがその場で新規作成を提供する場合、Autocomplete等は新規単一instanceを扱う単数ManagerをCREATE modeで開き、Firestore commit成功と割当済みdocument IDを持つ結果だけを選択する。選択前にlistener受信を必須待機しない。将来、選択済み既存documentをその場で編集する場合も、listener由来の単一instanceを単数ManagerのUPDATEへ渡し、`useFetch` cacheだけを変更可能な主対象の正本にしない。保存後の主対象document・listはreal-time listenerへ収束し、IDから補完する従属先の名称・詳細だけはtenant scopeを分離した`useFetch`共有cacheを優先できる。base Managerまたはmodel CRUDの直接利用は確認済み例外に限定し、Managerをserver認可境界にしない。
-- 通常のdata編集dialogは最大幅480pxを既定とする。可読性、複数列・表・複数step、responsive・accessibility上の必要性がある場合はcomponent固有に広げられる。確認専用dialog、viewer、selectorはこの既定の対象外とする。archive・復旧・物理削除等の例外operationのdialog幅は480pxへ自動拘束せず、操作固有の安全な確認内容、可読性、responsive・accessibilityを基準に決める。
-- 詳細なManager実装原則と例外は[Development and data rules](project-rules/development-and-data.md#実装原則)、page・fetch・従属参照の判断は[ADR 0067](decisions/0067-component-fetch-and-dependent-reference-boundary.md)、domain Managerとdialog規約の現行判断は[ADR 0069](decisions/0069-domain-manager-editable-state-ownership.md)を正とする。
+- 認証済み業務pageは、原則として画面全体を制御する一つのroot componentを直接配置し、そのrootが一つ以上の機能単位の子componentを構成する。pageはroute parameter、page metadata、layout、画面rootの接続へ責務を絞り、業務機能をpageへ集積しない。単純な認証・案内・error page等でこの階層が価値を持たない場合は、機能checkpointで例外理由を示せる。
+- 従属先documentの名称等をIDから参照する画面は`composables/fetch/useFetch.js`を使用する。pageは`useFetch(componentName, true)`で画面配下専用instanceをprovideし、子側は`useFetch(componentName)`で同じinstanceをinjectする。pageでは一度だけoriginを設置する。子側のfallback生成は独立利用の互換経路であり、通常pageのorigin設置省略には使わない。
+
+#### Domain Managerの構成と入力契約
+
+- Firestore上の通常のmaster dataについて製品が提供するdocument create・update・deleteは、編集可能stateの所有単位に対応するdomain Manager componentを画面上の共通入口とする。外部から渡された既存の単一instance、またはその場で生成した新規instanceを編集する文脈では単数形domain Managerが`AirItemManager`をラップし、collection・list自身が配列と行選択のdispatchを所有する文脈では複数形domain Managerが`AirArrayManager`をラップする。Customerの`CustomerManager`／`CustomersManager`、Siteの`SiteManager`／`SitesManager`、Employeeの`EmployeeManager`／`EmployeesManager`、Outsourcerの`OutsourcerManager`／`OutsourcersManager`を最初の適用例とする。画面が選択UIであることだけを複数形Managerの根拠にしない。各Managerはそのstate所有文脈で製品が提供するoperationだけを扱い、単数・複数形の双方に全C/U/Dを要求しない。
+- 複数形Managerで選択されたinstanceは、`AirArrayManager.beforeEdit`がtrueを返す場合は内部editorで編集し、collection固有の詳細画面を使う場合は`beforeEdit`内でnavigationしてfalseを返しdialogを抑止する。どちらの方式でもpage・listは行選択を複数形Manager／AirArrayManagerへ渡し、直接editorやdetail routeへ迂回しない。単数Managerと複数形Managerは相互に内包せず、各Managerが対応するbase Managerのstate、dialog、validation、submit、error・loading、または選択dispatchを完結して所有する。同じdomain application operation、FireModel/Class schema、error・loading、保存後のlistener正本契約は共有し、利用場所ごとに永続化契約を複製しない。
+- 新設または改修するdomain Managerは、base Managerへ渡す`modelValue`を`$attrs`だけに委ねずpropとして明示する。`AirItemManager`を包む単数Managerは対象domain classの新規instanceをdefault factoryで返し、validatorで同classのinstanceであることを確認する。`AirArrayManager`を包む複数形Managerは空配列をdefault factoryで返し、validatorで全要素が対象domain classのinstanceであることを確認する。空配列は有効とし、plain objectや異なるclassを含む配列は入力契約違反として開発時に検出する。このprop validatorはcomponent境界の誤接続を早期発見するためのもので、schema validation、認証・認可・tenant・Rulesの代替にしない。
+
+#### Editorと入力component
+
+- domain Managerはbase Managerの既定editor、form validation、loading、submit、mode管理を使用し、入力componentの構成・順序だけをManagerが指定する`customInput`で置き換えることを完成形とする。`customInput`はbase Managerから渡されるitem、`updateProperties`、edit mode、disabled状態、schema由来component属性を使用し、必要fieldと並び順を自ら所有する。edit mode別に入力componentを変える場合は`customInput` resolverを使う。base Managerで満たせない確認済み要件がない限り`editor` slot全体を上書きせず、validation・submit・loadingをdomain側へ重複実装しない。base Managerが発行するerror・error clear・loading eventは、適合する既存composableまたは同等の薄いadapterでアプリ標準の通知・logging・loading経路へ接続し、Manager固有のerror stateや表示を重複実装しない。既存helperの使用自体は必須とせず、event形状の不一致や二重処理等の弊害が確認された場合は必要な接続だけを実装する。
+- `includedKeys`はSchema定義順から対象fieldを絞る暫定的な簡易入力機能であり、配列の指定順を画面順序の契約にしない。既存Customerは段階移行中の明示例外として当面使用できるが、後続masterの完成形と新規domain Managerは`customInput`を既定とする。`customInput`使用時は同componentが表示fieldと順序を所有し、`includedKeys`による絞込みへ依存しない。
+
+#### Activatorと保存経路
+
+- 単数domain Managerのactivatorはbase Managerのslot propsを原則そのままpass-throughし、callerが`toCreate`、`toUpdate`、必要なら`toDelete`を目的に応じて直接呼ぶ。slot propsにmethodが存在することは、そのoperationを製品として許可することを意味しない。提供しないoperationは`beforeEdit`、disable・hide props、handler等のbase契約で拒否する。domain wrapper独自の`operation` prop、単一`open`関数、doc ID等の先行検査でedit modeを再管理しない。通常の単一document create・updateは、確認済みのdomain固有処理がなければbase Managerの`handle-create`・`handle-update`から編集対象FireModel instanceの`create()`・`update()`へ直接委譲し、ClientAdapterがhook、Schema validation、tenant prefix、管理field、transaction writeを所有する。wrapperはfreshなcreate instanceの生成、listener由来update instanceの接続、許可operation、domain handler・error表示等の薄い境界を持てるが、base Managerのmode、validation、submitやClientAdapterの通常保存契約を複製しない。複数形Managerはheader・tableの標準dispatchと`beforeEdit`を使い、`handleClickCreate`・`handleClickUpdate`・`handleClickDelete`でbase dispatchを迂回する場合は確認済み理由を示す。
+- page、list、document選択componentからbase `AirItemManager`・`AirArrayManager`またはmodel CRUDを直接呼ぶ経路は既定にせず、domain Managerで表現できない確認済み理由がある場合だけcheckpointで例外を示す。
+
+#### 選択UIと例外operation
+
+- Autocomplete等のdocument選択UIがその場で新規作成を提供する場合は、新規単一instanceを扱う単数ManagerをCREATE modeで開く。Firestore commitの成功が確認でき、割当済みdocument IDを持つ作成結果だけを選択し、listenerの受信を選択前の必須待機にはしない。既存候補を将来その場で編集する場合も、list cacheを直接編集せず、主対象のlistenerから受けた単一instanceを単数ManagerのUPDATEへ渡す。保存後の変更可能な主対象document・listはreal-time listenerを表示正本として収束し、IDから補完する従属先の名称・詳細だけはtenant scopeを分離した`useFetch`共有cacheを優先して更新できる。ManagerはUIとoperation orchestrationの責務であり、認証・認可・tenant・Rules・server validationの境界にしない。
+- domain Managerを共通入口とする規則は、すべてのoperationを一律に提供またはgeneric deleteへ接続することを意味しない。archive・復旧・物理削除、Authentication・Company・User、機微・機密情報、Stripe・請求確定、順序が重要な状態遷移等の例外operationは、固有のUI・Callable・競合制御へ委譲するか、製品上提供しない。提供する例外operationをManagerから開始する場合も、既存のactor、従属検査、監査、idempotency、write拒否条件を維持する。
+
+#### 編集dialogの幅
+
+- 通常のdata編集dialogは`max-width: 480px`を既定とする。項目の可読性、複数列・表・複数step、またはresponsive・accessibility上の必要性が確認できる場合だけ、component固有の理由をもってより広い幅へ上書きできる。確認専用dialog、viewer、selector等の非編集UIはこの既定の対象外とする。archive・復旧・物理削除等の例外operationのdialog幅は480pxへ自動拘束せず、操作固有の安全な確認内容、可読性、responsive・accessibilityを基準に決める。
+
+- 「Pageとcomponentの構成」をManager構成・入力・保存経路・dialog幅の詳細仕様の正本とする。変更・段階移行時の進め方は[Development and data rules](project-rules/development-and-data.md#実装原則)、page・fetch・従属参照の判断理由は[ADR 0067](decisions/0067-component-fetch-and-dependent-reference-boundary.md)、Managerとdialog規約の判断理由は[ADR 0069](decisions/0069-domain-manager-editable-state-ownership.md)を参照する。
+
+### 非同期UI操作のerror・loading責務
+
+- `AirArrayManager`または`AirItemManager`がsubmitを管理するCRUDでは、operation handlerはerrorを握りつぶさずmanagerへrejectを伝播する。managerのeventは[Editorと入力component](#editorと入力component)の接続契約に従い、適合する`useBaseManager`・`useLogger`・`useErrorsStore`・`useMessagesStore`または同等の薄いadapterでアプリ標準経路へ接続する。component内で同じerrorを重複して`logger.error()`または`errors.add()`へ渡さない。
+- manager管理下のCRUDはmanager固有の処理中状態を使用し、理由なくglobal loadingを重ねない。確認、取消、処理中、失敗後のdialog維持はmanagerの契約として扱う。
+- manager外の独立操作は、`useLoadingsStore.add()`、`try`、成功message、`catch`での`logger.error({ error })`、`finally`でのloading削除を基本形とする。errorをcallerへ再伝播するか吸収するかはoperationの成功条件として明示する。
+- Callableはserver側で内部情報を含まないcode・利用者向けmessageへ変換する。clientは安全なmessageをfeedback経路へ渡し、UID、会社ID、内部例外、秘密情報を画面へ表示しない。
+- `useLogger`へ`useErrorsStore()`を渡した場合、`logger.error()`がErrors Storeとerror色messageの登録を兼ねる。同じerrorへ`errors.add()`を併用しない。
+
+### Client操作policyとcomposableの責務
+
+- ドメイン上の操作可否をclientで事前検証する場合、Vue、component、Firebase transportへ依存しない純粋policyを設ける。application composableがpolicyをreactiveな状態へ適用し、操作可否、安定した拒否理由、実行処理をcomponentへ提供する。
+- componentはrole、permission、対象状態のpolicyを再実装せず、composableの結果を表示と操作へ反映する。composableはrequest送信直前にも適用対象のpolicyを再評価し、拒否状態では送信しない。ただし[テナントと認証](#テナントと認証)が定める例外APIのrole・permission重複検査禁止を優先し、非認可client検査と区別する。
+- client事前判定は認可境界にしない。server側のidentity、actor、tenant、対象、入力、最新状態の検証責務は[テナントと認証](#テナントと認証)の通常業務と例外の区分に従い、clientの許可結果で代替しない。
+- field単体の必須、文字数、書式validationはこの構造を強制せず、既存validatorまたはcomponent ruleを使用できる。判断理由は[ADR 0019](decisions/0019-client-operation-policy-composable-boundary.md)と[ADR 0065](decisions/0065-tenant-trust-normal-business-authorization.md)を参照する。
 
 ### バックエンド
 
@@ -84,25 +120,26 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 ### Firestoreドキュメントの構成
 
 - 通常の業務情報は、一つの管理対象について意味のある一まとまりを一つのdocumentにする。
-- 従業員のマイナンバー、取引先・自社の口座情報、CompanyのStripe契約情報等の機微な個人情報・機密情報は、通常の本体documentから別documentへ分割する。例示外の情報も機密性、閲覧・更新actor、保持・削除条件、外部provider ownershipを確認して同等に扱う。
-- 機微・機密性による分割に加え、Firestore Rulesを簡素化して認可を明確にし、Rules、reader/writer、query/index、migrationを含む総開発・保守コストを抑えられる場合は個別に分割を検討する。画面やwriterの責務名が違うことだけを分割理由にしない。
-- 分割先のpath、schema、actor、Rules、server処理、保持・削除、log・export・snapshotは対象機能ごとに確定する。既存documentに同居する情報は実装差として扱い、別checkpointで移行・互換性・rollback・検証を承認する。この仕様の採用だけで既存dataを自動移行しない。判断理由と旧原則の置換範囲は[ADR 0064](decisions/0064-sensitive-firestore-document-boundaries.md)を正とする。
+- 従業員のマイナンバー、取引先・自社の口座情報、CompanyのStripe契約情報等の機微な個人情報・機密情報は、通常の本体documentから別documentへ分割する。例示外の情報も漏えい時の影響、必要なread/write actor、保持・削除条件、外部provider ownershipを確認し、同等と判断できる場合は同じ境界を適用する。
+- 機微・機密性による必須分割とは別に、Firestore Rulesの式数・重複・例外を減らして認可を明確にできる、保存・削除・復旧条件が異なる、継続的に増加する、現実的なdocument size超過経路がある、独立queryが必要、またはfield限定updateで防げない確認済み競合がある場合はdocument分割を個別に検討する。分割案はRules、reader/writer、整合性、query/index、migration、運用・保守負担を比較し、総開発・保守コストを抑えられることを示す。一般的な将来riskやUI・writerの責務名だけでは分割しない。
+- 新しい機微・機密情報は本体へ保存せず、分割先のpath、schema、actor、Rules、server処理、保持・削除、log・export・snapshot、testを対象機能ごとに確定する。既存documentに同居する情報は実装差として扱い、別checkpointで移行・互換性・rollback・検証を承認する。この仕様の採用だけで既存dataを自動移行しない。判断理由と旧原則の置換範囲は[ADR 0064](decisions/0064-sensitive-firestore-document-boundaries.md)を正とする。
 
 ### Firestoreドキュメントの同時更新
 
-- Prod公開前のDev試用期間では、通常の可逆な更新をdocument単位のlast-write-winsとする。同じdocumentへの複数operationは、利用者が操作した時刻やclient clockではなく、Firestoreへのcommitが後に成立したoperationのdocument全体を正とする。異なるtop-level fieldだけを編集していても自動mergeせず、後commitのdocument全体で上書きする。
-- Firestore上の通常のmaster data CRUDは、document全体を編集・検証・保存する`AirItemManager`と`AirArrayManager`をdomain Manager経由で使用する。単一document・collection文脈におけるManagerの分類、Customer・Site・Employee・Outsourcerの具体例、選択UIのcreate経路、dialog幅は[Pageとcomponentの構成](#pageとcomponentの構成)を正とする。managerの使用は認証・認可・tenant・Rules・server validationの代替ではなく、Company・User・Authentication、機微・機密情報、archive・復旧・物理削除、Stripe・請求確定、順序依存の状態遷移等の例外operationへgeneric CRUDを強制しない。
-- `updatedAt`・`updatedBy`等のserver管理fieldと、当該operationに伴って更新が必要な検索値、表示名、座標等の派生fieldは、利用者が編集した値とは別に正規の保存境界で確定できる。document全体は保存前に現行schemaとoperation固有条件を満たさなければならない。
-- 変更可能な主対象documentは編集中もFirestore listener由来instanceをManagerへ直接接続する。listener更新を受信した場合、編集中のdraftを最新document全体で置き換えることを許容し、編集中だけ固定するsnapshot、入力消失の警告、競合通知、保存拒否、再読込、明示再確認を設けない。更新後もlistenerの最新documentを画面上の正本とする。認可・validation・保存失敗・結果不明は正常なlast-write-winsと区別する。
-- Company documentとUser documentは認証・tenant管理の基点であるため、この通常規則から除外する。利用者が別途変更するまで、現在のfield別writer、actor条件、validation、競合制御を維持する。Stripe、請求確定、archive・復旧・物理削除、順序が重要な状態遷移にもこの通常規則を適用せず、operation固有のtransaction、precondition、idempotency、再試行・照合、監査を定める。Authentication・role・permission・tenant所属、機微・機密情報、通知等に既に固有の競合制御がある場合も、この規則だけで撤去しない。
+- Prod公開前のDev試用期間では、通常の可逆な更新をdocument単位のlast-write-winsとする。同じdocumentへの複数operationは、利用者が操作した時刻やclient clockではなく、Firestoreへのcommitが後に成立したoperationの整合済みdocument全体を正とする。異なるtop-level fieldだけを編集していても自動mergeせず、後commitのdocument全体で上書きする。
+- 通常のmaster data CRUDはdocument全体を編集・検証・保存する。[Pageとcomponentの構成](#pageとcomponentの構成)に定めるdomain Managerの入口・保存経路・例外を適用する。
+- document共通の必須・型・長さ・相関はFireModel/Class schema、operation固有の追加条件は必要な場合だけ共有operation contractを正本とする。通常更新では保存対象となるdocument全体を正規application経路で検証し、`updatedAt`・`updatedBy`等の管理fieldと当該operationに必要な派生fieldを同じ保存境界で確定する。通常業務のFirestore Rulesはこれらのschema・業務validationを重ねて強制する責務を持たず、例外operationまたは明示した最低限の破壊防止条件だけをserver境界に残す。派生fieldには当該operationに伴って更新が必要な検索値、表示名、座標等を含み、利用者が編集した値とは別に確定する。
+- 変更可能な主対象documentは編集中もFirestore listenerから受信したinstanceをManagerの`modelValue`へ直接接続する。listener更新を受信した場合、base Managerが編集中のdraftを最新document全体で置き換えることを許容し、編集中だけ固定するsnapshot、入力消失の警告、競合通知、保存拒否、最新値の再読込、明示再確認を設けない。更新完了後もlistenerの最新documentを画面上の正本とする。保存自体の失敗、認可拒否、validation拒否、結果不明は同時更新による正常な上書きと区別して扱う。
+- 通常の可逆な業務操作では、同時更新を防ぐためのexpected value、revision、transaction、lock、ledger、競合拒否を既定にしない。短時間の連続操作、listener到着順、二重送信による外部作用等は同じ問題とみなさず、保存中UIやerror処理は対象operationの実害に応じて定める。
+- Company documentとUser documentは認証・tenant管理の基点であるため、この通常規則から除外する。利用者が別途変更するまで、現在のfield別writer、actor条件、validation、競合制御を維持する。Stripe、請求確定、archive・復旧・物理削除、順序が重要な状態遷移にもこの通常規則を適用せず、operation固有のtransaction、precondition、idempotency、再試行・照合、監査を維持または別途定める。Authentication・role・permission・tenant所属、機微・機密情報、通知等に既に固有の競合制御がある場合も、この規則だけで撤去しない。
 - Prod公開後にtop-level field単位のlast-write-winsへ変更する案は未確定であり、Prod公開によって自動適用しない。別途採用する場合、editorとwriterは利用者が変更したtop-level fieldだけを送信し、server管理fieldと必要な派生fieldを除いて未変更fieldを保存対象に含めない。異なるtop-level fieldの更新は併存させ、同じfieldは後commitのfield全体を正とする。arrayとmapは内容全体を一つのtop-level fieldとして扱い、要素またはkey単位ではmergeしない。判断理由と移行境界は[ADR 0066](decisions/0066-pre-production-document-level-last-write-wins.md)を正とする。
 
 ### 表示dataと従属参照
 
 - 画面の主対象として表示する変更可能なFirestore documentは、real-time listenerから受信した現在値を正本とする。one-shot readまたは保存済みsnapshotは、確定済み履歴、帳票、operation検証等の変更追随を要しない目的へ限定し、変更可能な主対象documentの現在値表示を固定し続ける正本にしない。
-- 従属先IDから名称等を解決する場合は共通`useFetch` instanceと共有cacheを優先する。従属先情報の表示は同じ画面表示中のreal-time listener追随を必須とせず、cache取得時点の値を使用できる。ただし認証・tenant scopeをまたいでcacheを再利用しない。従属先が不存在または取得不能なら画面全体をerrorにせず、該当表示を「取得できなかった」旨へ置き換える。別documentの値を推測せず、正常な空値と取得失敗を区別し、内部error・ID・個人情報を利用者向け表示へ含めない。
-- 従属documentのcreate・read・updateは、従属先documentの存在確認を原則として行わない。候補UIから不存在IDを除外しても参照整合性の保証とは扱わない。既に確認済みの金銭確定、identity、archive・復旧、順序依存状態等の固有不変条件は、対象checkpointで例外として明示した場合に維持できる。
-- 従属先documentの物理削除は、操作時点で既知の従属documentを確認し、一件でも存在する、検査に失敗する、または対象が不整合なら中断する。従属側CRUとのlock、tombstone、transactional barrierは既定にせず、検査の直前または同時に従属documentが生じるraceまで保証しない。このtrade-off、現行実装差、例外境界は[ADR 0067](decisions/0067-component-fetch-and-dependent-reference-boundary.md)を正とする。
+- 従属先IDから名称等を解決する場合は共通`useFetch` instanceと共有cacheを優先する。従属先情報の表示は同じ画面表示中のreal-time listener追随を必須とせず、cache取得時点の値を使用できる。認証・tenant scope変更時のcache分離・破棄を維持し、scopeをまたいでcacheを再利用しない。従属先が不存在または取得不能なら画面全体をerrorにせず、該当表示を「取得できなかった」旨へ置き換える。別documentの値を推測せず、正常な空値と取得失敗を区別し、内部error・ID・個人情報を利用者向け表示へ含めない。
+- 従属documentのcreate・read・updateは、従属先documentの存在確認を原則として行わない。候補UIから不存在IDを除外しても認可または参照整合性の保証とは扱わない。既に確認済みの金銭確定、identity、archive・復旧、順序依存状態等の固有不変条件は、対象checkpointで例外として明示した場合に維持できる。
+- 従属先documentの物理削除は、操作時点で既知の従属documentを確認し、一件でも存在する、検査に失敗する、または対象が不整合なら中断する。従属側CRUとのlock、tombstone、transactional barrierは既定にせず、検査の直前または同時に従属documentが生じるraceまで保証しない。残存riskを強い整合性を保証したとの表示・監査記録へ読み替えない。このtrade-off、現行実装差、例外境界は[ADR 0067](decisions/0067-component-fetch-and-dependent-reference-boundary.md)を正とする。
 
 ### ドキュメントのアーカイブと物理削除
 
@@ -131,10 +168,12 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 会社データは `Companies/{companyId}` 以下を基本とし、会社単位で分離する。
 - 認証ユーザーのカスタムクレームと会社 ID をデータアクセス判定に用いる。
 - `Companies/{companyId}` のCompany documentはclientから作成・削除できず、初期作成はCloud Functions/Admin SDKだけが行う。CompanyとUserは認証・tenant管理の基点であるため、通常業務のtenant共通権限とdocument単位last-write-winsから除外し、現在の厳密なactor・field・validation・競合制御を維持する。
-- roleによる通常業務上の差異は原則としてUXに限定する。同一tenantに所属する有効な認証済み本登録Userは、tenant内の通常業務dataについて同じserver権限で提供済み操作を行えるものとして信頼する。通常業務のRules・Callableはrole、permission、会社管理者、super-user等をallow条件にせず、受理されたAuthentication token、確認済みemail、有効User、tenant claim、User所属tenantとpath tenantの一致を共通の必須境界とする。通常アクセスの即時停止はUser documentの`disabled`を正本とする。RulesはFirebase Auth directoryの現在状態を直接再取得しないため、その現在値まで必要な例外operationはCallableで確認する。
-- 通常業務documentのstrict field allowlist、型・長さ・必須、状態等のschema・業務validationはFireModel/Class schemaと正規application保存境界の責務とし、Rulesへ重複させない。Rulesにはactor UIDの偽装防止、tenant境界、client物理delete拒否等、対象operationで明示した最低限の破壊防止条件だけを残す。例外operationの認可・validation、確定済みdata、外部作用、結果不明時の安全性はこの簡素化へ含めない。
-- Firebase Authentication account、Company document、User document、role、permission、tenant所属の現行提供操作、機微な個人情報・機密情報、archive・復旧・master dataの物理削除、Stripeによる契約・課金・決済・返金は例外とし、必要なroleその他のserver側認可と専用Callableを維持する。Company/Userの例外は機微情報分割規則を取り消さない。clientの画面・route・disabled制御はUXであり、例外処理の認可境界にしない。
-- Firestoreのclient書込み境界はcollection名だけで一律に決めず、field ownership、整合性、監査、同時実行、offline、複数document、server-only値、外部作用を確認して機能単位で見直す。有効なactorとtenant境界、および明示した最低限の破壊防止条件をRulesで強制できる通常操作はclient実装を選択できる。技術上Callableが必要な通常操作も、例外に該当しない限りroleでserver認可しない。判断理由と既存仕様の置換範囲は[ADR 0065](decisions/0065-tenant-trust-normal-business-authorization.md)を正とする。
+- roleによる通常業務上の差異は、原則として画面、navigation、案内、初期表示等のUXに限定する。同一tenantに所属する有効な認証済み本登録Userは、tenant内の通常業務dataについて同じserver権限でread・create・updateその他の提供済み通常操作を行えるものとして信頼する。通常業務のRules・Callableでrole名、role preset、permission文字列、会社管理者・super-user等の区分をallow条件にしない。
+- 通常業務dataのFirestore Rulesは、受理されたAuthentication token、確認済みemail、User documentの存在とUID一致、本登録、非disabled、正常なtenant claim、User所属tenantとpath tenantの一致を共通の必須境界とする。通常アクセスの即時停止はUser documentの`disabled`を正本とする。RulesはFirebase Auth directoryの現在のdisabled・deleted状態を直接再取得できないため、その現在値まで必要な例外operationはCallableで再確認する。通常業務documentのstrict field allowlist、型・長さ・必須、状態等のschema・業務validationはFireModel/Class schemaと正規application保存境界の責務とし、Rulesへ重複させない。Rulesには、actor UIDの偽装防止、tenant境界、client物理delete拒否等、対象operationで明示した最低限の破壊防止条件だけを残す。例外operationのより厳格なserver認可・validationは維持し、client UXだけを認可境界にしない。
+- 例外operationの認可・validation、確定済みdata、外部作用、結果不明時の安全性は通常業務の簡素化へ含めない。
+- 次は通常業務のtenant信頼境界の例外とし、role、permission、actor、target、最新状態等の必要なserver側認可を適用し、必要に応じて専用Callableを使用する。(1) Firebase Authentication account、Company document、User document、role、permission、tenant所属の作成・変更・削除その他の現行提供操作、(2) マイナンバー、口座情報等の機微な個人情報・機密情報、(3) archive、復旧、master dataの物理削除、(4) Stripeによる契約、課金、決済、返金。CompanyとUserは認証・tenant管理の基点としてdocument全体を例外にし、現行の厳密なactor・field・validation・競合制御を維持する。機微情報を別documentへ分割する規則は取り消さない。例外のclient表示・disabled・route制御はUXであり、認可境界にしない。例外APIを呼ぶclientは、button等の表示判定とは別にrole・permissionを実行直前へ重複実装せず、Callableを認可の正本として呼び出し、serverが返す拒否をManagerまたは操作固有UIの標準error経路で表示する。入力整合、操作中のtenant・actor・target・理由の取り違え防止、single-flight、idempotency等の非認可client検査は維持できる。
+- Firestoreのclient書込み境界はcollection名だけで一律に決めず、field ownership、整合性、監査、同時実行、offline、複数document、server-only値、外部作用を確認して機能単位で見直す。通常の可逆操作は、上記のactor・tenant境界と最低限の破壊防止条件をRulesで強制できる場合にclient実装を選べる。通常業務でも複数documentのatomicity、server-only値、外部作用、冪等性、再開・reconcile等の技術要件によりCallableを使用できるが、その技術要件だけからrole制限やschema検査を戻さない。判断理由と既存仕様の置換範囲は[ADR 0065](decisions/0065-tenant-trust-normal-business-authorization.md)を正とする。
+- server-only情報、厳密なactor、複数resource、外部作用、不可逆性、必須auditがある例外operationは専用Callableとoperation固有のRulesを使い、UI表示制御だけを保存境界にしない。通常業務のschema検証は上記のFireModel/Class schemaと正規application保存境界へ従う。
 - マスタ管理機能の改修中は対象masterのCRUDを主対象とし、配置・通知・稼働実績・請求・帳票などtransaction系機能への波及変更はFirestore更新に関係しない互換修正に限定する。transaction系の要改修箇所を検出しても実装せず既知課題へ記録し、マスタ管理の一連の改修後に別checkpointで見直す。Employee archiveの参照整合性に必要なwriter・Rules・索引・背景処理だけはADR 0060の限定例外として設計対象に含め、実装はEmployeeの合意済み工程で行う。
 - 配置管理の予定と配置作業員を作成・変更・削除・並べ替えする正式保存境界は専用Callableとする。通常の可逆な変更は、操作後の「なるべき形」を直ちにclientの表示用状態へ反映し、保存中を理由に予定cardや作業員操作を一律停止せず、client側のpending lock、single-flight queue、更新順保証を設けない。Firestore listenerから届く正本で表示用状態を置き換えて収束させる。単一documentの通常更新は同時更新だけを理由に拒否せずdocument単位last-write-winsへ従う。複数document、通知その他の外部作用、順序依存状態、削除を伴うoperationはFGA-06で例外分類し、必要なtransaction・再試行・照合を維持する。失敗は利用者へ表示し、認証・認可、結果不明の再送に必要な個別保護を維持する。
 - 未確定かつlockされていない現場稼働実績の基本情報変更と、従業員・外注先明細の追加・変更・削除・並べ替えは、同じtenantの有効な本登録Userがroleに依存せず行える通常業務とする。保存は既存の`saveOperation` Callableを維持し、最新状態との照合、lock拒否、勤怠・請求・履歴等の関連document更新を変更しない。現場稼働実績の作成・複製・削除、現場稼働予定からの確定、配置通知、稼働外売上、請求の取極め・調整・lockはこのcheckpointに含めない。
@@ -219,7 +258,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 ### Employeeの操作権限と保持
 
-- Employeeの通常業務情報は、機微・機密情報とUser/Auth lifecycleを除き、同じtenantの有効な認証済み本登録Userに同じread・通常編集権限を許可する。roleなし、未知role、直接permission、会社管理者、super-user等を通常Employeeのserver認可条件にしない。本人向けEmployee Self Accessはtenant内業務利用とは別境界とする。現行のrole別read/writeと専用保存経路は未解消の実装差であり、FGA-04でfield分類、Rules、Callable、client化、既存dataを段階的に整合する。
+- Employeeの通常業務情報は、機微・機密情報とUser/Auth lifecycleを除き、同じtenantの有効な認証済み本登録Userに同じread・通常編集権限を許可する。roleなし、未知role、直接permission、会社管理者、super-user等を通常Employeeのserver認可条件にしない。本人向けEmployee Self Accessはtenant内業務利用とは別境界とする。適用状態と旧経路の置換範囲は[FGA-04実装記録](implementation/employee-master.md#fga-04での情報分類)を参照する。
 - 退職後（RESIGNED）のEmployeeは、会社管理者・統括・人事も通常情報を訂正できない。基本・国籍・警備員登録・資格・保険と保険履歴復元を含む。閲覧は上記範囲で継続する。
 - Employeeの健康保険、厚生年金、雇用保険の番号・状態・日付・理由・履歴は機微・機密情報の例外にせず、Employee本体documentの通常業務情報として扱う。在職中は同じtenantの有効な認証済み本登録Userへ他の通常Employee情報と同じread・編集権限を許可し、roleをserver認可条件にしない。historyあり・手続中不可等の状態遷移と退職後編集禁止は、情報の機密性ではなくdata保護条件として維持する。理由と移行境界は[ADR 0070](decisions/0070-employee-insurance-normal-business-boundary.md)を参照する。
 - 通常編集、退職、誤退職訂正、誤登録のarchive・物理削除、User/Auth操作を分ける。退職は会社管理者・統括・人事、archive・物理削除は会社管理者・統括だけに許可し、人事単独には許可しない。誤退職訂正は既存の会社管理者専用条件を維持する。Employee編集権限からUser/Authのrole管理・account変更を導かない。
@@ -231,9 +270,10 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - codeは任意・手入力・重複可とし、document IDをidentityとする。姓名だけの変更では表示名を再生成し、同じ保存で表示名も明示変更した場合は入力した表示名を優先する。表示名カナは独立入力とし、過去記録の表示は現在master名を使う既存方式を維持する。
 - 新規登録は在職者一覧から行い、退職者検索には作成入口を設けない。在職一覧は空検索で`updatedAt`が新しい在職Employeeを最大20件表示し、退職者一覧は空検索で`dateOfTermination`が新しい退職Employeeを最大20件表示する。検索文字列がある場合は、ひらがな・カタカナを同一視して正規化した既存`tokenMap`検索結果を表示する。通常候補のACTIVE/RESIGNEDと期間内在籍者の既存条件を維持し、新たな在職者限定を加えない。
 - `Employees_archive`のget/listは通常Employeeと同じ会社管理者・統括・人事・労務・法務・管制・経理へ全項目を許可する。同社Userであることだけでは許可しない。通常一覧・選択候補から除外し、直接client CUDとrestoreは拒否する。今回archive管理一覧は新設しない。
-- Employeeの通常可逆更新はdocument単位のlast-write-winsとし、整合したdocument全体、server管理field、必要な派生fieldを保存する。編集中の外部更新を理由に拒否・再読込要求を行わず、保存後はlistenerの最新状態へ収束させる。User/Auth・lifecycle、archive・物理削除、順序が重要な状態遷移、およびFGA-04で機微・機密と分類するfieldは固有の保存・競合制御を優先する。現行の専用operation、部分保存、局所期待値、Manager非依存はFGA-04で置換範囲を決める実装差である。
-- 保険操作では現在mapに加え、Employeeのapplication所有field `insuranceOperationVersions`に保険別の非負safe integerを持ち、成功時に対象だけを増やす。履歴復元で巻き戻さない。新規は3保険とも0、既存はinsuranceOperationVersions全体が不存在の場合だけlegacy 0とし、最初の成功操作で原子的に初期化する。不正値・欠損key・上限超過は拒否する。期待値は表示用Classと分離した同時点のraw snapshotから取得し、取得失敗を不存在とみなさない。詳細な保存・wire・archive snapshot・参照catalogは[Employee設計契約](implementation/employee-master.md#通常保存の技術契約)に従う。
-- 保険項目自体が原本に存在しない場合は、未加入・手続きなし・履歴なしの初期状態として操作できる。閲覧・編集開始・取消では書き込まず、最初の成功する操作で対象保険を作成する。保存時は原本の不存在と保存世代を同transactionで照合し、先行登録があれば競合として拒否する。既存のnull・不正な保険mapを初期値で上書きせず、他保険・既存履歴・他sectionを保持する。一括補完は行わない。
+- Employeeの通常可逆更新はdocument単位のlast-write-winsとし、整合したdocument全体、server管理field、必要な派生fieldを保存する。編集中の外部更新を理由に拒否・再読込要求を行わず、保存後はlistenerの最新状態へ収束させる。User/Auth・lifecycle、archive・物理削除、順序が重要な状態遷移、およびFGA-04で機微・機密と分類するfieldは固有の保存・競合制御を優先する。通常保険保存の検証境界は次項に従い、適用経緯は[FGA-04実装記録](implementation/employee-master.md#fga-04での情報分類)を参照する。
+- 保険の加入・加入完了・取消・適用除外・喪失・履歴復元は、入力に用いたEmployeeの状態に対して既存の遷移条件・入力検証を行い、通常Employeeのdocument単位last-write-winsで保存する。専用Callableでserverの最新保険map・世代値を比較して競合拒否する旧方式は使用しない。世代値と期待値を用いたclient側の遷移計算を、複数端末間の競合検出・二重適用防止の保証として扱わない。通常操作の保存方式の適用経緯は[ADR 0070](decisions/0070-employee-insurance-normal-business-boundary.md)、実装上の検証境界は[保険実装記録](implementation/employee-insurance.md#fga-04後の保存と検証境界)を参照する。
+- `insuranceOperationVersions`はEmployee本体のapplication所有fieldとして保持する。新規作成は3保険とも0、既存fieldが不存在なら読取りだけで補完しない。保険操作のcandidateでは不存在をlegacy 0として計算し、対象保険だけを1増やす。履歴復元でも同じ入力時点の値を増やし、他保険の値を保持する。不正値・欠損key・上限超過は拒否する。この値はserver最新値に対する単調増加や原子的な競合拒否を保証するrevisionではなく、文書整理を理由に削除・一括変換しない。
+- 保険項目が不存在の場合は未加入・手続きなし・履歴なしの初期状態として操作する。閲覧・編集開始・編集dialogの取消では書き込まず、保存するcandidateへ対象保険を含める。null・不正mapを初期値で上書きせず、不存在と区別する。入力時点の他保険・履歴・他sectionを保ったdocument全体を保存するが、入力開始後の他端末の変更が自動mergeされるとは保証しない。一括補完は行わない。
 - 段階移行では未移行の警備員登録・資格・保険editorをlocalで一時read-onlyとし、各専用writer完成後に再開する。既存UWB専用操作は維持し、中間状態をDevへ反映しない。今回の実装範囲は参照保護を伴うarchiveまでとし、物理削除の実行機能は後続の専用工程へ分ける。共通物理削除仕様を取り消さず、保持期間・最小ID記録・自動実行等の運用判断はその工程で行う。
 
 ### 外注先

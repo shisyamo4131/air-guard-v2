@@ -1,8 +1,7 @@
 # 実装仕様調査カバレッジ棚卸し
 
-> **Current review-depth (2026-08-12):** SPEC-DEEP-045a/045b and schema checkpoints 046〜054 completed — A 519, B 0, C 0, D 11, E 1, Unknown 0; remaining B/C 0 files in 0 execution checkpoints. The [deep review plan](deep-review-plan.md) is authoritative for exclusive assignment.
 
-- 状態: 棚卸し（実装仕様の新規断定を目的としない）
+- 状態: Historical — 2026-08-12時点の調査文書・source対応の棚卸し
 - 対象セグメント: SPEC-SEG-045
 - 最終確認日: 2026-08-12
 - 根拠: `rg --files`による`pages/`、`components/`、`composables/`、`stores/`、`services/`、`utils/`、`functions/`、関連schemas `src/`のファイル名、route/import/export対応、および既存`docs/implementation/*.md`の対象・未確認範囲
@@ -10,7 +9,12 @@
 
 SPEC-AUDIT-001で531 source filesを機械再照合した。分類方法、母数、重複/漏れ検査、未被覆clusterは[coverage mechanical audit](coverage-audit.md)を参照する。
 
-> **review-depth進捗:** 本文精査の完了判定にはMechanical Coveredを使用しない。SPEC-DEEP-045a/045b反映後はA 519、B 0、C 0、D 11、E 1、Unknown 0である。排他的割当と終了条件は[deep review plan](deep-review-plan.md)を正とする。
+
+## 読み方と参照先
+
+この文書は当時の文書とsourceの対応表を保持する。固定inventoryの最終depth分類・件数・精査完了条件は[精査計画](deep-review-plan.md)、監査方法と訂正経緯は[監査記録](coverage-audit.md)へ集約する。
+
+以下のCovered、未被覆0、次segment候補等は当時の対象範囲に限定する。その後の追加・変更・削除を含む現行repository全体の精査済み・品質保証ではない。現在の作業対象は[文書案内](../README.md)から選び、必要な差分を再確認する。
 
 ## coverage基準
 

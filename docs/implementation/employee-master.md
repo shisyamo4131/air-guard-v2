@@ -2,15 +2,19 @@
 
 ## FGA-04での情報分類
 
+本書は実装差と過去の設計・調査記録を扱う。確認済み要件は[Employee仕様](../specification.md#employeeの操作権限と保持)、FGA-04の適用・受入れは[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)と[Dev検証記録](../verification/fga-04-employee-manager-lww-dev.md)を正とする。後段のEMP工程と初期調査を現在の通常保存契約として使わない。
+
 2026-09-12、利用者回答により健康保険、厚生年金、雇用保険の番号・状態・日付・理由・履歴を機微・機密情報の例外にせず、Employee本体documentの通常業務情報として維持することを確定した。保険専用documentへの分割と既存data migrationは行わない。在職Employeeではrole非依存のtenant共通read・編集へ揃え、退職後編集禁止を維持する。加入・喪失等の状態遷移条件は機密性とは別のdata保護として扱う。[現行仕様](../specification.md#employeeの操作権限と保持)と[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)を正とする。
 
 FGA-04-EMPLOYEE-MANAGER-LWW-02のLocal実装では、在職一覧の作成、詳細の基本・国籍・警備員情報をEmployee単数／複数形ManagerとCustomInputへ接続し、資格・3保険を含む通常編集をEmployee modelの`create`／`update`によるdocument last-write-winsへ戻した。資格・保険画面から専用Callable、最新値比較、競合拒否、role制限を外した。保険は既存の加入・喪失等の状態遷移条件だけを入力・計算時に維持する。通常readerとページ・Rulesは、同一tenantの有効な本登録Userへrole非依存で開いた。退職後の通常編集、client delete、archive、退職・誤退職訂正、User/Authは従来の専用境界を維持する。
 
-公開Schemas `3.0.0-dev.1`はapplication所有fieldの`insuranceOperationVersions`を出力しないため、そのまま全文保存すると既存値が消える。local Employee schemaで既存値を検証・保持し、新規作成時だけ3保険を0で初期化する互換層を追加した。fieldがない既存Employeeは読込みだけで補完せず、一括migrationも行わない。現行画面から到達しなくなった旧Employee通常保存Callable 6件と、その専用API・保存module・旧EditorはLocal sourceから撤去した。Dev上の既存Function削除と新Hosting反映は未実施であり、反映時は6件を削除対象として明示承認する。[Local検証記録](../verification/fga-04-employee-manager-lww-local.md)を参照する。以下のEMP-02〜09の記述と旧受入れ証拠は当時の実装履歴であり、FGA-04の完成状態へ読み替えない。
+公開Schemas `3.0.0-dev.1`はapplication所有fieldの`insuranceOperationVersions`を出力しないため、そのまま全文保存すると既存値が消える。local Employee schemaで既存値を検証・保持し、新規作成時だけ3保険を0で初期化する互換層を追加した。fieldがない既存Employeeは読込みだけで補完せず、一括migrationも行わない。現行画面から到達しなくなった旧Employee通常保存Callable 6件と、その専用API・保存module・旧EditorはLocal sourceから撤去した。この記述はLocal実装時点の差分である。その後のDev Function削除・Hosting反映と通常操作受入れは[Dev検証記録](../verification/fga-04-employee-manager-lww-dev.md)へ照合する。過去の削除承認を新しい操作へ拡張しない。[Local検証記録](../verification/fga-04-employee-manager-lww-local.md)を参照する。以下のEMP-02〜09の記述と旧受入れ証拠は当時の実装履歴であり、FGA-04の完成状態へ読み替えない。
 
-2026-09-06の最新方針は[現行仕様](../specification.md#employeeの操作権限と保持)と[共通データ仕様](../specification.md#共通データ仕様)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を参照する。archiveは別collection移動に戻し、必要な従属writerの保護を設計する。以下は静的実装事実と未実装の設計であり、適用・進捗は[Employeeロードマップ](../roadmaps/employee.md)を正とする。
+EMP工程の2026-09-06時点の方針は[現行仕様](../specification.md#employeeの操作権限と保持)と[共通データ仕様](../specification.md#共通データ仕様)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を参照する。archiveは別collection移動に戻し、必要な従属writerの保護を設計する。以下のEMP工程は各時点の静的実装事実・設計・受入れ履歴であり、当時の適用・進捗は[Employeeロードマップ](../roadmaps/employee.md)を正とする。
 
 ## EMP-02での実装差分
+
+ここからEMP-08までの実装差分は各工程時点の履歴。通常保存の専用Callable・部分保存・競合拒否・role制限は冒頭のFGA-04で置換された範囲と区別する。archive・退職・誤退職訂正・User/Auth等の例外境界を一括廃止したとは扱わない。
 
 作成・基本・国籍は`functions/apis/saveEmployee.js`の専用Callable、`functions/modules/employees/saveEmployee.js`のtransaction保存、`functions/shared/employeeContract.js`の共有契約へ移した。`components/Employee/Editor.vue`と`useEmployeeEditor.js`はraw snapshotから独立draftを作り、保存await・拒否時の入力保持・明示再読込・応答不明の照合を扱う。基本住所入力、明示表示名優先、国籍解除の従属値消去を同じ保存契約へ揃えた。
 
@@ -93,6 +97,8 @@ Employeeに関連するFUT-0075〜0079、0126、0143、0146、0159、0181を、�
 2026-09-06、利用者が最終提案を採用し確定を承認した。表示名/作成導線、archive閲覧、段階移行/提供工程を含む確認済み要件は[現行仕様](../specification.md#employeeの操作権限と保持)、工程配分は[ロードマップ](../roadmaps/employee.md)を正とする。以下は採用要件に対応する設計契約であり、見出しの「案」は既存link維持のため残す。その後EMP-04までの連続実施が承認された。工程別の適用済み部分は冒頭の実装差分、現在の適用状態・次工程はEmployeeロードマップを参照する。
 
 ### 通常保存の技術契約
+
+以下の表はEMP-01〜04で採用した保存設計の履歴。FGA-04による通常保存・資格・保険の置換は[冒頭](#fga-04での情報分類)と[Local検証記録](../verification/fga-04-employee-manager-lww-local.md)を参照する。archive snapshot・参照catalog・User/Authの維持条件まで旧通常保存と一緒に撤去しない。 保険世代値の保持・client計算時の増加と、撤去されたserver最新値による競合拒否は[現行仕様](../specification.md#employeeの操作権限と保持)と[保険実装記録](employee-insurance.md#fga-04後の保存と検証境界)で区別する。世代値自体が撤去されたとは扱わない。
 
 | 項目 | 設計契約 | 拒否・成功・再試行の扱い |
 |---|---|---|
@@ -274,6 +280,8 @@ query用fieldの実効schema変更と整合確認は必要だが、実data件数
 受入れは、許可2actor/人事拒否/他tenant、参照0件/各従属あり/検査失敗、archive対参照保存の両順序、既存索引の欠損/実明細不一致・明細/索引偽装、10人参照不変/1人追加の実read測定、複製/実績化/通知/遅延再生成、User/予約/lifecycle競合、旧削除event、同ID再作成、応答不明・別actor/別操作再送を含む。他Employee/Outsourcer・金額/集計・過去snapshotが変わらないことも確認する。今回の設計reviewはこれらのruntime成功を示さない。
 
 ## EMP-05実装前契約
+
+以下はEMP-05着手時の設計・review入力を保持した記録であり、新しい実装開始指示ではない。実施結果は[EMP-05検証記録](../verification/employee-05-local.md)、工程の受入れは[Employeeロードマップ](../roadmaps/employee.md)を参照する。通常保存に関する後続置換と、維持するarchive・従属検査・開放条件を分けて読む。
 
 ### 開発者の読取り順と作業境界
 

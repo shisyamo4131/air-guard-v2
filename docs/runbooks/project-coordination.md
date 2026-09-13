@@ -1,17 +1,17 @@
 # project coordination runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-09-04
+- 最終確認日: 2026-09-12（文書整理）
 - 役割: Git統合、event-driven task loop、session容量とhandoff
 
 ## Git統合
 
 担当、所有範囲、並列化、未統合変更の扱いとGit承認は[Coordination and Git rules](../project-rules/coordination-and-git.md)、deploy承認は[Environment and approval rules](../project-rules/environment-and-approval.md)に従う。
 
-- 作業単位ごとにユーザーとbranch境界を相談し、原則として機能単位の `codex/<機能名>` ブランチを合意済み基準から作成する。開始時に現在ブランチ、基準コミット、作業ツリーを確認する。
-- コーディネーターは差分と仕様・ロードマップとの整合を確認し、承認済み作業単位のreview済みfileだけをステージ、コミット、統合する。利用者または別taskの変更をcommit対象に含める場合は対象差分と検証状態をユーザーと確認する。専門タスクが既にコミットを作成している場合は、確認後に再利用する。
-- `main` へは原則としてマージコミットを作成し、機能単位の統合境界を残す。競合解消後に関連テストとガバナンス検証を再実行する。
-- 受入れ後に問題が判明した場合は、機能単位のマージコミットをrevert可能か、データ・契約互換性を確認する。安全にrevertできない場合は修正ブランチと移行・復旧手順を用意する。
+1. [Git現在状態](#git現在状態の報告)を確認し、作業単位ごとにユーザーとbranch境界を相談する。原則は合意済み基準から機能単位の`codex/<機能名>`を作成する。
+2. [Checkpoint transition](#checkpoint-transition)でreview・文書・検証を照合し、承認済みのreview済みfileだけをstage・commitする。利用者または別taskの差分を含める場合は対象と検証状態を利用者と確認する。専門taskの既存commitは確認後に再利用する。
+3. `main`への承認済み統合は原則merge commitで機能単位の境界を残し、競合解消後に関連testとgovernance検証を再実行する。
+4. 受入れ後の問題はdata・契約互換性を確認してmerge commitをrevert可能か判断する。安全に戻せなければ修正branchと移行・復旧手順を用意する。
 
 ## Git現在状態の報告
 
@@ -23,20 +23,21 @@
 4. 取得したremote先端のcommit objectがlocalにも存在する場合は、`git rev-list --left-right --count`で明示した2つのrevisionを比較する。object不足時は先行・遅延数を未確認とし、そのためだけに無断fetchしない。upstream未設定のbranchをmainと比較する場合は、upstreamとの差ではなくmainとの差であることを明記する。
 5. localのremote-tracking refは最後に取得した記録であり、当該報告時のremote照合とは別の証拠として扱う。live確認不能でもremote欄を省略せず、未確認の理由とlocal記録から分かる範囲を分ける。
 
-現在のcommitやremote実測値を本runbookへ蓄積せず、当該報告または必要な実行証拠に置く。既存のcommit・製品dataは変更せず、この報告手順のrollbackは承認済み文書変更の安全なrevertで行う。
+実測値は当該報告または実行証拠へ置く。読取り報告でcommit・製品dataを変更しない。手順の復元は承認済み文書変更を安全にrevertする。
 
 ## プロジェクト管理タスクループ
 
-長期作業は、定時確認ではなくタスク間通知を用いたイベント駆動型を標準とします。
+開始確認 → callback → transition → Git統合の順に進める。長期作業の割当単位と終了条件は[Task lifecycle](../project-rules/coordination-and-git.md#task-lifecycle)を正とする。
 
 ### 通常startup
 
-[必須の読取り順](../../governance/project-rules.md#必須の読取り順)に従い、primary repositoryのGit状態・scope・承認・次作業を照合する。製品再開の案内は[現在の製品作業](../implementation/current-coordinator-handoff.md)。手動作成、利用者要求の交代、旧task利用不能時も同じ経路とし、旧ownerの協力やactivationを前提にしない。
+[必須の読取り順](../../governance/project-rules.md#必須の読取り順)の後、[Git現在状態](#git現在状態の報告)と[製品再開案内](../implementation/current-coordinator-handoff.md)からscope・承認・次作業を照合する。手動作成・交代・旧task利用不能時も同じ手順を使い、旧ownerの協力・activationを前提にしない。
 
 installed scaffold skillは明示されたgovernance作成・採用・移行・更新でだけ使用し、日常作業ではrepositoryの指示を使用する。[旧handoff効率化runbook](coordinator-handoff-efficient-activation.md)はHistoricalであり、通常startupに適用しない。
+
 ### 開始確認
 
-1. コーディネーターと専門タスクのID・ホストを記録し、全taskのcwdとGit top-levelが利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`そのものであることを確認する。Codex専用worktreeは作成・使用しない。
+1. coordinatorと専門taskのID・hostを記録し、全taskのcwdとGit top-levelを[primary repository](../../governance/project-rules.md#常時適用する境界)へ照合する。Codex専用worktreeは作成・使用しない。
 2. 現在のロードマップ、基準コミット、チェックポイントID、担当・禁止ファイル、承認境界を確認する。
 3. 終了条件を記録する。標準は「安全に独立実行できる作業が尽きた時点」とする。
 4. コールバック先を記録する。
@@ -54,16 +55,15 @@ worktree: <clean or exact dirty paths>
 
 ### 通常ループ
 
-1. Codexが現行挙動、変更契約、影響、rollback、test条件を、利用者が理解・判断できる最小単位に整理する。
-2. [Coordination and Git rules](../project-rules/coordination-and-git.md)に従って必要な専門task、ownership、callbackを固定し、独立scopeだけを並列に割り当てる。
-3. 専門タスクは完了、失敗、仕様質問、承認境界で一度だけ通知し、待機する。
-4. コーディネーターが全報告、差分、test、未確認事項、承認境界、worktree、正本との整合を照合し、矛盾を解消する。
-5. document同期、独立review、選択済みcompletion gate、後続編集で失効したgateの再実行を終えてから、review済みfileだけをcommitする。release・外部受入れ後の追加記録はverification policyの失効条件に従う。
-6. 終了条件に達していなければ次のチェックポイントへ進む。
+1. 現行挙動、変更契約、影響、rollback、test条件を利用者が判断できる最小単位に整理する。
+2. [担当と並列化](../project-rules/coordination-and-git.md#担当と並列化)に従い、専門task・ownership・callbackを固定して独立scopeだけを割り当てる。
+3. 完了・失敗・仕様質問・承認境界のcallbackを受け、coordinatorが全報告と差分を照合し、矛盾を解消する。専門taskは一度通知して待機する。
+4. 次の[Checkpoint transition](#checkpoint-transition)を満たして[Git統合](#git統合)へ進む。release・外部受入れ後の追加記録はverification policyの失効条件に従う。
+5. 終了条件に達していなければ次checkpointへ進む。
 
 ### Checkpoint transition
 
-変更済みcheckpointから次checkpointへ進む前、または完了を主張する前に、次の4点を一度確認する。不足があれば次を開始せず、現在checkpointへ戻す。
+document同期・独立review・選択済みcompletion gate（後続変更で失効したgateの再実行を含む）を終え、commit・次checkpoint開始・完了主張の前に次の4点を一度確認する。不足があれば次を開始せず、現在checkpointへ戻す。
 
 1. 承認済み目的・完了条件ごとに成果と検証証拠を対応づけ、未達・未検証・合意した途中追加・独立問題の後続送りを区別する。[scope規則](../project-rules/development-and-data.md#フェーズごとのテスト範囲の合意)に反する後続送りは認めない。開始baselineから最終差分までのfileで`governance/verification-policy.json`のclass unionとcompletion gateを確定する。
 2. 各必須gateのexact command、結果、独立exit status、後続編集による失効有無、verification receiptまたはcompletion reportの保存先を確認する。task内の一時出力だけを永続証拠にしない。
@@ -72,13 +72,13 @@ worktree: <clean or exact dirty paths>
 
 このtransitionは既存gateと正本確認を閉じる手順であり、新しいstatus registry、branch manifest、全doc semantic validator、checkpointごとのADRを要求しない。
 
-3環境の検証選択・保証範囲・承認境界は[Environment and approval rules](../project-rules/environment-and-approval.md)を正とする。Codex専用Localの起動・操作・終了は[Codex専用local UI検証runbook](local-ui-testing.md)、利用者環境Localは[利用者環境local UI検証runbook](user-local-ui-testing.md)、製品変更の最終受入れは[Dev環境deploy runbook](dev-deployment.md)を使う。
+環境検証は[環境規則](../project-rules/environment-and-approval.md#local-emulatorとlocal-ui)から該当runbookへ進み、このtask loopへ個別手順を複写しない。
 
-通常の割当・通知は利用者へ逐次報告せず、終了時または早期停止時に統合して報告します。承認、安全・外部作用・破壊的操作の境界、テスト失敗、仕様競合、進捗低下、タスク・作業ツリー消失、状態取得・コールバック障害、容量閾値は直ちに報告します。突然の終了で統合報告できなかった場合は、再開後最初の確認で未報告期間をまとめます。
+通常の割当・通知は終了・早期停止時に統合報告する。承認・安全・外部作用・破壊操作の境界、test失敗、仕様競合、進捗低下、task・worktree消失、状態取得・callback障害、容量閾値は即時報告する。突然終了した場合は再開後最初の確認で未報告期間をまとめる。
 
-callback失敗時の専門taskの停止は[担当と並列化](../project-rules/coordination-and-git.md#担当と並列化)に従います。コーディネーターは状態を安全に1回だけ再取得し、最新指示と照合できなければ同じ割当を再送しません。コールバックを利用できない場合、またはユーザーが明示した場合だけ差分型ポーリングへ切り替え、対象、間隔、停止条件を記録します。変更なしの確認は通知せず、確認間隔を作業期限とみなしません。
+callback失敗時は[担当と並列化](../project-rules/coordination-and-git.md#担当と並列化)に従い専門taskを停止する。coordinatorは安全に1回だけ状態を再取得し、最新指示と照合できなければ再送しない。callback利用不能または利用者の明示選択時だけ差分型pollingへ切り替え、対象・間隔・停止条件を記録する。変更なしは通知せず、間隔を期限とみなさない。
 
-checkpoint固有のsubagent禁止の有効範囲も[担当と並列化](../project-rules/coordination-and-git.md#担当と並列化)を正とし、継続禁止には利用者による別の明示指示を必要とします。利用者要求の交代作成はcoordinator自身が[task交代手順](#利用者が要求したtask交代)に従って行います。
+checkpoint固有のsubagent禁止の有効範囲は[担当と並列化](../project-rules/coordination-and-git.md#担当と並列化)に従う。継続禁止には利用者による別の明示指示を必要とする。利用者要求の交代はcoordinator自身が[task交代手順](#利用者が要求したtask交代)を実施する。
 
 ### Critical identifierの確認
 
@@ -91,13 +91,13 @@ checkpoint固有のsubagent禁止の有効範囲も[担当と並列化](../proje
 
 `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は同じtask容量確認指示として、この節へrouteしてから回答します。これらはmodelのtoken数やcontext windowではなく、現在taskの永続Codex session JSONL容量を意味します。
 
-容量確認が依頼されたときにtrusted task metadataから現在のtask IDを特定して測定します。交代専用の測定や定期測定をstartup条件にしません。並行taskの有無にかかわらず、最新・最終更新sessionやtimestampから対象を推測しません。
+依頼時にtrusted task metadataから現在task IDを特定する。最新・最終更新sessionやtimestampから推測せず、交代専用測定・定期測定をstartup条件にしない。
 
 ```powershell
 pwsh -NoProfile -File scripts/check-codex-session-size.ps1 -SessionId <current-task-id>
 ```
 
-commandの結果とexit statusを独立して確認します。scriptは指定IDに一致するsession fileを正確に1件だけ解決しなければなりません。
+指定IDのsessionが正確に1件であること、command結果と独立exit statusを確認する。
 
 標準報告は次をすべて含めます。
 
@@ -108,7 +108,7 @@ commandの結果とexit statusを独立して確認します。scriptは指定ID
 - session測定時刻、Codex全体の測定時刻・source。
 - command resultと独立して観測したexit status。
 
-コーディネーターと専門taskのhandoff閾値は300 MiBです。`handoff_required`が`true`の場合だけtask交代を提案します。`false`の場合、taskの経過時間、会話の長さ、token/context推測を根拠に交代を勧めません。Codex全体の10 GiBは参考警告であり、task handoffや削除を自動実行する基準ではありません。
+coordinator・専門taskとも閾値は300 MiB。`handoff_required=true`の場合だけ交代を提案し、falseなら経過時間・会話長・token/context推測で勧めない。Codex全体の10 GiBは参考警告であり、交代・削除の自動実行基準ではない。
 
 停止・error契約は次のとおりです。
 
@@ -124,6 +124,6 @@ commandの結果とexit statusを独立して確認します。scriptは指定ID
 2. review済みの関連変更を意味のある単位でlocal commitし、primary repositoryをcleanにする。変更がなければ交代専用のcommitを作らない。
 3. 保存済みprimaryへ同じ基本名と次の連番でfresh non-fork taskを作成する。新taskは上記の通常startupで作業を始める。
 
-governance編集だけで交代を強制しない。task registry、owner状態、交代履歴/cache、generation、handshake、交代専用validatorやprofileを追加しない。必要な製品factsは既存正本、旧本文はGitに残す。判断は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)、共通契約は[Task Replacement](../../references/task-turnover-contract.md)を参照する。
+governance編集だけで交代を強制しない。[Task Replacement](../../references/task-turnover-contract.md)に従い、registry・owner状態・交代履歴/cache・generation・handshake・交代専用validator/profileを追加しない。製品factsは既存正本、旧本文はGit、判断理由は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)を参照する。
 
 Codexは旧taskのarchive/deleteを実行・依頼しない。archiveは利用者の操作であり、保存容量の縮小を保証しない。Codex所有のSQLite、WAL、session記録の直接削除や定常的な`VACUUM`は通常運用に含めない。

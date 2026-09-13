@@ -1,5 +1,23 @@
 # Employee保険管理（実装調査）
 
+## FGA-04後の保存と検証境界
+
+FGA-04で通常保険保存をEmployee modelの`update()`へ接続した。確認済み要件は[Employee仕様](../specification.md#employeeの操作権限と保持)、判断と実装checkpointへの委任は[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)、適用・受入れは[FGA roadmap](../roadmaps/foundational-governance-alignment.md)と[Dev記録](../verification/fga-04-employee-manager-lww-dev.md)を参照する。
+
+2026-09-12の文書整合時に、次のlocal sourceを照合した。runtime・remoteを再検証した記録ではない。
+
+| 責務 | 現在のsourceで確認した内容 |
+|---|---|
+| 入力・所有者・処理中制御 | `useEmployeeInsurance`が入力開始時のEmployeeからbaselineとdraftを作り、actor／tenant切替とbusyを検査する。保存失敗は入力を保持する |
+| 遷移計算 | clientの`prepareEmployeeInsurance`へ同じbaselineと、そこから作ったexpected map/versionを渡す。保険modelの遷移methodとvalidationを適用し、対象世代を1増やす |
+| 保存 | baseline全体に計算した保険map・世代値を重ねたEmployee candidateで`update()`する。専用Callable呼出し・server最新map/versionとの照合はない |
+| 世代値の互換性 | local Employee schemaが既存値を通常全文保存へ残す。新規作成時の0初期化と、不存在の既存fieldを読取りだけで補完しない条件を維持する |
+| 保証の限界 | expectedは同じ入力baselineとの整合確認であり、保存直前のserver最新値との競合検出ではない。busyは当該UIの再入抑止で、別tab・別端末の同時操作を防ぐものではない。古いcandidateのdocument全体保存による上書きを世代値で防げるとは扱わない |
+
+根拠source: [保険composable](../../composables/application/employee/useEmployeeInsurance.js)、[client遷移contract](../../composables/domain/employee/employeeInsuranceContract.js)、[Employee schema](../../schemas/Employee.js)。既存testは[UI保存test](../../test/domain/employee-editor.test.mjs)と[schema互換test](../../test/domain/employee-schema-compatibility.test.mjs)を参照する。UI保存testのharnessはFunctions側の同名contractを注入するため、その成功だけをclient contractの全分岐やremote競合防止の実証にしない。
+
+以下のEMP-04／EMP-01と初期調査は各時点の履歴。専用Callable・server競合拒否・role限定の記述を現在の通常保険保存へ適用しない。退職後編集禁止・保険の状態遷移・User/Auth・archive等の維持条件は現行仕様へ従う。
+
 ## EMP-04の移行状態
 
 Employee詳細の3保険を専用Callableと独立draftへ移行した。原本/archiveの直接client CUD拒否を維持し、旧全文保存を再許可しない。対象保険mapと巻き戻さない保険別世代値を照合し、6操作で変更するfieldだけを保存する。履歴復元は末尾の4fieldを復元し、履歴を1件消費する既存動作を維持する。実装・受入れ状況は[Employeeロードマップ](../roadmaps/employee.md)と[local検証記録](../verification/employee-02-04-local.md)、保存契約は[Employee設計](employee-master.md#通常保存の技術契約)を参照する。
@@ -18,7 +36,7 @@ Employee詳細の3保険を専用Callableと独立draftへ移行した。原本/
 
 ## メタデータ
 
-以下の節は2026-08-11の改修前調査履歴である。現在の保存・権限・適用状況は冒頭の移行状態を参照する。
+以下の節は2026-08-11の改修前調査履歴である。現在の保存・権限・適用状況は冒頭のFGA-04後の節を参照する。
 
 - 状態: 実装調査（SPEC-DEEP-027で対象9 componentをdeep review済み）
 - 対象セグメント: SPEC-SEG-051

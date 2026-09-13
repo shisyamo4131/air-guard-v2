@@ -5,16 +5,22 @@
 - 現在の進捗: 100%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
 - 現在の承認境界: SITE-09まで完了した。初回bounded Dev反映後に確認したRules評価上限を補正し、補正版RulesだけをDevへ反映したうえで、会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchiveと、経理accountの閲覧・作成導線非表示を確認した。利用者は見た目・操作感の追加改善を後続phaseへ送った。
-- 環境境界: 補正済みRulesはDevへ反映済みである。Hosting・Functions・Indexesは補正時に再反映せず、Prod・migration・既存data補完は変更していない。合成Siteは承認済みarchive経路で通常一覧から除外し、合成CustomerはDevに残している。
+- SITE-09受入れ時点の環境記録: 補正済みRulesはDevへ反映済みである。Hosting・Functions・Indexesは補正時に再反映せず、Prod・migration・既存data補完は変更していない。合成Siteは承認済みarchive経路で通常一覧から除外し、合成CustomerはDevに残している。
 - 後続phase: SITE-01〜09は当時のstrict actor契約による履歴証拠として100%を維持する。現在のFGA-03では通常作成・基本情報・Customer・Agreement・手動終了・再有効化をtenant-trust認可へ置換し、archiveだけをstrict例外として維持する。現在地と完了条件は[根本ガバナンス整合phase](foundational-governance-alignment.md)を正とする。
+
+## 現行仕様と適用状態の参照
+
+通常保存・認可の現行要件は[仕様](../specification.md#取引先現場取極め)、FGA-03後の適用状態・後続作業は[FGAロードマップ](foundational-governance-alignment.md)、実装経路は[Site実装記録](../implementation/site-master.md)を正とする。[FGA-03 Dev受入れ記録](../verification/fga-03-site-manager-lww-dev.md)に後続反映と受入れを記録済みであり、以下の通常保存をLocal候補・Dev未受入れとは扱わない。
+
+SITE-01〜09の工程・検証・rollbackは当時の契約と達成証拠として保持する。得点を変更せず、旧actor・専用writer・競合拒否を通常保存へ再適用しない。終了・再有効化・archiveの専用境界、自動終了公開・実data補完・Prod等の別承認は維持する。
 
 ## 現状確認
 
 ### 確認済み事実
 
 - `/sites`、`/sites/[id]`、`/sites/terminated`は`sites:read`で到達する。SITE-02では通常writeをstrict `sites:write`へ限定したが、FGA-03で作成、基本情報・Customer・取極め更新、手動終了、再有効化のclient／server認可を同一tenantの有効な本登録Userへ置換した。role差は現行route・menu等のUXとして残り得る。
-- FGA-03の現在候補では、Site masterの作成、基本情報、Customer、取極めをSite modelの標準`create()`／`update()`へ統一し、document単位last-write-winsとする。取極めも専用Callable、baseline比較、同一field競合を使わず、listener由来Siteへ編集後の配列を重ねて通常保存する。数値・重複・0円確認と失敗時の入力保持は維持する。終了・再有効化はSITE-04、archiveはSITE-05の専用Callableへ分離した。
-- Firestore Rulesは同一tenant readを維持し、通常Site create/updateを確認済みemail、canonical User ID、tenant一致、有効・本登録Userへ許可する。role、permission、会社管理者、super-user区分はallow条件にしない。FGA-03のLocal候補では通常fieldと`agreementsV2`のschema・業務検査を正規application writerへ集約し、Rulesにはtenant・identity、maintenance、ACTIVE、schedule・lifecycle、live Customer、client delete、archive CUD・tombstoneの保護を残した。SITE-03／06／08の専用writer、exact field、競合検査は当時の履歴証拠として扱う。
+- FGA-03では、Site masterの作成、基本情報、Customer、取極めをSite modelの標準`create()`／`update()`へ統一し、document単位last-write-winsとする。取極めも専用Callable、baseline比較、同一field競合を使わず、listener由来Siteへ編集後の配列を重ねて通常保存する。数値・重複・0円確認と失敗時の入力保持は維持する。終了・再有効化はSITE-04、archiveはSITE-05の専用Callableへ分離した。
+- Firestore Rulesは同一tenant readを維持し、通常Site create/updateを確認済みemail、canonical User ID、tenant一致、有効・本登録Userへ許可する。role、permission、会社管理者、super-user区分はallow条件にしない。FGA-03では通常fieldと`agreementsV2`のschema・業務検査を正規application writerへ集約し、Rulesにはtenant・identity、maintenance、ACTIVE、schedule・lifecycle、live Customer、client delete、archive CUD・tombstoneの保護を残した。SITE-03／06／08の専用writer、exact field、競合検査は当時の履歴証拠として扱う。
 - Customer未定の仮Siteを作成できる。Customer設定後のunsetは拒否し、同じ会社に存在する別Customerへの変更は許可する。SiteのCustomer変更だけでは既存OperationResult・BillingのcustomerIdを変更しない。
 - ACTIVE一覧は会社配下のACTIVEだけをSite専用listenerでlive購読し、空検索では取引先・警備種別の絞込み後に`updatedAt`が新しい最大20件を取得する。文字列入力時は同じ絞込みと正規化済み`tokenMap`検索を使う。TERMINATED一覧も空検索では`updatedAt`が新しい最大20件、文字列入力時は正規化済み`tokenMap`検索を取得し、古い応答を破棄する。Site Autocompleteはstatusを限定せずACTIVEを先に表示し、TERMINATEDは明示確認後も終了状態のまま選択する。
 - SITE-04着手前は、手動終了の予定確認とstatus更新が一つのatomic boundaryでなくUI入口を停止し、日次自動終了にも将来予定や同時更新の保護がなかった。SITE-04で終了・再有効化・自動終了を専用処理へ置き換え、現在の保護条件は24行目の完了事実を正とする。
@@ -72,12 +78,16 @@
 
 ## rollback
 
+以下はSITE-01〜09時点の復旧契約。次のreleaseでは[Dev runbook](../runbooks/dev-deployment.md)に従い対象と復旧先を再確認し、過去の承認を流用しない。
+
 - 各local phaseはUI、application action、Functions、Rules、test、文書をreview可能なcommit単位にし、data変更がなければ当該commitのrevertを基本とする。
 - 権限縮小やarchive停止の検証が失敗した場合、既知の広いwriteやgeneric deleteを再開せずlocalで停止する。
 - archive済みdata、status監査data、migration結果が生じた後はcode revertだけで復旧しない。入口停止、互換Rules維持、対象dataの別承認restoreを組み合わせる。
 - SITE-09のDev releaseは対象commit、service、Rules、Functions、migration、backup、停止条件、復旧先を実行前に固定する。
 
 ## 検証計画
+
+以下はSITE工程当時の計画であり、後続変更の固定gate集合ではない。現在の検証は[policy](../../governance/verification-policy.json)から選び、FGA-03で承認された代替証拠の範囲は同工程の受入れ記録で確認する。
 
 - 設計時: actor・tenant・field・status・Customer・archive・Agreement・自動終了・transaction分離の失敗経路とsecurity review。
 - unit/source contract: operation入力、変更field、draft競合、検索sequence、UI表示・送信直前policy、generic delete/restore非到達。
@@ -87,4 +97,4 @@
 
 ## 完了後の境界
 
-SITE-09は[検証記録](../verification/master-dev-site-create-correction.md)のとおり機能面のDev受入れを完了した。見た目・操作感の追加改善、既存Dev dataの全件検査・補完、Site自動終了の公開、残した合成Customerの削除、Prod・migrationは自動的な次工程にせず、必要性と対象を示す別承認で扱う。
+SITE-09の機能面受入れは[検証記録](../verification/master-dev-site-create-correction.md)、その後の通常保存・見た目の受入れは[FGA-03記録](../verification/fga-03-site-manager-lww-dev.md)を参照する。初回受入れで残した合成Customerの後続処置は[4マスター受入れ結果](../implementation/master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果)へ照合し、現在の削除待ちとして再掲しない。既存Dev dataの全件検査・補完、Site自動終了の公開、Prod・migrationは自動的な次工程にせず、必要性と対象を示す別承認で扱う。

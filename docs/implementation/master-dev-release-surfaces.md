@@ -1,6 +1,6 @@
 # 4マスター Dev反映前 release surface inventory
 
-- 状態: `MASTER-DEV-PREFLIGHT-01` No.7完了
+- 状態: Historical — 初回Dev反映前の準備記録。 `MASTER-DEV-PREFLIGHT-01` No.7完了
 - local source baseline: `7ce7b485c7bb1350b9112b2a12075d6bedf25e7e`
 - No.5検討baseline: `1204ba205ddf4ca2f3d2de7f32924d7404db8af5`
 - branch: `codex/master-dev-preflight`
@@ -10,6 +10,15 @@
 この文書は反映候補のinventoryであり、release checkpointの承認、最終commit、exact deploy command、実行順序を確定しない。最終release差分は後続Checkpointで再照合する。
 
 > FGA-02〜04の後続変更により、このbaseline inventoryは現在のrelease判断には使用しない。特にEmployee通常保存6 FunctionはLocal sourceから撤去済みで、Dev反映時は新規・更新候補ではなく既存Functionの削除候補として正確な名前、復旧source、反映順を再確認する。
+
+## 結果・現行作業への参照
+
+- 初回反映後の結果は[Dev受入れ記録](master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果)と同文書内のSite記録を参照する。
+- 後続変更・残作業は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)と[製品再開案内](current-coordinator-handoff.md)、新たな反映手順は[Dev runbook](../runbooks/dev-deployment.md)へ進む。
+- 以下の候補・未確認事項・二段階release・停止・rollbackは初回準備時点の契約を保存したもの。現在のtarget、差分、実行順、復旧source、承認を確定する根拠として流用しない。Employee tenant開放、Site自動終了、実data・IAM等の追加操作は個別承認のままとする。
+
+<details>
+<summary>初回Dev反映前のinventory・準備・停止・復旧の詳細履歴</summary>
 
 ## 比較基準
 
@@ -264,6 +273,8 @@ remoteで同一定義がREADYなら再作成・再deployしない。不足分だ
 
 ## 後続Checkpointへ渡す未確認事項
 
+以下はNo.7完了時点の引渡し一覧であり、現在の未完了一覧ではない。実施後の結果は冒頭の参照先へ進む。
+
 1. No.8: [4マスター Dev受入れ計画](master-dev-acceptance-plan.md)へtask冒頭の利用者担当5項目を照合し、完了済みbranch承認、4マスター全体のUI確認、Dev利用状況・停止条件、権限別account、No.10の外部操作承認境界を統合した。起動中Chromeを再利用し、U8-1〜U8-4を1マスターずつ確認後、U8-5〜U8-7を確定する。
 2. No.9: No.6で必要性を限定したread-only preflight／dry-runに不足するlocal tool、最終差分、gateを確認する。
 3. No.10: actual Dev targetのread-only preflight結果を含むbounded release checkpointを提示し、明示承認後だけbuild／remote変更へ進む。
@@ -271,3 +282,5 @@ remoteで同一定義がREADYなら再作成・再deployしない。不足分だ
 ## No.4の検証選定
 
 今回証明する事項はlocal sourceと記録済みDev比較元からのsurface分類であり、runtime動作ではない。既存のLocal domain/Emulator/UI/build証拠は変更されず、同じ機能動作を再証明する必要がないため再実行しない。文書追加により失効する`project-docs`と`diff-check`だけを最終状態で実行する。直前のgovernance変更で成功した`managed-governance`、`project-docs-negative`、`capacity-regression`は各`invalidatedBy`に該当する変更がなく、既存検証でカバー済みとする。
+
+</details>

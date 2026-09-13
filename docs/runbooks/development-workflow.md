@@ -1,8 +1,8 @@
 # 開発workflow runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-09-04
-- 役割: 通常開発の担当、変更単位、UI error・loading、client操作policy
+- 最終確認日: 2026-09-12（文書整理）
+- 役割: 承認済みcheckpointの開発・review・検証、UI契約の適用、Rules cutoverの実行手順
 
 ## 担当と変更単位
 
@@ -27,26 +27,15 @@
 
 ## 非同期UI操作のerror・loading責務
 
-2026-08-17に、特定機能へ限定しないproject共通原則として次を確定した。
-
-- `AirArrayManager`または`AirItemManager`がsubmitを管理するCRUDでは、operation handlerはerrorを握りつぶさずmanagerへrejectを伝播する。managerの`error` eventを`useBaseManager`、`useLogger`、`useErrorsStore`、`useMessagesStore`へ接続し、component内で同じerrorを重複して`logger.error()`または`errors.add()`へ渡さない。
-- manager管理下のCRUDはmanager固有の処理中状態を使用し、理由なくglobal loadingを重ねない。確認、取消、処理中、失敗後のdialog維持はmanagerの契約として扱う。
-- manager外の独立操作は、`useLoadingsStore.add()`、`try`、成功message、`catch`での`logger.error({ error })`、`finally`でのloading削除を基本形とする。errorをcallerへ再伝播するか吸収するかはoperationの成功条件として明示する。
-- Callableはserver側で内部情報を含まないcode・利用者向けmessageへ変換する。clientは安全なmessageをfeedback経路へ渡し、UID、会社ID、内部例外、秘密情報を画面へ表示しない。
-- `useLogger`へ`useErrorsStore()`を渡した場合、`logger.error()`がErrors Storeとerror色messageの登録を兼ねる。同じerrorへ`errors.add()`を併用しない。
-- error/loading基盤全体のtyped error、retry、owner、reference count、取消し、layout lifecycleはFUT-0136、FUT-0137、FUT-0139で継続する。Air managerの責務分割はFUT-0181へ統合し、現時点では低優先度の構造整理として扱う一方、既知のdisable・single-flight等の安全上の不具合は同FUTの重大度を維持する。
+1. 操作がManager管理下のCRUDか独立操作かを分類し、[現行仕様のerror・loading契約](../specification.md#非同期ui操作のerrorloading責務)に対応する既存経路へ接続する。
+2. 成功、失敗、取消、処理中と再操作を対象testへ含め、error伝播、通知の二重登録、loading解除、失敗後のdialog状態、安全なmessageを照合する。Manager接続は[入力component契約](../specification.md#editorと入力component)に従う。
+3. 基盤全体の将来整理は[FUT台帳](../implementation/future-actions.md)のFUT-0136・0137・0139・0181へ同一原因を統合する。対応優先度と未解決の安全上の不具合は各FUTを正とし、本手順へ複写しない。
 
 ## Client操作policyとcomposableの責務
 
-2026-08-17に、特定機能へ限定しないproject共通原則として次を確定した。判断理由は[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)を正とする。
-
-- ドメイン上の操作可否をclientで事前検証する場合、Vue、component、Firebase transportへ依存しない純粋policyを設ける。
-- application composableがpolicyをreactiveな状態へ適用し、操作可否、安定した拒否理由、実行処理をcomponentへ提供する。
-- componentはrole、permission、対象状態のpolicyを再実装せず、composableの結果を表示と操作へ反映する。
-- composableはrequest送信直前にもpolicyを再評価し、拒否状態では送信しない。
-- client事前判定を認可境界として扱わず、serverはidentity、actor、tenant、対象、入力、最新状態を必ず再検証する。
-- field単体の必須、文字数、書式validationはこの構造を強制せず、既存validatorまたはcomponent ruleを使用できる。
-- 既存機能は一括移行せず、新規機能と改修対象機能からpolicy、composable、component接続、server共通条件parity testを小segmentで追加する。
+1. [現行仕様のclient操作policy](../specification.md#client操作policyとcomposableの責務)と[通常業務・例外の境界](../specification.md#テナントと認証)から、対象operationで必要な事前判定とserver検証を特定する。
+2. 既存機能は一括移行せず、新規機能と改修対象機能からpolicy、composable、component接続、server共通条件parity testを小segmentで追加する。
+3. 表示と送信直前の判定、拒否時の送信抑止、例外APIの非認可検査と標準error経路を、適用対象の契約へ照合する。判断理由は[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)を参照する。
 
 ## Firestore Rulesを狭める改修順序
 
@@ -63,7 +52,7 @@
 
 ## 必要十分なdata設計
 
-data分割と競合制御の採用条件は[Development and data rules](../project-rules/development-and-data.md#実装原則)と[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)を正とする。本runbookでは承認済み設計を下記segment contractへ落とし込む。
+data構成と分割条件は[現行仕様](../specification.md#firestoreドキュメントの構成)、段階移行は[Development and data rules](../project-rules/development-and-data.md#実装原則)、通常更新と例外の競合制御は[現行仕様](../specification.md#firestoreドキュメントの同時更新)を正とする。判断理由は[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)と[ADR 0066](../decisions/0066-pre-production-document-level-last-write-wins.md)を参照する。本runbookでは承認済み設計を下記segment contractへ落とし込む。
 
 認証・認可およびCRUD改修は、既存の機能設計へ次のsegment contractを揃えます。対象外項目は理由を示し、独立した書式文書は増やしません。
 

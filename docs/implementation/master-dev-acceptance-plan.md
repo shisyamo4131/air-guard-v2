@@ -2,6 +2,27 @@
 
 最終更新日: 2026-09-07
 
+## この記録の読み方
+
+初回Dev反映の計画と2026-09-07の受入れ結果を分けて保持する。下の結果は当時の実操作の証拠であり、後続変更や現在のremote状態まで検証済みとはしない。Siteの結果は[SITE-09記録](../verification/master-dev-site-create-correction.md)、後続作業は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)と[再開案内](current-coordinator-handoff.md)を参照する。
+
+## No.10後のCustomer・Outsourcer・Employee Dev受入れ結果
+
+2026-09-07に、反映済みDevを既存の会社管理者accountと経理accountで確認した。実在のCustomer、Outsourcer、Employee、User／Authenticationは操作せず、明確なtest labelを持つ合成masterだけを使用した。FCM、email、Stripe、PDF、実通知、課金、User／Authentication削除、Prod、migration、全件scanは実行していない。
+
+| master | 会社管理者で確認した操作 | 経理accountで確認した境界 | 判定と処置 |
+|---|---|---|---|
+| Customer | 基本情報編集、取引状態の終了・復帰、状態別検索、参照なしarchive、active Siteから参照されるCustomerのarchive拒否 | 一覧・検索・状態絞込み・詳細を閲覧でき、作成・編集・状態変更・archive導線が表示されない | CS-04とCAS-05は完了。参照拒否後の再読込でCustomerとSiteが変更されていないことを確認した。合成Siteを先に、合成Customerを後に承認済みarchive経路でcleanupし、通常一覧から除外した。通常画面にrestore導線はない |
+| Outsourcer | 作成、名称検索、基本情報編集、契約終了、終了済みmasterの表示・選択 | 一覧・名称検索・詳細を閲覧でき、作成・編集・破壊操作の導線が表示されない | OUT-08は完了。製品にarchive／deleteを設けない契約どおり、合成Outsourcerは契約終了状態でDevに保持する |
+| Employee | 作成、基本情報・国籍・警備員登録・資格・3保険の編集、退職・復帰 | 在職一覧・詳細を閲覧でき、作成・各編集・退職・User登録・archive導線が表示されない | EMP-09は完了。通常archive APIのtenant allowlistは空のまま、archiveは実行していない。合成Employeeは在職状態で保持し、User／Authenticationは作成していない |
+
+Customer archive safetyは、利用者承認のもと一時合成Customerとactive Siteを作成してDev実操作を行った。Customer archive要求は参照中である旨を表示して拒否され、再読込後もCustomerはactive、Siteは稼働中、両者の参照は維持されていた。その後、各破壊操作のaction-time承認を得てSite、Customerの順にarchiveし、通常一覧から除外した。これによりCAS-05を完了した。
+
+<details>
+<summary>初回受入れの計画・事前回答・操作条件・検証選定の履歴</summary>
+
+以下のNo.8〜10は初回反映時点の計画・回答であり、次のreleaseの承認ではない。account、合成data、外部作用、停止・cleanup条件を含む当時の契約を保持する。
+
 ## 目的と停止点
 
 この文書はCustomer、Site、Outsourcer、Employeeの初回Dev反映について、受入れに使うaccount、合成data、操作、外部作用、終了後の処置と担当を固定する。実company ID、名称、account、資格情報は記録しない。
@@ -55,18 +76,6 @@ No.10へ進む前に次を確認する。UI確認は機能検証を再実行す�
 利用者は2026-09-07に、4マスター管理機能のUIを概ね確認し、機能面についてDev受入れへ進めると判断した。役割が類似するcomponentの共通化、画面ごとに異なるcomponent境界、DataTable／DataIteratorを含むデザイン統一は未完了の機能改修ではなく、Dev受入れ完了後の別phaseで扱う。
 
 SiteはNo.10後のDevで、会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchiveと、経理accountの閲覧・作成導線非表示を確認した。利用者は機能面を受入れ、見た目・操作感の追加改善を後続phaseへ送ったため、SITE-09を完了した。合成Siteは承認済みarchive経路で通常一覧から除外した。Site受入れ時点で残した合成Customerも、その後のCustomer受入れでarchive済みである。詳細は[SITE-09記録](../verification/master-dev-site-create-correction.md)を正とする。
-
-## No.10後のCustomer・Outsourcer・Employee Dev受入れ結果
-
-2026-09-07に、反映済みDevを既存の会社管理者accountと経理accountで確認した。実在のCustomer、Outsourcer、Employee、User／Authenticationは操作せず、明確なtest labelを持つ合成masterだけを使用した。FCM、email、Stripe、PDF、実通知、課金、User／Authentication削除、Prod、migration、全件scanは実行していない。
-
-| master | 会社管理者で確認した操作 | 経理accountで確認した境界 | 判定と処置 |
-|---|---|---|---|
-| Customer | 基本情報編集、取引状態の終了・復帰、状態別検索、参照なしarchive、active Siteから参照されるCustomerのarchive拒否 | 一覧・検索・状態絞込み・詳細を閲覧でき、作成・編集・状態変更・archive導線が表示されない | CS-04とCAS-05は完了。参照拒否後の再読込でCustomerとSiteが変更されていないことを確認した。合成Siteを先に、合成Customerを後に承認済みarchive経路でcleanupし、通常一覧から除外した。通常画面にrestore導線はない |
-| Outsourcer | 作成、名称検索、基本情報編集、契約終了、終了済みmasterの表示・選択 | 一覧・名称検索・詳細を閲覧でき、作成・編集・破壊操作の導線が表示されない | OUT-08は完了。製品にarchive／deleteを設けない契約どおり、合成Outsourcerは契約終了状態でDevに保持する |
-| Employee | 作成、基本情報・国籍・警備員登録・資格・3保険の編集、退職・復帰 | 在職一覧・詳細を閲覧でき、作成・各編集・退職・User登録・archive導線が表示されない | EMP-09は完了。通常archive APIのtenant allowlistは空のまま、archiveは実行していない。合成Employeeは在職状態で保持し、User／Authenticationは作成していない |
-
-Customer archive safetyは、利用者承認のもと一時合成Customerとactive Siteを作成してDev実操作を行った。Customer archive要求は参照中である旨を表示して拒否され、再読込後もCustomerはactive、Siteは稼働中、両者の参照は維持されていた。その後、各破壊操作のaction-time承認を得てSite、Customerの順にarchiveし、通常一覧から除外した。これによりCAS-05を完了した。
 
 ## account最小構成
 
@@ -129,3 +138,5 @@ No.10のbounded Dev releaseと上記受入れは別の承認済み実行とし�
 - [Employee roadmap](../roadmaps/employee.md)
 - [Dev deployment runbook](../runbooks/dev-deployment.md)
 - [Local UI runbook](../runbooks/local-ui-testing.md)
+
+</details>

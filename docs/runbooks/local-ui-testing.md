@@ -1,58 +1,62 @@
 # Codex専用local UI検証runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-09-04（郵便番号隔離の追加修正・再検証は実行証拠を参照）
+- 最終確認日: 2026-09-12（文書整理。runtimeの実行証拠は検証索引を参照）
 - 役割: Codex専用UI環境の共通手順と個別手順の索引
 
 ## UI検証と最終受入れの責任分離
 
-- 担当、承認、環境、受入れ判断は[Environment and approval rules](../project-rules/environment-and-approval.md)と[Coordination and Git rules](../project-rules/coordination-and-git.md)を正とする。本runbookはCodex専用Localだけを対象とし、利用者環境Local、Dev、Prod、remote/data、外部操作の権限を追加しない。
-- application fileごとの利用者確認はcheckpointが明示した場合だけ行い、通常はsegment単位の変更挙動、UI smoke、未検証、残存risk、rollback、利用者確認項目をまとめる。
+担当は[Coordination and Git rules](../project-rules/coordination-and-git.md)、環境選択・承認・最終受入れは[Environment and approval rules](../project-rules/environment-and-approval.md#local-emulatorとlocal-ui)を正とする。本runbookは実行手順を定め、利用者環境Local、Dev、Prod、remote/data、外部操作の権限を追加しない。application fileごとの利用者確認はcheckpointが明示した場合だけ行い、通常はsegment単位に結果をまとめる。
 
 ## 適用範囲
 
-- 対象: Codexが専用demo project、専用port、`.codex-test/saved-data`、generated server、Codex管理browserを使用して起動からcleanupまで所有する局所的・限定的なLocal UI検証。
-- 対象外: 利用者が`.env.local`、`./saved-data`、Chrome profile、起動processを管理するLocal検証。この経路は[利用者環境local UI検証runbook](user-local-ui-testing.md)を使用する。
-- Dev環境での試用・検証はLocal検証へ含めず、[Dev deploy runbook](dev-deployment.md)のremote検証として扱う。
-- 本runbookは、自動検証後にも専用build、合成data、Emulator、UI操作、保存・再表示、外部作用denyの結合に不確実性が残る場合に選ぶ。自動検証が必要事項を直接覆う場合、または必要な証明がDev固有である場合は実行しない。
-- 本runbookの成功はDev前の手戻り抑制用証拠であり、製品変更の最終受入れまたは完了ではない。製品変更の最終受入れは固定commitを[Dev環境](dev-deployment.md)へ反映して行う。
+- Codexが専用demo project、専用port、`.codex-test/saved-data`、generated server、Codex管理browserの起動からcleanupまで所有するLocal UI検証を扱う。
+- 自動検証後に専用build・合成data・Emulator・UI操作・保存再表示・外部作用denyの結合に不確実性が残る場合だけ選ぶ。自動検証で必要事項を覆う場合は実行しない。
+- 利用者が`.env.local`、`./saved-data`、Chrome profile、起動processを管理する検証は[利用者環境Local](user-local-ui-testing.md)、Dev固有の証明と製品変更の最終受入れは[Dev deploy](dev-deployment.md)へ進む。本手順の成功はDev前の手戻り抑制用証拠とする。
 
 ## Codexだけで完結するlocal UI test
 
-Codex専用local UI検証は、承認済み専用buildから生成した画面をgenerated serverで配信する経路を標準とする。HTTP 200または起動templateだけは成功証拠ではなく、製品画面へ到達して対象操作を確認する。実行結果は[検証証拠索引](../verification/README.md)から対象receiptを参照する。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。Functionsのdenyだけではブラウザの直接通信を制御できないため、下記の専用郵便番号隔離も確認する。これらを未調査の全ブラウザ通信を遮断する汎用firewallとは扱わない。
+[事前確認](#ui-ready-preflight) → [build制約](#専用buildとgenerated-serverの制約)・[認証準備](#合成認証とsnapshot) → [起動](#emulatorとgenerated-serverの起動) → [UI操作](#ui操作と受入れ証拠) → [終了確認](#codex専用local-ui-testの完成条件)の順に進める。
 
 ### UI-READY preflight
 
-最初に[Documentation and verification rules](../project-rules/documentation-and-verification.md#verification)の4点を照合し、既存の自動test、Emulator、build、browser受入れ等で今回の証明事項が同一または厳しい条件のままカバーされている場合は、手段が異なることだけを理由にUI検証を追加しない。UI固有の不足がある場合だけ、buildまたはprocess起動前に次を一度確認する。どれかを満たせない場合はbuildせず、担当・環境・隔離方法を見直す。
+[検証規則](../project-rules/documentation-and-verification.md#verification)の4点を照合し、有効な既存証拠を再利用する。UI固有の不足がある場合だけ、buildまたはprocess起動前に次を確認する。一つでも満たせなければ起動せず、担当・環境・隔離方法を見直す。
 
-1. 実際にUI操作するtaskが正規in-app browserのtab取得と通常pointer・keyboard操作を利用できる。
-2. 保存済み合成sessionまたは秘密値を残さない一時合成credentialにより、対象actorを準備できる。
-3. 完了条件に必要なCallable・背景trigger・保存先・初期dataを実行構成と照合し、必要な処理の登録とloopback接続を確認する。Functions側denyに加えclient-side endpoint・file参照packageの外部作用も隔離する。不足は環境整備または確認方法の合意を先行し、未取得のnetwork trace等は未確認として残す。
-4. 既存runtime・port・processを確認し、ownerと生成物を含むcleanup対象をexact pathで固定する。Firebase Emulatorがrootへ出力するdebug logは一時診断情報として上書きを許容し、退避・復元しない。削除・停止の承認範囲と保護対象を開始時に確認し、既存承認が対象を含む場合は再承認を求めない。
-5. 対象HEAD、専用build、Emulator、generated server、browser、backend assertion、cleanupの担当と停止条件が一つのcheckpoint内で決まっている。終了時はcleanupの実行結果まで確認し、承認取得だけを完了としない。
+1. 実担当taskが正規in-app browserのtab取得と通常pointer・keyboard操作を利用できる。
+2. [合成認証](#合成認証とsnapshot)により対象actorを準備でき、`.codex-test/saved-data`にexport metadataとAuth fixtureがある。
+3. 完了条件に必要なCallable・背景trigger・保存先・初期dataの登録とloopback接続を実行構成で確認する。Functionsから外部API、Stripe、mail、FCM、通知、ジオコーディング等へ到達しないことを陰性testまたは明示拒否設定で確認する。client-side endpointとfile参照packageも隔離し、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。[郵便番号隔離](#専用uiの郵便番号隔離)も確認する。これは全ブラウザ通信を遮断する汎用firewallではなく、未取得のnetwork trace等は未確認として残す。不足時は環境整備または確認方法の合意を先行する。
+4. 既存runtime・port・processとownerを照合し、新規起動portの未使用、生成物を含むcleanup対象のexact path、削除・停止の承認と保護対象を固定する。既存承認が対象を含む場合は再承認を求めない。rootのEmulator debug logは一時診断情報として上書きを許容し、退避・復元しない。
+5. 対象HEAD、build、Emulator、server、browser、backend assertion、cleanupの担当と停止条件を同じcheckpointに固定する。対象は`demo-air-guard-v2-codex`と通常localとは異なるloopback portだけとする。
 
-新規準備が必要な構成の標準起動・確認・終了順序は次のとおりとする。対象HEAD、identity、設定、actor、tenant、Functions・Rules・Firestore、隔離、data、owner・cleanup境界を確認できる起動済みEmulator、generated server、ChromeまたはCodex管理browserは対応する起動手順を省略して再利用し、同一条件を作り直さない。今回所有していない既存processは停止せず、条件不一致または確認不能な構成だけを分離して準備する。
+起動済み構成は[環境規則の再利用条件](../project-rules/environment-and-approval.md#local-emulatorとlocal-ui)に加え、identityと必要なFunctions・Rules・Firestoreの一致を確認できれば対応する準備・起動を省略する。条件不一致または確認不能な構成だけを分離して準備し、今回所有していないprocessは変更・停止しない。
 
-Windows上でCodexがこの経路を実行する場合、Firebase CLIとlocal serverは、最初からworkspace sandbox外の承認済み前景processとして起動する。sandbox内ではNuxtのdependency解決がfilesystem read制限で停止することが既知であるため、成功しない予備起動を試してから再起動する手順にしない。これは既存のCodex専用demo project、loopback、合成data、外部作用denyの承認境界に限ったprocess実行方法であり、network、利用者用local環境、Dev、Prod、remote service、実dataへの許可拡張ではない。
+### 専用buildとgenerated serverの制約
 
-1. 上記`UI-READY`を完了し、新規起動する専用portが未使用で、`.codex-test/saved-data`にexport metadataとAuth fixtureがあることを確認する。再利用する既存processはownerと条件一致を確認し、既存runtime・他者processは変更しない。
-2. clean worktreeの同一HEADで`npm run test:local:ui:build`を実行し、identity marker付き`.output`を生成する。このbuildは実行ごとの承認境界を維持する。
-3. `npm run test:local:ui:emulators`を独立した前景processで起動し、`All emulators ready`まで待つ。
-4. `npm run test:local:ui:server:generated`を別の前景processで起動し、identity確認、server ready、loopback rootのHTTP応答を確認する。marker欠損・不一致、dirty worktree、非200ならbrowserを開かず停止する。
-5. Codexインアプリブラウザで`http://127.0.0.1:14600/`を初めて開く。visibility機能が利用可能な場合は操作開始前に表示を要求し、その状態を報告する。利用者が監視する場合もChrome profileではなく同じCodex Desktop内のtabを使う。
-6. 製品landmarkが現れるまでbounded waitし、起動templateを成功証拠にしない。残る場合はreloadを通常手順にせず失敗として停止し、server identity、HTTP、console、FUT-0005・FUT-0008・FUT-0096・FUT-0178の既知再発要因を診断する。
-7. 可視UIからsign-inへ移動し、保存済み合成accountを通常のkeyboard入力で使用して対象画面へ到達する。保存済みbrowser sessionが有効なら、その合成account sessionを再利用する。
-8. Codexが作成したtabを閉じ、generated server、Emulatorの順に停止し、専用portと今回の派生portがLISTENしていないことを確認する。Windowsでは実LISTENと取得結果を照合し、APIで結果が欠ける場合は`netstat`でも確認する。saved-data不変を検証し、`.output`と今回所有runtimeだけを安全な絶対path・reparse不在確認後に削除する。Firebase Emulatorのroot debug logは復元しない。反省会など別目的の一時メモは削除対象へ混ぜない。
+`npm run test:local:ui:server`を使うCodex専用Nuxt開発サーバーは、郵便番号隔離の追加対応により起動を停止する。遮断を確認していない診断経路へ迂回せず、上記generated serverを使う。通常のDev環境・利用者用localの起動方法は変更しない。従来は途中確認・診断に利用できたが、専用診断経路の復旧には同等の通信隔離と陰性testの確認が必要である。古いmarkerや生成物は流用しない。
 
-インアプリブラウザはCodex Desktop内の専用browserであり、利用者のChrome profileを使用しない。利用者が目視を希望する検証ではvisibilityを要求し、同じtabを監視対象にする。visibility状態を機械的に取得できない場合は、利用者が実際に監視できた事実とtool上の未確認を分けて報告する。Chrome拡張経路は、利用者が既存sessionを使う受入れまたはインアプリブラウザ障害の補助経路であり、標準のCodex専用UI testの前提ではない。
+承認済みの専用buildは`npm run test:local:ui:build`だけを使用する。このcommandはbuild前後にroot worktreeがcleanで同じHEADであること、専用dotenvがallowlist済みのdemo project・loopback・Emulator設定だけであることを確認し、成功した`.output`へ設定SHA-256とsource HEADを含むidentity markerを作成する。`npm run test:local:ui:server:generated`はmarkerの欠損・破損、現在のdotenvまたはHEADとの差、dirty worktreeのいずれでもgenerated serverをimportせず停止する。markerを手動作成・更新してはならない。実buildとgenerated serverの受入れ確認は引き続き実行ごとの明示承認を必要とする。
 
-`.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。利用するfixtureの現在値と受入れ証拠は[検証証拠索引](../verification/README.md)から確認する。通常起動は`--import .codex-test/saved-data`だけを使い、確認済みのCodex管理ブラウザ認証sessionを再利用する。sign-in credentialはtracked repository、応答、検証logへ保存・出力しない。browser sessionを喪失した場合は、対象が専用loopback Auth Emulatorの保存済み合成accountであることを確認し、running Emulator内だけへrandom alphanumeric passwordを一時設定してよい。saved-dataを更新せず、停止後に同じcredentialを再利用可能と扱わない。永続管理が必要になった場合はrepository外の保護済みlocal credential storeと復旧手順を別途確定するまで平文保存しない。Rules・Callable test用の`CODEX_LOCAL_USERS`とは分離し、いずれもlocal demo project以外へ使用しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。snapshot破損時だけ、candidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
+### 合成認証とsnapshot
+
+`.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。利用するfixtureの現在値と受入れ証拠は[検証証拠索引](../verification/README.md)から確認する。通常起動は`--import .codex-test/saved-data`だけを使う。browser sessionを喪失した場合は、対象が専用loopback Auth Emulatorの保存済み合成accountであることを確認し、running Emulator内だけへrandom alphanumeric passwordを一時設定してよい。saved-dataを更新せず、停止後に同じcredentialを再利用可能と扱わない。永続管理が必要になった場合はrepository外の保護済みlocal credential storeと復旧手順を別途確定するまで平文保存しない。Rules・Callable test用の`CODEX_LOCAL_USERS`とは分離し、いずれもlocal demo project以外へ使用しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。snapshot破損時だけ、candidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
 
 Codex専用demo Emulator、loopback限定、外部作用deny、実在情報を含まない合成accountという承認済み境界内では、保存sessionの再利用または合成credentialの通常keyboard入力によるsign-inのたびに利用者へ再承認を求めない。credentialは画面へ入力する直前まで表示せず、repository、応答、command出力、検証logへ残さない。接続先が利用者用local環境、Dev、Prod、remote serviceまたは実dataへ変わる場合はこの継続承認を適用しない。
 
 `npm run test:local:seed`が生成する`.codex-test/isolated-saved-data`はRules・Callable test用であり、UI用`.codex-test/saved-data`を生成・更新しない。UI snapshotの更新はcandidate受入れ・promotion手順だけで行う。
 
 インアプリブラウザで`type=password`への通常typingが利用できない場合は、専用loopback demo accountの一時credentialに限って、製品の可視なpassword表示切替controlを通常pointerで操作し、可視fieldへ一文字ずつkeyboard入力した直後に再maskする。平文表示中はscreenshot、DOM snapshot、console、networkその他のread-only観測も行わない。入力値をtool outputへ含めず、終了時にEmulatorを停止してcredentialを失効させ、実行前後のsaved-data file数・SHA-256指紋が一致することを確認する。実account、利用者用local、Dev、Prod、remote serviceではこのfallbackを禁止し、通常のsecure credential入力を利用できなければ未検証として停止する。
+
+### Emulatorとgenerated serverの起動
+
+WindowsのFirebase CLIとlocal serverは、最初からsandbox外の承認済み前景processとして起動する。sandbox内ではNuxtのdependency解決がfilesystem read制限で停止するため、失敗する予備起動を試さない。`Start-Process`、detach、background helperは禁止する。これは専用demo・loopback・合成data・外部作用deny内の実行方法であり、network等への許可を拡張しない。
+
+1. `UI-READY`とbuild制約を満たし、clean worktreeの同一HEADで`npm run test:local:ui:build`を実行してidentity marker付き`.output`を生成する。
+2. `npm run test:local:ui:emulators`を独立した前景processで起動し、`All emulators ready`まで待つ。Auth、Firestore、Realtime Database、Storage、必要なFunctionsを対象とする。
+3. `npm run test:local:ui:server:generated`を別の前景processで起動し、identity、server ready、loopback rootのHTTP応答を確認する。marker欠損・不一致、dirty worktree、非200ならbrowserを開かず停止する。
+4. Codexインアプリブラウザで`http://127.0.0.1:14600/`を開き、製品landmarkまでbounded waitする。HTTP 200や起動templateだけでは成功とせず、templateが残れば停止する。reloadを通常手順にせず、server identity、HTTP、consoleとFUT-0005・FUT-0008・FUT-0096・FUT-0178を診断する。
+5. 有効な保存済み合成sessionを再利用するか、可視UIからsign-inへ進んで合成credentialを通常keyboard入力し、対象画面を操作する。操作契約と証拠区分は[UI操作と受入れ証拠](#ui操作と受入れ証拠)に従う。
+
+インアプリブラウザは利用者のChrome profileを使用しない。visibility機能が利用可能なら操作開始前に表示を要求して状態を報告し、利用者の監視も同じCodex Desktopのtabで行う。visibilityを機械取得できない場合は、利用者が監視できた事実とtool上の未確認を分ける。Chrome拡張は利用者が既存sessionを使う受入れ、またはインアプリブラウザ障害の補助経路であり、標準手順の前提ではない。
 
 ### UI操作と受入れ証拠
 
@@ -70,32 +74,14 @@ Codex専用demo Emulator、loopback限定、外部作用deny、実在情報を�
 - clean browser contextの準備、Authentication EmulatorのOOB確認、backend verifier、candidate export/importは非UI処理である。結果は`UI user-equivalent action`、`non-UI setup`、`backend assertion`へ分け、UI成功の代用にしない。
 - 許可された実利用者相当操作をtoolが実行できない場合は、DOMやeventを直接操作して回避せず未検証と報告する。
 
-### Emulatorとgenerated serverの起動
-
-Emulatorとgenerated serverは、build完了後に次の2つの独立した前景processとして起動する。`Start-Process`、detach、background helperは使用しない。
-
-```powershell
-npm run test:local:ui:emulators
-npm run test:local:ui:server:generated
-```
-
-### 専用buildとgenerated serverの制約
-
-`npm run test:local:ui:server`を使うCodex専用Nuxt開発サーバーは、郵便番号隔離の追加対応により起動を停止する。遮断を確認していない診断経路へ迂回せず、上記generated serverを使う。通常のDev環境・利用者用localの起動方法は変更しない。従来は途中確認・診断に利用できたが、専用診断経路の復旧には同等の通信隔離と陰性testの確認が必要である。古いmarkerや生成物は流用しない。
-
-承認済みの専用buildは`npm run test:local:ui:build`だけを使用する。このcommandはbuild前後にroot worktreeがcleanで同じHEADであること、専用dotenvがallowlist済みのdemo project・loopback・Emulator設定だけであることを確認し、成功した`.output`へ設定SHA-256とsource HEADを含むidentity markerを作成する。`npm run test:local:ui:server:generated`はmarkerの欠損・破損、現在のdotenvまたはHEADとの差、dirty worktreeのいずれでもgenerated serverをimportせず停止する。markerを手動作成・更新してはならない。実buildとgenerated serverの受入れ確認は引き続き実行ごとの明示承認を必要とする。
-
 ### Codex専用local UI testの完成条件
 
-完成条件は次のとおりとする。
+対象画面で[UI操作契約](#ui操作と受入れ証拠)を満たし、非UI setup・backend assertionを区別して証拠を残す。sign-in actorと環境baselineは再生成可能な専用fixtureから準備できること、受入れ対象の仮登録User・業務documentは架空値を可視UIから正規作成したことを確認する。成功・失敗とも次を行い、承認取得だけで終了扱いにしない。
 
-1. `demo-air-guard-v2-codex`と通常local環境とは異なるloopback portだけを使用する。
-2. CodexがAuth、Firestore、Realtime Database、Storage、必要なFunctions、local serverを起動し、Codexが起動したprocessだけを終了する。
-3. sign-in actorと環境baselineは再生成可能な専用fixtureから準備できる。UI受入れ対象の仮登録Userや必要な業務documentは、架空のテスト値を使って製品の可視UIと正規application処理経路から作成する。
-4. Functionsから外部API、Stripe、mail、FCM、通知、ジオコーディング等へ到達しないことを陰性testまたは明示拒否設定で確認する。
-5. Codex管理ブラウザが実利用者相当のpointer・keyboard操作だけでlocal appを開き、合成accountでsign-inし、対象画面を操作できる。非UI setup・backend assertionは別証拠として記録する。
-6. 利用者用`./saved-data`、`.env.local`、Chrome profile、Dev、Prod、remote dataが実行前後で変更されない。
-7. 終了時にserverとEmulatorを停止し、一時runtimeをproject配下の明示pathだけから削除する。失敗時も同じcleanupと状態報告を行う。
+1. Codexが作成したtabを閉じ、今回起動したgenerated server、Emulatorの順に停止する。専用portと今回の派生portに実LISTENがないことを確認し、WindowsのAPI取得結果が欠ける場合は`netstat`でも照合する。
+2. 専用saved-dataの実行前後の指紋を比較し、不変を確認する。利用者用`./saved-data`、`.env.local`、Chrome profile、Dev、Prod、remote dataも変更されていないことを確認する。
+3. `.output`と今回所有する一時runtimeだけを、project配下の明示された安全な絶対path・reparse不在確認後に削除する。debug logの扱いはUI-READYに従い、反省会など別目的の一時メモを削除対象へ混ぜない。
+4. segment単位の変更挙動、UI smoke、未検証、残存risk、rollback、利用者確認項目、cleanup結果と停止後の状態を報告する。
 
 ## 実行証拠の保存先
 

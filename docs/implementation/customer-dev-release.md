@@ -6,6 +6,17 @@
 - 正本: [仕様](../specification.md)、[既存Dev documentの3条件](../project-rules/development-and-data.md#dev試用中の既存document)、[Dev runbook](../runbooks/dev-deployment.md)
 - 利用者指示: local準備後にDevテスト開始を承認。利用停止は不要。検証用dataの作成と終了時の削除、利用者指定の既存取引先の編集を承認した。
 
+## 閉鎖結果と後続作業への案内
+
+CUSTOMER-01D/01Eの実行・限定修正・cleanup・フェーズ閉鎖は[01D実行記録](../verification/customer-01d-dev-test.md)と[01E閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)を正とする。請求期日・請求書PDFの受入れを後続へ移した境界を維持し、Customerフェーズ終了を請求受入れ完了へ読み替えない。
+
+後続のCustomer通常保存は[Customer実装記録](customer-master.md)、製品作業の順序は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)と[再開案内](current-coordinator-handoff.md)へ進む。以下の対象・account状態・試験案・停止・復旧手順は当時の記録であり、現在の再開指示や外部操作の承認ではない。新しい反映は[Dev runbook](../runbooks/dev-deployment.md)で対象と必要な承認を再確認する。
+
+継続するdata保持方針は[Dev検証用アカウント台帳](#dev検証用アカウント台帳)の2026-09-03追加指示を正とし、以下の履歴化によって失効させない。対象accountに紐づく会社と配下のテストdataは今後のDevテスト用に保持し、終了時の自動削除対象にしない。旧削除指示は当該対象について置換済みで、削除済みdataを自動再作成しない。次回の具体対象はactual確認し、操作承認は別に扱う。
+
+<details>
+<summary>CUSTOMER-01D/01Eの反映・試験・復旧・account準備の履歴</summary>
+
 ## 対象と停止位置
 
 今回の範囲は固定commitのDev生成、Rules・Hosting反映、Customerの通常Dev作成・基本情報・支払条件の保存、作成した検証用dataの終了時削除、指定既存取引先の試験変更の復元とする。利用者は試験中に、今回のフェーズをCustomer管理の改修に限定し、請求期日・請求書PDFの受入れは稼働実績管理の改修後の請求書発行機能確認へ移すと指示した。System maintenanceと他利用者の保存停止は行わず、実dataのmigration・一括repairは含めない。
@@ -117,3 +128,5 @@ Devの2種類には該当するaccountが必要となる。利用者が用意で
 - 終了・再有効化・archive/restore、code一意化、請求snapshot等の後続機能は今回の受入れへ拡張しない。
 
 製品要件・data contract・進捗値は変更しない。今回の反映・保存不具合修正・Dev試験・cleanupは[CUSTOMER-01D実行記録](../verification/customer-01d-dev-test.md)、準備は[local実行証拠](../verification/customer-01c-local-preparation.md)、現在の再開位置は[current handoff](current-coordinator-handoff.md)を参照する。
+
+</details>

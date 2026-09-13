@@ -7,9 +7,15 @@
 - 部分加点: 行わない。各工程の完了条件と必要な利用者判断・review・検証をすべて満たしてから当該重みを加点する。調査・案の保存を製品実装の達成と混同しない。
 - 承認境界（以下は採用経緯。最新方針は次項）: 2026-09-06に計画文書保存・review・文書検証・local commitとEMP-01開始を承認し、[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)のactor・閲覧最小化を採用した。同日、[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)の会社管理者・統括だけの従属なし誤登録物理削除、archive延期、他collectionの既存実装維持を採用し作業開始を指示した。この時点の未決事項は後続回答で順次置換した。後続の開始承認は次項を参照する。Dev・Prod・remote・実data・package変更は未承認のままである。
 - EMP-06受入れ時点の履歴（今回の再判定前）: EMP-06では一覧・検索とUser panelのAirItemManager/AirArrayManager依存を除去し、統括退職actorをclient/serverのstrict policyへ反映した。見た目は利用者が承認した一覧loading/error表示と統括の退職buttonに限定した。会社管理者でサインイン済みの現在のChrome、domain 1501件、Emulator 181件、clean HEADの専用UI buildでLocal受入れを完了した。Dev/Prod・remoteは同じcheckpointで開始しない。[検証記録](../verification/employee-06-local.md)を参照する。
-- 最新の採用: [ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)により、直接物理削除・archive延期と必要な従属writer変更禁止を置換した。Employeeから別archive collectionへの移動と参照整合性を設計し、住所・座標とarchive/物理削除は共通仕様を参照する。actor・全項目read・退職後通常編集禁止・保険の条件は維持する。最終回答で表示名/作成導線、archive同一7actor read、local段階移行、EMP-05の参照保護/archive、purge後続専用工程、9工程の重み合計100も採用した。その後EMP-04までの実装・local検証・review・文書更新・local統合も承認された。
+- EMP計画時の最終採用: [ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)により、直接物理削除・archive延期と必要な従属writer変更禁止を置換した。Employeeから別archive collectionへの移動と参照整合性を設計し、住所・座標とarchive/物理削除は共通仕様を参照する。actor・全項目read・退職後通常編集禁止・保険の条件は維持する。最終回答で表示名/作成導線、archive同一7actor read、local段階移行、EMP-05の参照保護/archive、purge後続専用工程、9工程の重み合計100も採用した。その後EMP-04までの実装・local検証・review・文書更新・local統合も承認された。
 - 利用者への報告: EMPの作業結果・現在地を報告する際は、本書のマイルストーン表を基にEMP-01〜09の工程名・状態・必要に応じた残作業を一覧で示し、EMP全体の確認済み進捗を併記する。短い作業中の連絡では表を毎回繰り返さず、まとまった報告には必ず付ける。工程内の成果を未確認の割合へ換算せず、部分加点なし・Dev別承認の条件を維持する。
 - EMP-05実装前の再確認: 利用者が設計・review・文書化を指示した。[開発者向け実装前契約](../implementation/employee-master.md#emp-05実装前契約)へ経路/field/actor/競合/開放条件/受入例を補い、開発者・受入・securityの指摘を解消した。[レビュー記録](../verification/employee-05-design-review.md)を実装開始時の入力にし、明示承認で実装した。[EMP-05 local実施記録](../verification/employee-05-local.md)に全内部単位の受入れを記録し、完了により55%から75%へ更新した。
+
+## 現行仕様とこのロードマップの読み方
+
+EMP-01〜09は2026-09-07までの完了記録であり、得点と受入れ証拠を保持する。後続の通常保存・認可・Manager構成は[現行仕様](../specification.md#employeeの操作権限と保持)、適用状態は[FGAロードマップ](foundational-governance-alignment.md)、実装差は[Employee実装記録](../implementation/employee-master.md#fga-04での情報分類)を正とする。
+
+以下の工程表・操作表・互換性節にある所有fieldの部分保存、旧専用Callable、局所競合拒否、通常情報の7actor限定、旧Manager撤去はEMP当時の契約である。FGA-04後の通常document保存へ再適用しない。保険世代値と複数端末の保護限界は[保険実装記録](../implementation/employee-insurance.md#fga-04後の保存と検証境界)を参照する。archive、退職・誤退職訂正、User/Authの専用境界、tenant開放・data補完・purgeの別承認は維持する。
 
 ## 正本と維持する境界
 
@@ -101,6 +107,8 @@ EMP-05計画・初回終了時点の履歴: 内部順序はreader/参照契約�
 
 ## 互換性・移行・復旧
 
+以下はEMP-01〜09当時の移行・復旧契約。後続の通常保存方式は冒頭の現行正本へ照合する。旧方式への巻戻し指示ではない。
+
 - Employee単一正本・全項目read・既存購読を維持する。閲覧項目を制限するための新API・projection・通知・polling・data移行は不要であり、方式選定をEMP-02の前提から外す。
 - 既存Classのaccessor・instanceof・検索/表示互換を維持する。全項目の取得を許可しても、更新はoperation所有fieldへ限定し全文setへ戻さない。
 - 実効schema変更、他機能への明確な影響、確実な変換必要性がある場合だけ既存dataを必要範囲で確認する。入社日変更が期間検索へ影響する点はEMP-02で扱う。全件診断・一括修復・package更新を一律の前提にしない。
@@ -110,11 +118,9 @@ EMP-05計画・初回終了時点の履歴: 内部順序はreader/参照契約�
 
 ## 検証選択と現在の次作業
 
-今回の採用反映は[検証policy](../../governance/verification-policy.json)の文書・進捗classに加え、権限・安全仕様変更としてgovernance-permissions-agentsのcomprehensive 5 gateを選ぶ。製品実装・project共通規則・release手順の変更には広げない。review後にcached diff checkでも検証する。
+現在の製品作業は[FGAロードマップ](foundational-governance-alignment.md)と[再開案内](../implementation/current-coordinator-handoff.md)へ進む。EMP-08・09の証拠はマイルストーン表を参照する。通常archive APIのtenant開放、旧client全件確認、remote実data補完、migration、Prodは別承認なしに進めない。
 
-後続実装は実diffのUI/application/data-contract等のunionから選択し、直接test→対象回帰→最終状態のcompletion gateを実行する。UI・logic・Rules変更の基本集合はproject-docs、domain-full、local-emulator-suite、local-ui-build、diff-checkであり、build実行・permission定義・release等の該当classはpolicyどおり追加する。環境・実行承認がないgateは記載だけを根拠に実行しない。各commandの結果・exit・証拠失効・省略理由をcompletion reportへ残す。
-
-EMP-08 Local統合確認は[最終記録](../verification/employee-08-local.md)のとおり完了した。続くEMP-09では承認済みbounded Dev releaseと権限別受入れを完了した。通常archive APIのtenant allowlist開放、旧client全件確認、remote実data補完、migration、Prodは別承認なしに進めない。
+新しい変更の検証は[検証policy](../../governance/verification-policy.json)と[開発workflow](../runbooks/development-workflow.md)から実diffのclass unionで選ぶ。当時のgate集合を新しい変更への固定必須集合として複写しない。結果・exit・失効・省略理由を各completion reportへ記録する。
 
 ### EMP-05再受入れ時点の履歴（2026-09-07）
 
@@ -123,6 +129,9 @@ EMP-08 Local統合確認は[最終記録](../verification/employee-08-local.md)�
 3. EMP-06以降、Dev/Prod・実data整合/補完・外部作用・関連packageは別承認。現在の75%はEMP-01〜05の再受入れによる得点である。
 
 ## 計画reviewの記録
+
+<details>
+<summary>EMP計画・再受入れ時点の詳細履歴（現在の次作業ではない）</summary>
 
 2026-09-06、source baseline `3881712cb3e80bee532f067b135a72207376b42a`をPMと専門agentが独立照合し、現経路・実装可能性/test・securityの3視点で調査した。対象はEmployee UI/Rules/Functions、installed schema/adapter、直接reader、既存test、仕様/ADR/CONF/FUTである。静的reviewであり実data・runtime・remoteは未確認だった。
 
@@ -363,3 +372,5 @@ checkpoint: EMP-01-REACCEPT。baselineはprimary `C:\Users\seven\projects\AirGua
 [現行仕様](../specification.md#employeeの操作権限と保持)、ADR 0018・0020・0031・0055〜0060、[Employee設計契約](../implementation/employee-master.md#emp-01最終案の位置付け)、本書の工程表・受入れmatrixを確認した。通常編集3actor、原本/archive read 7actor、退職後通常編集禁止、archive実行2actor、専用operation・独立draft・所有field保存、局所期待値・保険別世代、保険field不存在時の初回作成、住所/座標失敗契約、表示名・code・作成導線、archive/参照保護とpurgeの工程分離は一致している。ADR 0056・0057の古い判断には0058・0060による置換先が明記され、新しい業務判断を要する矛盾はなかった。
 
 次工程reviewでは、EMP-02へ渡す入力・保存・認可・競合・失敗時・test前提が既に確定し、EMP-03〜05の工程境界とも一致することを確認した。EMP-01は利用者回答、仕様/ADR/設計反映、独立review、文書検証という完了条件を満たすためCompleted、得点0→10、EMP全体0%→10%へ戻す。これは製品runtime、EMP-02〜05、専用UI、Dev/remote/実dataの成功を示さない。新しい仕様・ADR・data契約・実装変更はなく、roadmapとCHANGELOGだけを現在状態へ整合する。rollbackはこの2文書のcorrective commitとし、製品実装やdataを戻さない。
+
+</details>
