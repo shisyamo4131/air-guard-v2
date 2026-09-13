@@ -10,13 +10,14 @@
 ## 未決事項と承認
 
 - 利用者判断は[確認事項台帳](pending-confirmations.md)、独立した問題は[将来対応台帳](future-actions.md)へ照合します。回答済み・保留・統合関係を確認し、台帳のOpenを一律に再質問しません。
+- 稼働実績詳細の稼働外売上は追加・編集・削除できる現行画面を維持します。role・permissionを操作へ影響させるかは未決であり、FGA-06の通常業務簡素化から権限変更を推論しません。[現行仕様](../specification.md#テナントと認証)と[Operation CRUD棚卸し](operation-crud-simplification-inventory.md)を参照します。
 - 通常Employee archiveのtenant開放、Site自動終了公開、見た目・操作感、Prod、実data補完、package、緊急restore、retention/purgeは既存の別工程です。対象・状態は[Employeeロードマップ](../roadmaps/employee.md)、[Siteロードマップ](../roadmaps/site.md)、[4マスター反映範囲](master-dev-release-surfaces.md)を参照します。過去releaseの承認を次の操作へ拡張しません。
 - data変換・索引補完やIAM・Callable公開設定の不足が確認された場合は、対象・必要性・作用・検証・復旧を提示し、既存の承認境界へ戻ります。未確認を理由に全件scan、補完、tenant開放を自動実行しません。
 - Spark taskと破棄済みEmployee案は再利用せず、Sparkを再採用しません。判断の参照先は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)と[CAS-02試験記録](customer-archive-cas02-developer-trial.md)です。
 
 ## 次の作業
 
-1. [FGA-06内部checkpoint](../roadmaps/foundational-governance-alignment.md#fga-06-transaction系内部checkpoint)と[稼働実績編集の実装記録](operation-result-edit-authorization.md)から、残るtransaction系機能の小checkpointを提案します。完了済み範囲を再実装せず、作成・削除・通知・請求等の対象外契約を確認します。
+1. [FGA-06内部checkpoint](../roadmaps/foundational-governance-alignment.md#fga-06-transaction系内部checkpoint)と[Operation CRUD棚卸し](operation-crud-simplification-inventory.md)から、`FGA-06-RESULT-MANAGER-CLIENT-04`のsegment contractを提示します。対象候補はlockされていない既存実績の基本情報と作業員明細であり、Domain Manager／Air Manager再利用、FireModel標準client保存、Rules簡素化、旧Callable撤去単位を確定します。稼働外売上、実績作成・複製・物理削除、予定、通知、実績化、請求は含めません。
 2. 予定入力内の現場新規登録は[FUT-0190](future-actions.md#fut-0190-現場稼働予定入力内の現場新規登録を復旧する)、サインアウト／session切替と従属cacheのcleanupは[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)へ分離済みです。現在checkpointへの追加はscope合意に従います。
 3. 実装・検証の範囲と完了条件を[開発workflow](../runbooks/development-workflow.md)で固定します。この案内自体は新しい実装・Dev操作・data変更の承認ではありません。
 
