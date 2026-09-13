@@ -94,17 +94,10 @@ test("Customer reference collections use explicit guarded matches outside the fa
   const contracts = [
     {
       collectionName: "Billings",
-      createGuard: "isValidCustomerReferenceCreate",
-      updateGuard: "isValidCustomerReferenceUpdate",
-    },
-    {
-      collectionName: "OperationResults",
-      createGuard: "isValidCustomerReferenceCreate",
-      updateGuard: "isValidCustomerReferenceUpdate",
     },
   ];
 
-  for (const { collectionName, createGuard, updateGuard } of contracts) {
+  for (const { collectionName } of contracts) {
     const escapedCollectionName = collectionName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
     const body = source.match(
       new RegExp(
@@ -115,6 +108,20 @@ test("Customer reference collections use explicit guarded matches outside the fa
     assert.ok(body, `${collectionName} must have an explicit document match`);
     assert.match(body, /allow write: if false;/u);
   }
+
+  const operationResultBody = source.match(
+    /match \/Companies\/\{companyId\}\/OperationResults\/\{docId\} \{([\s\S]*?)\n    \}/u,
+  )?.[1];
+  assert.ok(operationResultBody, "OperationResults must have an explicit document match");
+  assert.match(operationResultBody, /allow create, delete: if false;/u);
+  assert.match(
+    operationResultBody,
+    /allow update:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?isValidOperationResultClientUpdate\(companyId, docId\)/u,
+  );
+  assert.match(
+    source,
+    /function isValidOperationResultClientUpdate\(companyId, docId\)[\s\S]*?resource\.data\.docId == docId[\s\S]*?request\.resource\.data\.docId == docId[\s\S]*?resource\.data\.isLocked == false[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid[\s\S]*?isValidSiteReferenceUpdate\(companyId\)[\s\S]*?isValidCustomerReferenceUpdate\(companyId\)/u,
+  );
 
   const siteBody = source.match(
     /match \/Companies\/\{companyId\}\/Sites\/\{docId\} \{([\s\S]*?)\n    \}/u,

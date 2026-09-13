@@ -502,7 +502,7 @@ test("EMP05-B HTTP operation writers preserve references, notification confirmat
   assert.equal((await billing([emp05Command(result, "lock", { desiredLocked: true }, { kind: "billing" })])).response.status, 200);
   result = (await resultRef.get()).data();
   assert.equal((await call([emp05Command(result, "overview", { remarks: "locked normal" }, { kind: "result" })])).payload.error.status, "FAILED_PRECONDITION");
-  assert.equal((await billing([emp05Command(result, "workers", { id: "missing" }, { kind: "result", array: "employees", rowAction: "update", position: 0 })])).payload.error.status, "PERMISSION_DENIED");
+  assert.equal((await billing([emp05Command(result, "workers", { id: "missing" }, { kind: "result", array: "employees", rowAction: "update", position: 0 })])).payload.error.status, "FAILED_PRECONDITION");
   assert.equal((await billing([emp05Command(result, "adjusted", { useAdjusted: true, adjustedQuantityBase: 3 }, { kind: "billing" })])).response.status, 200);
   result = (await resultRef.get()).data();
   const copy = emp05Command(result, "duplicate", { dateAt: "2028-05-02" }, { kind: "result", documentId: "emp05-copy", sourceId: id });
@@ -4262,7 +4262,7 @@ test("SITE-04 maintenance state fails closed for client Site revision and schedu
   assert.equal((await getDoc(schedule)).exists(), true);
 });
 
-test("SITE-04 direct Schedule result linkage and standalone OperationResult CUD reject non-writers", async () => {
+test("OperationResult normal update is tenant-wide while create, delete, and Schedule linkage stay closed", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const customerId = "site-lifecycle-result-policy-customer";
   const cases = [
@@ -4283,6 +4283,8 @@ test("SITE-04 direct Schedule result linkage and standalone OperationResult CUD 
   });
 
   for (const [label, user, claims] of cases) {
+    const normalWriter = !user.isTemporary && !user.disabled
+      && (user.companyId ?? companyId) === companyId;
     const uid = `site-lifecycle-result-denied-${label.replaceAll(" ", "-")}`;
     const siteId = `${uid}-site`;
     const scheduleId = `${uid}-schedule`;
@@ -4316,6 +4318,12 @@ test("SITE-04 direct Schedule result linkage and standalone OperationResult CUD 
         {
           docId: existingScheduleId, customerId,
           siteOperationScheduleId: existingScheduleId, siteId,
+          isLocked: false, articles: [], useAdjusted: false,
+          adjustedQuantityBase: 0, adjustedOvertimeMinutesBase: 0,
+          adjustedQuantityQualified: 0, adjustedOvertimeMinutesQualified: 0,
+          adjustedUnitPriceBase: 0, adjustedOvertimeUnitPriceBase: 0,
+          adjustedUnitPriceQualified: 0, adjustedOvertimeUnitPriceQualified: 0,
+          billingCalculationVersion: 1,
           uid: "server-writer",
           updatedAt: ClientTimestamp.fromDate(new Date("2028-01-01T00:00:00.000Z")),
         },
@@ -4355,9 +4363,63 @@ test("SITE-04 direct Schedule result linkage and standalone OperationResult CUD 
       updatedAt: serverTimestamp(),
     });
     await assertFails(createStandalone, `${label} standalone create`);
-    await assertFails(updateDoc(doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId), { uid, updatedAt: serverTimestamp() }), `${label} standalone update`);
+    await (normalWriter ? assertSucceeds : assertFails)(
+      updateDoc(
+        doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId),
+        { remarks: label, uid, updatedAt: serverTimestamp() },
+      ),
+      `${label} standalone update`,
+    );
     await assertFails(deleteDoc(doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId)), `${label} standalone delete`);
   }
+});
+
+test("OperationResult client update preserves lock, article, billing, and lifecycle boundaries", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "operation-result-normal-writer";
+  const customerId = "operation-result-normal-customer";
+  const siteId = "operation-result-normal-site";
+  const resultId = "operation-result-normal-result";
+  await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: ["accountant"] });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(doc(firestore, "Companies", companyId, "Customers", customerId), { docId: customerId });
+    await setDoc(doc(firestore, "Companies", companyId, "Sites", siteId), siteRulesData({
+      docId: siteId, uid: "server-writer", scheduleRevision: 0,
+      customerId, customer: {}, isTemporary: false,
+    }));
+    await setDoc(doc(firestore, "Companies", companyId, "OperationResults", resultId), {
+      docId: resultId, customerId, siteId, siteOperationScheduleId: null,
+      isLocked: false, articles: [{ articleId: "article", price: 100, quantity: 1 }],
+      useAdjusted: false, adjustedQuantityBase: 0, adjustedOvertimeMinutesBase: 0,
+      adjustedQuantityQualified: 0, adjustedOvertimeMinutesQualified: 0,
+      adjustedUnitPriceBase: 0, adjustedOvertimeUnitPriceBase: 0,
+      adjustedUnitPriceQualified: 0, adjustedOvertimeUnitPriceQualified: 0,
+      billingCalculationVersion: 1, uid: "server-writer",
+      createdAt: ClientTimestamp.fromDate(new Date("2028-01-01T00:00:00.000Z")),
+      updatedAt: ClientTimestamp.fromDate(new Date("2028-01-01T00:00:00.000Z")),
+    });
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const result = doc(firestore, "Companies", companyId, "OperationResults", resultId);
+  await assertSucceeds(updateDoc(result, { remarks: "normal", uid, updatedAt: serverTimestamp() }));
+  for (const patch of [
+    { isLocked: true },
+    { articles: [] },
+    { useAdjusted: true },
+    { adjustedUnitPriceBase: 9999 },
+    { billingCalculationVersion: 2 },
+    { siteOperationScheduleId: "other" },
+    { docId: "other" },
+    { createdAt: serverTimestamp() },
+  ]) {
+    await assertFails(updateDoc(result, { ...patch, uid, updatedAt: serverTimestamp() }));
+  }
+  await assertFails(updateDoc(result, { remarks: "spoof", uid: "other", updatedAt: serverTimestamp() }));
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), "Companies", companyId, "OperationResults", resultId), { isLocked: true });
+  });
+  await assertFails(updateDoc(result, { remarks: "locked", uid, updatedAt: serverTimestamp() }));
 });
 
 test("EMP05-C Billing reference arrays cannot bypass the background writer even for accountants", async () => {

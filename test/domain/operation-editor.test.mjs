@@ -492,12 +492,36 @@ test("route reset invalidates an in-flight save without closing the next documen
 });
 
 test("dedicated operation editors and wrappers compile with their actual template slots", async () => {
-  for (const path of ["components/ArrangementNotifications/Manager/index.vue", "components/ArrangementNotification/Manager/toLeaved.vue", "components/Operation/Editor.vue", "components/Operation/Manager.vue", "components/Operation/ArrayManager.vue", "components/Operation/RowInput.vue", "components/Operation/RowsManager.vue", "components/SiteOperationSchedule/Manager/index.vue", "components/SiteOperationSchedules/Manager/index.vue", "components/OperationResult/Manager/index.vue", "components/OperationResults/Manager/index.vue", "components/OperationBilling/Manager/index.vue", "components/OperationBillings/Manager/index.vue", "components/SiteOperationSchedule/WorkerDetailManager/index.vue", "components/ArrangementNotification/Manager/index.vue", "components/OperationResult/Generator/index.vue", "components/SiteOperationSchedule/Duplicator/index.vue", "components/OperationResult/Duplicator/index.vue", "components/OperationBilling/Activator/Base/BtnToggleLock.vue", "pages/operation-results/[id].vue", "pages/billings/operations/[id].vue"]) {
+  for (const path of ["components/ArrangementNotifications/Manager/index.vue", "components/ArrangementNotification/Manager/toLeaved.vue", "components/Operation/AirEditor.vue", "components/Operation/Editor.vue", "components/Operation/Manager.vue", "components/Operation/ArrayManager.vue", "components/Operation/RowInput.vue", "components/Operation/RowsManager.vue", "components/SiteOperationSchedule/Manager/index.vue", "components/SiteOperationSchedules/Manager/index.vue", "components/OperationResult/Manager/index.vue", "components/OperationResults/Manager/index.vue", "components/OperationBilling/Manager/index.vue", "components/OperationBillings/Manager/index.vue", "components/SiteOperationSchedule/WorkerDetailManager/index.vue", "components/ArrangementNotification/Manager/index.vue", "components/OperationResult/Generator/index.vue", "components/SiteOperationSchedule/Duplicator/index.vue", "components/OperationResult/Duplicator/index.vue", "components/OperationBilling/Activator/Base/BtnToggleLock.vue", "pages/operation-results/[id].vue", "pages/billings/operations/[id].vue"]) {
     const { descriptor, errors } = parse(await source(path), { filename: path }); assert.deepEqual(errors, []);
     const compiled = compileScript(descriptor, { id: path });
     const template = compileTemplate({ source: descriptor.template.content, filename: path, id: path, compilerOptions: { bindingMetadata: compiled.bindings } });
     assert.deepEqual(template.errors, [], path);
   }
+});
+
+test("result detail adopts Air managers without changing its visible operation controls", async () => {
+  const page = await source("pages/operation-results/[id].vue");
+  const single = await source("components/OperationResult/Manager/index.vue");
+  const workers = await source("components/OperationResult/Workers/Manager/index.vue");
+  const editor = await source("components/Operation/AirEditor.vue");
+  const writer = await source("composables/application/operationResult/useOperationResultWriter.js");
+
+  assert.match(single, /<air-item-manager/u);
+  assert.match(single, /maxWidth:\s*760/u);
+  assert.match(workers, /<air-array-manager/u);
+  assert.match(workers, /Operation\/RowInput\.vue/u);
+  assert.match(workers, /props\.tableCard \? 'v-card' : 'div'/u);
+  assert.match(editor, /最新値を読み直す/u);
+  assert.match(editor, /キャンセル/u);
+  assert.match(editor, /\? "削除" : "保存"/u);
+  assert.match(page, /title="作業員"/u);
+  assert.match(page, />従業員を追加<\/v-btn>/u);
+  assert.match(page, />外注先を追加<\/v-btn>/u);
+  assert.match(page, /group="articles"[\s\S]*label="稼働外売上"/u);
+  assert.match(page, /<OperationManager[\s\S]*kind="result"[\s\S]*削除処理/u);
+  assert.doesNotMatch(writer, /httpsCallable|saveOperation/u);
+  assert.match(writer, /next\.update\(\{ transaction \}\)/u);
 });
 
 test("actual article input connection blocks save while lookup is pending, commits ID/price together, and preserves explicit price", async () => {
