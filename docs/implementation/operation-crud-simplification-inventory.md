@@ -1,20 +1,20 @@
 # Operation CRUD簡素化の現行棚卸し
 
 - 確認日: 2026-09-13
-- checkpoint: FGA-06-TRANSACTION-SIMPLIFICATION-SCOPE-03
-- 状態: 現行実装の確認と後続checkpoint候補。製品変更・権限確定ではない
+- checkpoint: FGA-06-RESULT-MANAGER-CLIENT-04
+- 状態: Local実装・自動検証・固定commitの専用UI build完了。Dev反映・画面受入れ前
 - 対象: 現場稼働予定、稼働実績、稼働請求の画面、Manager、`saveOperation` Callable、Firestore Rules
 - 正本: 要件は[現行仕様](../specification.md)、移行方針は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、進捗は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)
 
 ## 確認済み実装事実
 
-1. `components/Operation/Manager.vue`と`components/Operation/ArrayManager.vue`は、`useOperationEditor`を介して予定・実績・請求の作成、編集、削除を`saveOperation` Callableへ送る専用Managerであり、`AirItemManager`／`AirArrayManager`を使用していない。
-2. `components/Operation/RowsManager.vue`は、予定・実績・請求の作業員または稼働外売上の行追加・編集・削除・並替えを同じCallableへ送る。稼働実績詳細では稼働外売上の追加・編集・削除を表示している。
-3. `components/OperationResult/Workers/Manager/index.vue`は`AirArrayManager`、`components/SiteOperationScheduleDetail/Manager/index.vue`は`AirItemManager`を既に使用する。前者は現行の請求詳細画面から利用され、後者は今回確認した静的caller検索では参照を確認できなかった。再利用可否は後続checkpointでbase契約とcallerを再確認する。
+1. `components/Operation/Manager.vue`と`components/Operation/ArrayManager.vue`は、`useOperationEditor`を介して予定・実績・請求の作成、編集、削除を`saveOperation` Callableへ送る専用Managerである。FGA-06-RESULT-MANAGER-CLIENT-04では実績詳細の基本情報と作業員明細だけをこの経路から外した。
+2. `components/Operation/RowsManager.vue`は、予定・実績・請求の作業員または稼働外売上の行追加・編集・削除・並替えを同じCallableへ送る。実績詳細の作業員は`OperationResultWorkersManager`へ移行したが、稼働外売上は表示・操作・Callable経路を変更していない。
+3. 実績詳細の基本情報は`OperationResultManager`／`AirItemManager`、作業員明細は`OperationResultWorkersManager`／`AirArrayManager`から、`OperationResult.update()`の標準client保存へ接続した。作業員追加時だけ同じclient transactionで新規Employee参照を確認する。
 4. `functions/shared/operationWriteContract.js`が`create`、`duplicate`、`overview`、`workers`、`articles`、`order`、`delete`、`notify`、`convert`、`agreement`、`adjusted`、`lock`を一つのcommand契約へ集約する。
 5. `functions/modules/operations/saveOperation.js`は全commandを一つのFirestore transactionで処理し、Auth identityとUser、現場、従業員参照、期待値を検査する。予定ではSite `scheduleRevision`と配置通知、実績化では予定・通知・実績、請求では取極め・調整・lockを同じ入口で扱う。
-6. 現行Firestore Rulesは`OperationResults`と`SiteOperationSchedules`のclient writeを全面拒否している。このRulesは現行Callable経路と整合するが、Callableを維持すべき設計理由そのものではない。
-7. 稼働実績の`overview`・`workers`は同一tenantの有効な本登録Userへserver認可を緩和済みだが、client保存、Air Manager、Rules簡素化へは未移行である。稼働外売上と請求は現在のrole判定を維持している。
+6. Firestore Rulesは`SiteOperationSchedules`のclient writeを全面拒否したまま、`OperationResults`では同一tenantの有効な本登録Userによる既存・非lock実績のupdateだけを許可する。create、delete、lock変更、稼働外売上、請求調整、billing version、lifecycle IDのclient変更は拒否する。
+7. `saveOperation`の実績`overview`・`workers`分岐は旧client互換とrollbackのため残している。実績詳細画面の正規経路からは呼ばれない。稼働外売上、実績作成・複製・物理削除、請求は従来経路を維持する。
 
 ## 操作別の予備分類
 
@@ -41,22 +41,18 @@
 - ADR 0069と仕様は当初Air Managerを通常masterへ限定していた。ADR 0071と仕様訂正により通常業務data全般へ適用範囲を広げるが、製品codeは未移行である。
 - `saveOperation`は通常CRUD、物理削除、通知、実績化、請求状態遷移を同じAPIへ集約している。後続ではAPI単位でなくoperation単位に必要性を判定する。
 
-## 次の実装checkpoint候補
+## FGA-06-RESULT-MANAGER-CLIENT-04 Local実装結果
 
-`FGA-06-RESULT-MANAGER-CLIENT-04`として、lockされていない既存実績の`overview`・`workers`だけを対象に設計する。稼働外売上、実績作成・複製・物理削除、予定、通知、実績化、請求は対象外とする。
+lockされていない既存実績の`overview`・`workers`だけを対象に実装した。稼働外売上、実績作成・複製・物理削除、予定、通知、実績化、請求は対象外である。
 
-実装前に次を確定する。
+- listener由来`OperationResult`を単数`OperationResultManager`／`AirItemManager`へ渡し、基本情報をdocument単位last-write-winsで保存する。
+- 作業員配列は`OperationResultWorkersManager`／`AirArrayManager`を再利用し、編集後の親`OperationResult`全体を保存する。新たに追加されたEmployeeだけはclient transaction内で存在を確認する。
+- Rulesはtenant、active registered User、actor UID、document ID、既存非lock状態、Site・Customer参照を境界とする。未決または専用操作のfieldは同時に開かない。
+- 旧画面のカード枠、toolbar、ボタン文言、入力component、760px dialog、lock表示、稼働外売上一覧、物理削除dialogを維持する。固定製品commit `40316475`のsource contract、全domain、Local Emulator、専用UI buildは成功した。[Local検証記録](../verification/fga-06-result-manager-client-local.md)を参照する。
 
-- listener由来`OperationResult`を単数Domain Manager／`AirItemManager`へ渡す基本情報編集契約。
-- 作業員配列に既存`OperationResultWorkersManager`／`AirArrayManager`を再利用できるか、親document保存とbase Managerのevent契約。
-- `OperationResult.update()`によるdocument単位last-write-wins、既存downstream trigger、lock、追加Employee参照の責務。
-- `OperationResults` Rulesをtenant共通の通常updateへ開く際に残すactor UID、tenant、client物理delete拒否と、create・未決`articles`を同時に開かない方法。
-- 旧Callable clientとの互換、Functions撤去単位、rollback、対象自動test、Local Emulator、固定commitのDev反映・受入れ。
-
-本候補は製品実装の承認ではない。上記segment contractと影響を提示し、利用者承認後に実装する。
+checkpoint完了には、別承認による固定commitのFirestore Rules・Hosting Dev反映と、実績基本情報・従業員／外注先明細の保存再表示および見た目の受入れが残る。旧Callable分岐の撤去はDev受入れ後にrollback要否を再評価して別の変更単位とする。
 
 ## 未確認事項
 
-- Air Managerの現行公開契約が、親document内の作業員・稼働外売上配列をdocument全体として保存する構成をそのまま満たすかは未確認。
-- `saveOperation`以外のCloud Functions triggerが各action後に更新する全documentと、client化時の同等性はこの棚卸しでは再検証していない。
-- Dev／Prodのactual Firestore edition、deploy状態、実dataは確認していない。今回の文書変更は実環境を対象にしない。
+- ブラウザ上の見た目と実操作は未確認であり、source contractと専用UI buildだけをLocal証拠とする。
+- Dev／Prodのactual deploy状態と実dataは確認していない。Local実装は実環境を変更していない。

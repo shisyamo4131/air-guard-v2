@@ -17,9 +17,9 @@
 
 ## 次の作業
 
-1. [FGA-06内部checkpoint](../roadmaps/foundational-governance-alignment.md#fga-06-transaction系内部checkpoint)と[Operation CRUD棚卸し](operation-crud-simplification-inventory.md)から、`FGA-06-RESULT-MANAGER-CLIENT-04`のsegment contractを提示します。対象候補はlockされていない既存実績の基本情報と作業員明細であり、Domain Manager／Air Manager再利用、FireModel標準client保存、Rules簡素化、旧Callable撤去単位を確定します。稼働外売上、実績作成・複製・物理削除、予定、通知、実績化、請求は含めません。
+1. `FGA-06-RESULT-MANAGER-CLIENT-04`は固定製品commit `40316475`でLocal実装・自動検証・専用UI buildまで完了しています。次は別承認のDev release checkpointとしてFirestore RulesとHostingの反映範囲、生成、rollbackを提示し、基本情報・従業員／外注先明細の保存再表示と既存画面の見た目を受入れます。Functions、稼働外売上、物理削除、実績作成・複製、予定、通知、実績化、請求は今回の反映対象へ含めません。
 2. 予定入力内の現場新規登録は[FUT-0190](future-actions.md#fut-0190-現場稼働予定入力内の現場新規登録を復旧する)、サインアウト／session切替と従属cacheのcleanupは[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)へ分離済みです。現在checkpointへの追加はscope合意に従います。
-3. 実装・検証の範囲と完了条件を[開発workflow](../runbooks/development-workflow.md)で固定します。この案内自体は新しい実装・Dev操作・data変更の承認ではありません。
+3. Dev反映までは[Local検証記録](../verification/fga-06-result-manager-client-local.md)を正とし、旧`saveOperation`の`overview`・`workers`分岐はrollback用に残します。この案内自体はDev操作・remote data変更の承認ではありません。
 
 ## 参照
 
