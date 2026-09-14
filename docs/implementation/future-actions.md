@@ -16,6 +16,8 @@ Local completed、Resolved、Superseded等は記録された限定条件のま�
 
 ### Open
 
+[FUT-0191](#fut-0191-domain-managerのイベント名を基底componentと揃える)
+
 [FUT-0005](#fut-0005-サインアウト完了条件へmodel-cleanupを含める) · [FUT-0006](#fut-0006-通知クリックを安全なpayload遷移と既存client再利用へ変更する) · [FUT-0007](#fut-0007-fcm-client-listenerと表示の重複を検証cleanupする) · [FUT-0008](#fut-0008-fcm-token-lifecycleと登録失敗の再試行を設計する) · [FUT-0009](#fut-0009-tokenとuser情報をログへ出さない) · [FUT-0010](#fut-0010-fcmtokens-rulesのtenant所有権field検証を強化する)
 
 [FUT-0011](#fut-0011-fcm-error分類で有効tokenを削除しない) · [FUT-0012](#fut-0012-通知配送を冪等再試行可能にする) · [FUT-0013](#fut-0013-休眠test通知handlerを除去または保護する) · [FUT-0014](#fut-0014-batch送信の500件超切捨てを明示修正する) · [FUT-0015](#fut-0015-recipient重複時の集計token-owner対応を一貫させる) · [FUT-0016](#fut-0016-service-worker更新ライフサイクルを検証する)
@@ -2764,3 +2766,16 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 推奨する将来対応: Site AutocompleteのactivatorからDOM eventを渡さず`toCreate()`を呼び、`rememberCreateCompany`、3ステップ入力、取引先候補なしの仮登録、作成結果のAutocomplete選択を維持する。見た目と通常の現場一覧作成は変更しない。
 - 必要なテスト: activatorからDOM eventをitemとして渡さないこと、予定入力内で3ステップdialogが開くこと、取引先既存／未登録の両方で作成結果が選択されること、取消・失敗時の予定入力保持、通常現場一覧作成の非回帰、固定commitのDev受入れ。
 - ユーザー判断が必要な事項: 修正checkpointの開始、Dev反映、受入れは別途承認する。今回のFGA-06予定C/U/D受入れでは実装しない。
+
+## FUT-0191 Domain Managerのイベント名を基底componentと揃える
+
+- 状態: Open
+- 発見日・工程: 2026-09-15、SCR-01-02の利用者code review。
+- 確認した意図: AirItemManager／AirArrayManagerのwrapperは、特別な理由がない限り基底componentのeventを同名・同payload・同タイミングで伝える。基底のcreate/update/deleteをcreated/updated/deletedへ改名する共通component改修は今回行わない。
+- 確認済み事実: OutsourcerManagerはcreate/updateをcreated/updatedへ転送する。SCR-01-02のCustomerBillingManagerもupdateをupdatedへ転送していた。これ以外の対象と利用側の購読箇所は未棚卸しであり、全wrapperが同じとは断定しない。
+- 対象: 単数・複数domain Managerとevent購読側。将来改修の着手時に改名・payload変換・二重通知と、例外が必要な具体的理由を調査する。
+- 実施方針: 後発の独立改修としてまとめ、既存SCR全体の完了条件へ追加しない。新規roadmapは作らない。利用者がCustomerBillingManagerを再改修するため、Codexは今回そのcodeを変更しない。
+- 完了条件・test: 対象wrapperと購読側を同じ変更で整合し、成功時の同名event・payload・通知回数、失敗時の非通知、利用側処理の継続を確認する。基底event名とCRUD・保存挙動を変えず、例外は理由を記録する。
+- 互換性・rollback: event名変更で既存購読が切れるため、wrapperと利用側を対で修正・復元する。旧別名の恒久的な二重emitを既定にしない。
+- SCRを妨げない理由: 現時点で既存wrapper群の改名を直さなくても、請求詳細の標準保存接続は進められる。新しい機能改修へ無関係な既存wrapperの一括修正を混ぜない。
+- 承認境界: 今回は後発事項の記録のみ。対象全体のcode改修、共通component改名、追加の仕様整理・releaseは未実施。
