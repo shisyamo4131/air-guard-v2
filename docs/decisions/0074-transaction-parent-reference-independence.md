@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-14
 - 状態: Accepted
+- 2026-09-15改訂: マスターarchive・restoreは[ADR 0060の改訂](0060-common-archive-purge-and-address-contract.md)と[共通仕様](../specification.md#ドキュメントのアーカイブと物理削除)を正とする。以下の専用archive維持・transaction従属による拒否なしという旧条件は、その範囲で現行要件に使用しない。通常保存・背景同期とtransaction削除の判断は維持する。
 - 対象: 稼働予定、稼働実績、配置通知、請求、勤怠、従業員別稼働、現場勤務履歴
 - 関連仕様: [共通データ仕様](../specification.md#共通データ仕様)、[Employeeの操作権限と保持](../specification.md#employeeの操作権限と保持)、[取引先・現場・取極め](../specification.md#取引先現場取極め)
 - 置換範囲: [ADR 0046](0046-customer-archive-reference-barrier.md)、[ADR 0051](0051-site-mistaken-registration-archive-boundary.md)、[ADR 0060](0060-common-archive-purge-and-address-contract.md)のうち、トランザクション文書に親マスターの存在を必須とする判断を置換する

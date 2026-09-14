@@ -8,6 +8,18 @@
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
 - 既存判断との関係: [ADR 0065](0065-tenant-trust-normal-business-authorization.md)の通常業務認可とclient／Callable境界を具体化し、[ADR 0069](0069-domain-manager-editable-state-ownership.md)のDomain Manager適用範囲を通常のmaster dataから通常業務data全般へ拡張する。0069のeditable state所有、Manager非入れ子、入力契約は維持する
 
+## 2026-09-15改訂：業務CRUDと後続処理の分担
+
+利用者は質疑応答で、マスターの業務状態変更、確定後を含む請求の編集・削除、予定からの実績化、配置通知の作成・状態変更をManagerとSchemasクラスの標準処理へ統一すると決定した。認証account変更部分は厳密な専用処理へ分離し、Notifications生成・FCM送信・結果記録と、実績から請求・勤怠等への反映は既存Functionsトリガーが担う。詳細の正本は[標準CRUDと後続処理](../specification.md#標準crudと後続処理)と[ロックの画面別操作](../specification.md#稼働実績ロックと画面別操作)とする。
+
+理由は、業務上の操作条件とserver実装の必要性を混同して、既存クラスにある処理を専用Callableへ重複実装する手戻りを止めるため。ロックは稼働実績管理からの編集・削除を制限する画面上の仕組みであり、経理側の編集やdocument全体を凍結する認可条件ではない。UI経由をサポート範囲とし、CRUDは認証・tenant共通境界を使う。
+
+本改訂は下記の分類待ちのうち回答済み操作、および旧ADRの請求確定・業務状態変更・実績化を理由とする専用保存条件を置換する。archiveはADR 0060改訂を参照する。認証account操作の認可、入力・計算のクラス責務、外部送信、未提供操作の一律追加禁止は維持する。請求確定後の訂正に新revisionを必須とする判断も置換し、snapshot自体の用途は維持する。
+
+今回は文書反映のみで製品code・Rules・data・deployを変更しない。未移行箇所は[棚卸し](../implementation/operation-crud-simplification-inventory.md)、実装・受入れは[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)で管理する。後続実装ではクラスの提供機能、全caller、旧専用経路、Rules、Auth連携、Triggerとの接続と保存形式の互換性を照合し、画面別lock操作、確定後請求編集・削除、実績化、通知生成、請求・勤怠反映と失敗を検証する。文書反映だけでmigrationを実行せず、実装rollbackは対象client・Rules・Functionsの整合した単位で定める。今回の文書は所有差分だけを戻せる。
+
+以下は2026-09-13の判断記録。本改訂で置換した専用条件・分類待ちを現行要件として再適用しない。
+
 ## 背景
 
 AirGuardV2では、通常のmaster CRUDへrole・permission検査、専用Callable、field別writer、競合拒否、詳細なRules検査が重なり、client policy、Functions、Rules、testが同じ条件を重複していた。FGA-02からFGA-05では、Customer、Site、Employee、OutsourcerをDomain Manager、FireModel／ClientAdapterの標準保存、tenant共通Rulesへ段階的に戻した。

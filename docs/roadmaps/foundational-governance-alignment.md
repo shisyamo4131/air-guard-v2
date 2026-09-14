@@ -3,10 +3,18 @@
 - 状態: In progress
 - 開始日: 2026-09-09
 - 現在の進捗: 80%
-- 目的: 利用者が提示するプロジェクト固有の根本ルールを正本へ反映し、通常業務CRUDに重なったrole・permission制御、専用Callable、重複Rulesを可能な限り緩和・簡素化する。通常CRUDとtransaction dataの物理削除はDomain Manager、`AirItemManager`／`AirArrayManager`、FireModel／ClientAdapterの標準client経路を有効活用し、マスタdataのarchive・物理削除その他の確認済み例外と、技術的にserverを必要とする最小operationだけを専用境界へ残す。transaction dataにはarchiveを設けず、削除後の関連data連携はTriggerへ委譲する。
+- 目的: 利用者が提示するプロジェクト固有の根本ルールを正本へ反映し、通常業務CRUDに重なったrole・permission制御、専用Callable、重複Rulesを可能な限り緩和・簡素化する。通常CRUDとtransaction dataの物理削除はDomain Manager、`AirItemManager`／`AirArrayManager`、FireModel／ClientAdapterの標準client経路を有効活用し、標準archive・restoreと業務状態変更・請求・実績化を含む保存方式は現行仕様へ揃え、認証account操作と後続Trigger・外部作用の必要部分を分離する。transaction dataにはarchiveを設けず、削除後の関連data連携はTriggerへ委譲する。
 - FGA-06最優先基準: 新しい専用層を追加することではなく、過去実装と現行の標準Manager／model保存を照合し、後から過剰に追加されたCallable接続、専用writer、client transaction、競合検査と、それらを前提に増えたRulesを通常CRUDから除去する。server維持にはoperation固有の確認済み理由を必要とし、server検査をclientへ移植しただけの変更は簡素化完了としない。
 - 実装順: Customer管理 → Site管理 → Employee管理 → Outsourcer管理 → その他transaction系機能。
 - 進捗方式: milestone weightは工程完了の比率であり工数見積りではない。合計100。各機能milestoneは、着手時に利用者と合意した小checkpointへweightを配分し、各checkpointの実装、必須検証、必要なmigration、固定commitのDev反映・受入れが完了した場合だけ部分加点できる。ルール整理だけ、local実装だけ、未承認Dev待ちは製品milestoneへ加点しない。
+
+## 2026-09-15の仕様回答に対応する残作業
+
+[標準CRUDと後続処理](../specification.md#標準crudと後続処理)、[実績ロック](../specification.md#稼働実績ロックと画面別操作)、[archive](../specification.md#ドキュメントのアーカイブと物理削除)の承認済み方式を、各対象機能の実装工程へ反映する。今回の文書更新による製品進捗の加点はない。以下の過去checkpointで維持した専用Callable・一律lock拒否等を、現行の必須設計と読み替えない。
+
+- マスター工程: 業務状態変更とUser/Auth変更部分の分離、標準archive・restoreへの切替えを対象ごとに確認する。
+- transaction工程: [CRUD棚卸しの残作業](../implementation/operation-crud-simplification-inventory.md)から、請求・画面別lock・実績化・配置通知の標準クラス接続と既存Trigger維持を確認する。
+- 完了条件: 対象Manager／Class／Rules／Functionsが承認済み方式に一致し、画面別操作と認証・tenant境界、関連documentへの反映、失敗時の挙動を検証してDev受入れを行う。文書だけでこれらを完了扱いしない。
 
 ## フェーズ原則
 

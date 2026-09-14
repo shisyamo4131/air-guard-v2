@@ -8,6 +8,18 @@
 - 一部置換: [ADR 0057](0057-employee-hard-delete-and-archive-deferral.md)の直接物理削除・archive延期、[ADR 0058](0058-employee-full-read-and-geocoding-scope.md)の従属writer変更禁止。全項目read・通常編集・退職・保険のactorと状態条件は維持する。
 - 適用計画: [Employeeロードマップ](../roadmaps/employee.md)。本判断の採用時はEMP-01の設計・review・文書保存までとし、後続の実装開始承認と進捗はroadmapで管理する。
 
+## 2026-09-15改訂：標準archive・restoreの採用
+
+利用者は、当面client-adapterが提供する論理削除とrestoreを使い、マスタdataの削除機能全体を将来見直すと決定した。詳細の正本は[共通仕様](../specification.md#ドキュメントのアーカイブと物理削除)、将来判断は[FUT-0146](../implementation/future-actions.md#fut-0146-archive-audit-metadataretentionpurgerulesを共通設計する)とする。
+
+理由は、既存基盤にある移動・復旧処理と機能固有Callable・保存形式が併存し、共通restoreをそのまま使えなくなっているため。従属確認直後の稀な参照追加は受容し、同IDでの復旧で対応する。完全防止のための参照writer保護や独自envelopeを再導入しない。
+
+本改訂は、下記旧判断およびADR 0046・0051・0072の専用archive方式、ADR 0074の「トランザクション参照をarchive拒否理由にしない」部分を置換する。親不存在でも通常保存・背景同期を継続する判断と認証・tenant保護は維持する。住所・座標契約は変更しない。
+
+今回は定義と将来課題の記録のみ。製品code・Rules・保存dataは変更せず、既存envelopeを標準restoreへ渡す切替えは行わない。対象機能の実装工程で保存形式の互換性、Manager接続、Rules、認証関連処理、同ID移動・復旧、従属あり拒否と失敗時の挙動を確認する。文書rollbackは今回の所有差分だけを戻す。実装切替え時のdata変換・復旧手順は対象を確認して別途定める。
+
+以下は2026-09-06の判断記録。archive・restoreについて本改訂と異なる条件を現行要件に使用しない。
+
 ## 背景と決定
 
 利用者は、EmployeeのarchiveをSite同様の別collection移動へ戻し、従属側の参照整合性の設計を委ねた。また、archive・物理削除と住所・座標はcollectionごとの独立判断ではなく、システム共通仕様としてまとめるよう指示した。採用内容の唯一の正本は現行仕様の共通節とし、本書は理由・影響を記録する。

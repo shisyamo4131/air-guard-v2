@@ -1,5 +1,16 @@
 # アーカイブ・物理削除の実装差と設計
 
+## 標準処理への切替えに残る実装差（2026-09-15）
+
+当面の方式は[共通仕様](../specification.md#ドキュメントのアーカイブと物理削除)で変更済み。今回の文書改訂では製品実装・Rules・dataを変更していない。
+
+- Customer／Site／Employeeは専用Callableでarchiveを作成し原本を削除している。保存dataはそれぞれ原本をcustomer／site／employeeに格納する独自envelopeで、標準adapterの元data移動と異なる。
+- client-adapterのdeleteはクラスの従属検査後、元dataを同IDのarchiveへsetして原本をdeleteする。restoreはarchiveのdataをそのままactiveの同IDへsetするため、現在の独自envelopeを直接渡してはならない。
+- 切替え時にManager・Class接続、既存専用Callableとclient拒否Rules、既存archive形式の互換性、認証関連処理との分離、復旧入口を対象機能ごとに確認する。remoteのarchive有無・件数や変換要否は未確認であり、一括変換を承認済みと扱わない。
+- 標準処理は移動先の同ID存在を拒否せずsetする。衝突・再送の追加設計を採用済みと扱わず、削除機能全体の将来判断はFUT-0146へ集約する。
+
+以下は旧仕様下での実装記録・設計案。標準処理への移行条件として独自監査・barrier・purge案を再適用しない。
+
 ## 共通仕様との対応（2026-09-06）
 
 表は後続のEMP実装記録を反映して2026-09-12に整理した。環境状態は記録時点の証拠を参照し、live remoteを再確認したものではない。

@@ -1,6 +1,6 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-09-10
+- 最終更新日: 2026-09-15
 - 仕様バージョン: 0.8.25
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
@@ -77,11 +77,11 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 #### 選択UIと例外operation
 
 - Autocomplete等のdocument選択UIがその場で新規作成を提供する場合は、新規単一instanceを扱う単数ManagerをCREATE modeで開く。Firestore commitの成功が確認でき、割当済みdocument IDを持つ作成結果だけを選択し、listenerの受信を選択前の必須待機にはしない。既存候補を将来その場で編集する場合も、list cacheを直接編集せず、主対象のlistenerから受けた単一instanceを単数ManagerのUPDATEへ渡す。保存後の変更可能な主対象document・listはreal-time listenerを表示正本として収束し、IDから補完する従属先の名称・詳細だけはtenant scopeを分離した`useFetch`共有cacheを優先して更新できる。ManagerはUIとoperation orchestrationの責務であり、認証・認可・tenant・Rules・server validationの境界にしない。
-- domain Managerを共通入口とする規則は、すべてのoperationを一律に提供またはgeneric deleteへ接続することを意味しない。マスタdataのarchive・復旧・物理削除、Authentication・Company・User、機微・機密情報、Stripe・請求確定、順序が重要な状態遷移等の例外operationは、固有のUI・Callable・競合制御へ委譲するか、製品上提供しない。transaction dataの物理削除はDomain Manager／FireModel／ClientAdapterのclient削除へ接続し、関連dataとの連携をTriggerへ委譲する。提供する例外operationをManagerから開始する場合も、既存のactor、従属検査、監査、idempotency、write拒否条件を維持する。
+- domain Managerを共通入口とする規則は、すべてのoperationを一律に提供またはgeneric deleteへ接続することを意味しない。Authentication・Company・User、機微・機密情報、Stripe等の認証・外部作用に関する例外operationは、固有のUI・Callable・競合制御へ委譲するか、製品上提供しない。transaction dataの物理削除はDomain Manager／FireModel／ClientAdapterのclient削除へ接続し、関連dataとの連携をTriggerへ委譲する。提供する例外operationをManagerから開始する場合も、既存のactor、従属検査、監査、idempotency、write拒否条件を維持する。
 
 #### 編集dialogの幅
 
-- 通常のdata編集dialogは`max-width: 480px`を既定とする。項目の可読性、複数列・表・複数step、またはresponsive・accessibility上の必要性が確認できる場合だけ、component固有の理由をもってより広い幅へ上書きできる。確認専用dialog、viewer、selector等の非編集UIはこの既定の対象外とする。archive・復旧・物理削除等の例外operationのdialog幅は480pxへ自動拘束せず、操作固有の安全な確認内容、可読性、responsive・accessibilityを基準に決める。
+- 通常のdata編集dialogは`max-width: 480px`を既定とする。項目の可読性、複数列・表・複数step、またはresponsive・accessibility上の必要性が確認できる場合だけ、component固有の理由をもってより広い幅へ上書きできる。確認専用dialog、viewer、selector等の非編集UIはこの既定の対象外とする。archive・復旧・物理削除等の確認dialog幅は480pxへ自動拘束せず、操作固有の安全な確認内容、可読性、responsive・accessibilityを基準に決める。
 
 - 「Pageとcomponentの構成」をManager構成・入力・保存経路・dialog幅の詳細仕様の正本とする。変更・段階移行時の進め方は[Development and data rules](project-rules/development-and-data.md#実装原則)、page・fetch・従属参照の判断理由は[ADR 0067](decisions/0067-component-fetch-and-dependent-reference-boundary.md)、Managerとdialog規約の判断理由は[ADR 0069](decisions/0069-domain-manager-editable-state-ownership.md)を参照する。
 
@@ -131,7 +131,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - document共通の必須・型・長さ・相関はFireModel/Class schema、operation固有の追加条件は必要な場合だけ共有operation contractを正本とする。通常更新では保存対象となるdocument全体を正規application経路で検証し、`updatedAt`・`updatedBy`等の管理fieldと当該operationに必要な派生fieldを同じ保存境界で確定する。通常業務のFirestore Rulesはこれらのschema・業務validationを重ねて強制する責務を持たず、例外operationまたは明示した最低限の破壊防止条件だけをserver境界に残す。派生fieldには当該operationに伴って更新が必要な検索値、表示名、座標等を含み、利用者が編集した値とは別に確定する。
 - 変更可能な主対象documentは編集中もFirestore listenerから受信したinstanceをManagerの`modelValue`へ直接接続する。listener更新を受信した場合、base Managerが編集中のdraftを最新document全体で置き換えることを許容し、編集中だけ固定するsnapshot、入力消失の警告、競合通知、保存拒否、最新値の再読込、明示再確認を設けない。更新完了後もlistenerの最新documentを画面上の正本とする。保存自体の失敗、認可拒否、validation拒否、結果不明は同時更新による正常な上書きと区別して扱う。
 - 通常の可逆な業務操作では、同時更新を防ぐためのexpected value、revision、transaction、lock、ledger、競合拒否を既定にしない。短時間の連続操作、listener到着順、二重送信による外部作用等は同じ問題とみなさず、保存中UIやerror処理は対象operationの実害に応じて定める。
-- Company documentとUser documentは認証・tenant管理の基点であるため、この通常規則から除外する。利用者が別途変更するまで、現在のfield別writer、actor条件、validation、競合制御を維持する。Stripe、請求確定、マスタdataのarchive・復旧・物理削除、順序が重要な状態遷移にもこの通常規則を適用せず、operation固有のtransaction、precondition、idempotency、再試行・照合、監査を維持または別途定める。transaction dataの物理削除にはCallable、archive、削除前の従属連鎖処理を設けず、client deleteのcommit後にTriggerで関連dataを連携する。Authentication・role・permission・tenant所属、機微・機密情報、通知等に既に固有の競合制御がある場合も、この規則だけで撤去しない。
+- Company documentとUser documentは認証・tenant管理の基点であるため、この通常規則から除外する。利用者が別途変更するまで、現在のfield別writer、actor条件、validation、競合制御を維持する。Stripe等の外部作用にもこの通常規則を適用せず、operation固有のtransaction、precondition、idempotency、再試行・照合、監査を維持または別途定める。transaction dataの物理削除にはCallable、archive、削除前の従属連鎖処理を設けず、client deleteのcommit後にTriggerで関連dataを連携する。Authentication・role・permission・tenant所属、機微・機密情報、通知等に既に固有の競合制御がある場合も、この規則だけで撤去しない。
 - Prod公開後にtop-level field単位のlast-write-winsへ変更する案は未確定であり、Prod公開によって自動適用しない。別途採用する場合、editorとwriterは利用者が変更したtop-level fieldだけを送信し、server管理fieldと必要な派生fieldを除いて未変更fieldを保存対象に含めない。異なるtop-level fieldの更新は併存させ、同じfieldは後commitのfield全体を正とする。arrayとmapは内容全体を一つのtop-level fieldとして扱い、要素またはkey単位ではmergeしない。判断理由と移行境界は[ADR 0066](decisions/0066-pre-production-document-level-last-write-wins.md)を正とする。
 
 ### 表示dataと従属参照
@@ -143,16 +143,16 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 ### ドキュメントのアーカイブと物理削除
 
-この節のarchive後の物理削除は、archiveを提供するマスタdocumentの契約である。transaction dataにはarchive処理を設けない。User/Authの専用account削除、業務transactionの取消・物理削除、会社全体の保守削除へarchiveを新たに要求せず、それぞれの固有契約を維持する。製品が提供するtransaction documentの物理削除はCallableを使わずclientから原本を削除し、関連dataとの連携はTriggerへ委譲する。
+2026-09-15採用。当面、マスタdataの論理削除（archive）とrestoreにはclient-adapterの標準処理を使用する。方式・保存形式・従属検査について、旧来の専用Callable・監査envelope・generic delete/restore禁止の規定を置き換える。判断理由は[ADR 0060の改訂](decisions/0060-common-archive-purge-and-address-contract.md)、適用差は[archive実装差](implementation/archive-restore.md)を参照する。
 
-- アーカイブは、誤登録・重複など通常業務に使用すべきでないdocumentを、同一会社の別archive collectionへ同じdocument IDで移し、通常collectionから取り除く操作とする。正常な退職・取引終了と区別し、過去業務の参照先を消す代替手段にしない。
-- archiveには原本snapshotと、形式version・実行者・server時刻・理由・操作IDを保持する。元documentの通常更新日時とarchive日時を混同しない。原本の読取り、対象ごとに維持するマスター・認証・lifecycle従属の検査、同ID archive不存在確認、archive作成と原本削除を同じ保存単位で確定し、部分移動・上書きを許さない。
-- 対象ごとに維持すると明示したマスター・認証・lifecycle従属が一つでも存在すればarchiveを拒否する。トランザクション文書が親マスターIDを保持することはarchive拒否条件にせず、連鎖削除もしない。検査不能・不正dataの扱いは、実際に維持する従属検査ごとに定める。この境界は[ADR 0074](decisions/0074-transaction-parent-reference-independence.md)を正とする。
-- archiveを提供する機能で参照作成側のbarrierを固有に採用済みの場合は、その機能checkpointで維持または撤去を明示する。共通既定として従属documentのCRUへ参照先存在確認を要求せず、archive・物理削除時点の従属検査が、直前または同時の参照作成まで防ぐとは保証しない。
-- archiveを通常一覧・検索・選択候補へ混ぜず、通常業務で新規参照できないものとする。archiveの閲覧権限は個別に定め、通常原本のread許可から自動的に導かない。archiveへの参照が検出された場合は不整合として扱い、archiveから名前を補完して正常な業務記録に見せかけない。
-- 物理削除は、archive済みdocument本体をFirestoreから抹消する別操作とする。削除時にも従属なし・対象同一性・認可を再確認し、従属あり・不整合・検査失敗なら削除せず原因を記録する。archive完了だけを理由に無条件削除しない。バックアップ、外部出力や別契約の操作記録まで消去したとは表現しない。
-- 応答不明時は対象と操作IDを照合し、同じ操作の再送で上書き・再生成・別対象の削除を起こさない。archive後・物理削除後の旧ID再利用と古い要求を防ぐ仕組みを、各操作を開放する前に定める。復元を提供する場合も通常原本の同ID上書きは禁止し、User/Authなどの自動復元を含めない。
-- 共通化は全masterへのarchive・物理削除・restore UIの一律追加を意味しない。Customer/Siteの既存固有条件と、Outsourcerでこれらを提供しない条件は維持する。定期実行、保持期限、削除実行の担当・承認、エラー一覧の保存方式は個別の運用判断とし、自動purgeをこの仕様だけで有効化しない。
+- 製品が提供する削除はDomain ManagerからSchemasクラス／FireModelを通じてClientAdapterへ接続する。論理削除対象では、元documentのdataを同一tenantの同名collectionに`_archive`を付けた専用collectionへ同じIDで保存し、原本を同じtransactionで削除する。独自の監査envelopeで包まない。
+- restoreはClientAdapterの標準処理でarchiveのdataを元collectionの同じIDへ戻し、archive側を同じtransactionで削除する。User/Authなど別resourceの復旧や連鎖操作を含めない。
+- 削除時の従属確認はSchemasパッケージ各クラスの`hasMany`・削除hookとadapterの標準処理に任せ、検出した従属documentが存在する場合は削除を拒否する。全collectionを独自に走査する仕組みを追加しない。
+- 確認直後に従属documentが作成される稀な競合は許容し、同じIDへのrestoreで対応する。参照作成側のbarrierやlockを追加して完全防止することは要求しない。通常保存・背景同期に親マスター存在を一律要求しない判断は維持する。
+- archive・restoreは通常業務の認証・同一tenant境界で扱い、操作名だけを理由に専用Callableや追加roleを要求しない。Authentication・User・tenant管理を伴う処理は引き続き厳密に制御し、マスター移動からaccount削除・復旧を導かない。
+- archiveを通常一覧・検索・選択候補に混ぜない。方式の採用だけで、未提供のマスター削除・restore UIを一律に追加しない。通常退職・取引終了との使い分け、Outsourcer等の操作提供範囲は将来の機能見直しで判断する。
+- マスタdataの削除機能は将来見直す。最終的な物理削除、保持、復旧の提供範囲、同ID衝突時の扱い等は[将来対応FUT-0146](implementation/future-actions.md#fut-0146-archive-audit-metadataretentionpurgerulesを共通設計する)で管理し、旧設計案を標準処理採用の前提に戻さない。標準adapterにない監査・衝突拒否・再送成功を保証したとは扱わない。
+- transaction dataにはarchiveを設けず、提供する物理削除はclientから実行し、関連dataとの連携はTriggerへ委譲する。User/Auth専用account削除、会社全体の保守削除は別契約のままとする。
 
 ### 住所と座標
 
@@ -169,14 +169,14 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 認証ユーザーのカスタムクレームと会社 ID をデータアクセス判定に用いる。
 - `Companies/{companyId}` のCompany documentはclientから作成・削除できず、初期作成はCloud Functions/Admin SDKだけが行う。CompanyとUserは認証・tenant管理の基点であるため、通常業務のtenant共通権限とdocument単位last-write-winsから除外し、現在の厳密なactor・field・validation・競合制御を維持する。
 - roleによる通常業務上の差異は、原則として画面、navigation、案内、初期表示等のUXに限定する。同一tenantに所属する有効な認証済み本登録Userは、tenant内の通常業務dataについて同じserver権限でread・create・updateその他の提供済み通常操作を行えるものとして信頼する。通常業務のRules・Callableでrole名、role preset、permission文字列、会社管理者・super-user等の区分をallow条件にしない。
-- 通常業務dataのFirestore Rulesは、受理されたAuthentication token、確認済みemail、User documentの存在とUID一致、本登録、非disabled、正常なtenant claim、User所属tenantとpath tenantの一致を共通の必須境界とする。通常アクセスの即時停止はUser documentの`disabled`を正本とする。RulesはFirebase Auth directoryの現在のdisabled・deleted状態を直接再取得できないため、その現在値まで必要な例外operationはCallableで再確認する。通常業務documentのstrict field allowlist、型・長さ・必須、状態等のschema・業務validationはFireModel/Class schemaと正規application保存境界の責務とし、Rulesへ重複させない。Rulesには、actor UIDの偽装防止、tenant境界、マスタdataのclient物理delete拒否、transaction dataで提供するclient deleteの対象・状態条件等、対象operationで明示した最低限の破壊防止条件だけを残す。例外operationのより厳格なserver認可・validationは維持し、client UXだけを認可境界にしない。
-- 例外operationの認可・validation、確定済みdata、外部作用、結果不明時の安全性は通常業務の簡素化へ含めない。
-- 次は通常業務のtenant信頼境界の例外とし、role、permission、actor、target、最新状態等の必要なserver側認可を適用し、必要に応じて専用Callableを使用する。(1) Firebase Authentication account、Company document、User document、role、permission、tenant所属の作成・変更・削除その他の現行提供操作、(2) マイナンバー、口座情報等の機微な個人情報・機密情報、(3) archive、復旧、master dataの物理削除、(4) Stripeによる契約、課金、決済、返金。CompanyとUserは認証・tenant管理の基点としてdocument全体を例外にし、現行の厳密なactor・field・validation・競合制御を維持する。機微情報を別documentへ分割する規則は取り消さない。例外のclient表示・disabled・route制御はUXであり、認可境界にしない。例外APIを呼ぶclientは、button等の表示判定とは別にrole・permissionを実行直前へ重複実装せず、Callableを認可の正本として呼び出し、serverが返す拒否をManagerまたは操作固有UIの標準error経路で表示する。入力整合、操作中のtenant・actor・target・理由の取り違え防止、single-flight、idempotency等の非認可client検査は維持できる。
+- 通常業務dataのFirestore Rulesは、受理されたAuthentication token、確認済みemail、User documentの存在とUID一致、本登録、非disabled、正常なtenant claim、User所属tenantとpath tenantの一致を共通の必須境界とする。通常アクセスの即時停止はUser documentの`disabled`を正本とする。RulesはFirebase Auth directoryの現在のdisabled・deleted状態を直接再取得できないため、その現在値まで必要な例外operationはCallableで再確認する。通常業務documentのstrict field allowlist、型・長さ・必須、状態等のschema・業務validationはFireModel/Class schemaと正規application保存境界の責務とし、Rulesへ重複させない。Rulesには、actor UIDの偽装防止、tenant境界、マスタdataの最終的な物理削除とarchive移動の区別（archiveに伴う原本のclient deleteは共通仕様に従う）、transaction dataで提供するclient deleteの対象・状態条件等、対象operationで明示した最低限の破壊防止条件だけを残す。例外operationのより厳格なserver認可・validationは維持し、client UXだけを認可境界にしない。
+- 例外operationの認可・validation、外部作用、結果不明時の安全性は通常業務の簡素化へ含めない。
+- 次は通常業務のtenant信頼境界の例外とし、role、permission、actor、target、最新状態等の必要なserver側認可を適用し、必要に応じて専用Callableを使用する。(1) Firebase Authentication account、Company document、User document、role、permission、tenant所属の作成・変更・削除その他の現行提供操作、(2) マイナンバー、口座情報等の機微な個人情報・機密情報、(3) Stripeによる契約、課金、決済、返金。CompanyとUserは認証・tenant管理の基点としてdocument全体を例外にし、現行の厳密なactor・field・validation・競合制御を維持する。機微情報を別documentへ分割する規則は取り消さない。例外のclient表示・disabled・route制御はUXであり、認可境界にしない。例外APIを呼ぶclientは、button等の表示判定とは別にrole・permissionを実行直前へ重複実装せず、Callableを認可の正本として呼び出し、serverが返す拒否をManagerまたは操作固有UIの標準error経路で表示する。入力整合、操作中のtenant・actor・target・理由の取り違え防止、single-flight、idempotency等の非認可client検査は維持できる。
 - Firestoreのclient書込み境界はcollection名だけで一律に決めず、field ownership、整合性、監査、同時実行、offline、複数document、server-only値、外部作用を確認して機能単位で見直す。通常の可逆操作は、上記のactor・tenant境界と最低限の破壊防止条件をRulesで強制できる場合にDomain ManagerからFireModel／ClientAdapterの標準client保存へ接続することを既定候補とする。既存Callable、transaction data、server実装の存在だけを維持理由にしない。transaction dataの物理削除もDomain Manager／FireModel／ClientAdapterからclientで実行し、削除後の関連data連携はTriggerへ委譲する。通常業務でも複数documentのatomicity、server-only値、外部作用、冪等性、再開・reconcile等の技術要件によりCallableを使用できるが、この一般例外をtransaction dataの物理削除へ適用しない。削除以外のoperationでCallableを維持する場合は、operationごとにclient transaction・batch・triggerでは満たせない理由と最小server所有範囲を示し、その技術要件だけからrole制限やschema検査を戻さない。判断理由と既存仕様の置換範囲は[ADR 0065](decisions/0065-tenant-trust-normal-business-authorization.md)、[ADR 0071](decisions/0071-normal-business-manager-and-callable-boundary.md)、[ADR 0072](decisions/0072-transaction-delete-client-trigger-boundary.md)を正とする。
 - server-only情報、厳密なactor、複数resource、外部作用、不可逆性、必須auditがある例外operationは専用Callableとoperation固有のRulesを使い、UI表示制御だけを保存境界にしない。通常業務のschema検証は上記のFireModel/Class schemaと正規application保存境界へ従う。
-- マスタ管理機能の改修中は対象masterのCRUDを主対象とし、配置・通知・稼働実績・請求・帳票などtransaction系機能への波及変更はFirestore更新に関係しない互換修正に限定する。transaction系の要改修箇所を検出しても実装せず既知課題へ記録し、マスタ管理の一連の改修後に別checkpointで見直す。Employee archiveの参照整合性に必要なwriter・Rules・索引・背景処理だけはADR 0060の限定例外として設計対象に含め、実装はEmployeeの合意済み工程で行う。
-- 配置管理の予定と配置作業員の作成・変更・並べ替えは通常CRUDとし、Domain Manager／Air ManagerからFireModel／ClientAdapterの標準client保存へ接続する。配置通知の作成も予定modelの既存処理を使う。操作後の「なるべき形」を直ちにclientの表示用状態へ反映し、保存中を理由に予定cardや作業員操作を一律停止せず、client側のpending lock、single-flight queue、更新順保証を設けない。Firestore listenerから届く正本で表示用状態を置き換えて収束させる。単一documentの通常更新は同時更新だけを理由に拒否せずdocument単位last-write-winsへ従う。予定の物理削除はclient削除とし、関連通知等の連携をmodelまたはTriggerへ委譲する。予定から実績への確定など複数document・外部作用・順序依存状態は通常CRUDから分離し、必要な最小範囲だけtransaction・再試行・照合・Callableを維持する。失敗は利用者へ表示し、認証・認可、結果不明の再送に必要な個別保護を維持する。
-- 未確定かつlockされていない現場稼働実績の基本情報変更と、従業員・外注先明細の追加・変更・削除・並べ替えは、同じtenantの有効な本登録Userがroleに依存せず行える通常業務とする。Domain Manager／Air ManagerとFireModel／ClientAdapterの標準client保存へ移行し、document単位last-write-wins、lock拒否、勤怠・請求・履歴等の既存downstream更新結果を維持する。現場稼働実績の物理削除はclient削除へ移し、勤怠・請求・履歴・予定・日報等との連携をTriggerへ委譲する。現場稼働実績の作成・複製、現場稼働予定からの確定、配置通知、請求の取極め・調整・lockは操作ごとに別checkpointで分類する。稼働外売上は次項の未決境界を正とする。
+- マスタ管理機能の改修中は対象masterのCRUDを主対象とし、配置・通知・稼働実績・請求・帳票などtransaction系機能への波及変更はFirestore更新に関係しない互換修正に限定する。transaction系の要改修箇所を検出しても実装せず既知課題へ記録し、マスタ管理の一連の改修後に別checkpointで見直す。マスターのarchive・restoreの切替えは共通仕様と対象機能の合意済み工程に従う。
+- 配置管理の予定と配置作業員の作成・変更・並べ替えは通常CRUDとし、Domain Manager／Air ManagerからFireModel／ClientAdapterの標準client保存へ接続する。配置通知の作成も予定modelの既存処理を使う。操作後の「なるべき形」を直ちにclientの表示用状態へ反映し、保存中を理由に予定cardや作業員操作を一律停止せず、client側のpending lock、single-flight queue、更新順保証を設けない。Firestore listenerから届く正本で表示用状態を置き換えて収束させる。単一documentの通常更新は同時更新だけを理由に拒否せずdocument単位last-write-winsへ従う。予定の物理削除はclient削除とし、関連通知等の連携をmodelまたはTriggerへ委譲する。予定からの実績化は[標準CRUDと後続処理](#標準crudと後続処理)に従い、ManagerとSchemasクラスの標準処理を使う。失敗は利用者へ表示し、認証・認可、結果不明の再送に必要な個別保護を維持する。
+- 稼働実績と請求の提供操作は[標準CRUDと後続処理](#標準crudと後続処理)に従う。ロックは[画面別操作](#稼働実績ロックと画面別操作)の制約であり、server側の一律編集禁止とはしない。関連する請求・勤怠・履歴等の更新は既存Functionsトリガーが担う。
 - [根本ガバナンス整合phase](roadmaps/foundational-governance-alignment.md)で、既存master dataとtransaction dataの通常操作をCustomer、Site、Employee、Outsourcer、その他transaction系の順に見直す。各機能は一括改修せず、対象operationと規模に応じた小checkpointでrole/permission依存、Domain Managerと`AirItemManager`／`AirArrayManager`の再利用、FireModel標準保存、Callableの必要性、client化、Rules簡素化、data影響を確定し、必要な自動検証と固定commitのDev反映・受入れまで閉じてから次へ進む。破壊的変更、data migration、Dev操作はcheckpointごとの明示承認を必要とする。
 - 稼働実績詳細の稼働外売上は、追加・編集・削除できる現行提供操作を維持する。role・permissionを操作へ影響させるかは未決であり、FGA-06の通常業務簡素化だけから権限の追加・撤去・tenant共通化を行わない。
 - Firestore Rulesの責務と式数は同phase内で段階的に整理する。collectionとclient／server利用経路を棚卸しし、未定義collectionを許可しない既定拒否、通常業務のtenant共通権限、例外operationのserver認可、Rules式数削減、必要な機密情報分離をrollback可能なcheckpointに分ける。各checkpointで既存query・schema・tenant・field・状態遷移との互換性とRules／Emulatorの許可・拒否を確認する。
@@ -185,7 +185,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - スーパーユーザーの例外権限は、明示されたルール・サーバー処理だけで許可する。
 - スーパーユーザーに対する恒久的な全会社Firestore client read/write bypassは廃止する。将来、遠隔地の他社利用者を支援するため、所属会社を持つ有効なスーパーユーザーが、未確定の明示的な手続きを経て対象会社のdataをその場で扱えるsupport accessを提供する構想があるが、現時点では未実装とする。
 - 各会社の会社管理者は`User.isAdmin === true`の1人だけとする。
-- 同一tenantの有効な認証済み本登録Userは、role、permission、会社管理者、super-user区分にかかわらず、自社の通常業務機能を同じserver権限で閲覧し、提供済みの作成・更新その他の通常操作を行える。role別のmenu、route、button、初期表示はUXとして設けられるが、通常業務dataのserver認可根拠にしない。Company、User/Auth、権限・tenant管理、機微・機密情報、archive・復旧・master物理削除、Stripe操作はこの共通権限から導出せず、個別の現行条件を優先する。
+- 同一tenantの有効な認証済み本登録Userは、role、permission、会社管理者、super-user区分にかかわらず、自社の通常業務機能を同じserver権限で閲覧し、提供済みの作成・更新その他の通常操作を行える。role別のmenu、route、button、初期表示はUXとして設けられるが、通常業務dataのserver認可根拠にしない。Company、User/Auth、権限・tenant管理、機微・機密情報、Stripe操作はこの共通権限から導出せず、個別の現行条件を優先する。
 - Userは、Employeeとの紐付けを持たない単独Userと、同じ会社のEmployeeへ`User.employeeId`で紐付くEmployee連携Userに分類する。仮登録・本登録、管理者、有効・無効はUser種類とは別の状態として扱う。
 - 会社管理者に加え、`users:provision` permissionを持つ有効な本登録Userは、同じ会社の仮登録Userを作成・削除できる。`manager`には`users:provision`と`users:write`、`human-resource`には`users:provision`だけを明示付与する。`employees:write`だけではUserアカウント管理を許可しない。
 - 既知presetの判定はpackageの`isRolePresetId`によるown-catalog membershipだけを使用し、通常の未知値に加えて`toString`、`constructor`、`__proto__`をstrict client/Functions経路でfail closedとする。strict `hasPresetPermission`と`resolveRolePermissions`は直接permission文字列をpresetとして受け入れない。一方、一般clientの`getPermissions`が未知文字列を直接permissionとして扱う既存互換挙動は維持し、strict認可へ流用しない。`*:write`から同resourceの`*:read`を導出する規則もconsumer側の責務とする。
@@ -200,13 +200,13 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Employee連携Userは、自身に紐付くEmployee情報へアクセスできるものとする。本人へ公開するfieldと提供pathは、Employee文書全体の過剰開示を避ける別のEmployee Self Access境界で確定するまでは未実装とする。
 - 有効な本登録会社管理者だけが、同じ会社の別の本登録非管理者Userを有効化・無効化できる。会社管理者は自分自身を無効化できず、必要な場合は先に同社の別Userへ管理者権限を移譲する。
 - 本登録UserからAirGuardV2の操作権限だけを一時的または継続的に剥奪し、雇用・業務記録上のEmployeeを維持する場合は、UserとAuthenticationを削除せず既存の無効化を使用する。
-- Employee退職は専用操作とし、同社の有効な本登録会社管理者、統括、人事へ許可する。`employees:write`、`users:provision`、`users:write`という文字列だけでは退職を許可せず、既知roleと専用操作のactor条件を検証する。退職日はserverのAsia/Tokyo暦日を基準に入社日以降かつ実行日以前に限定し、自己退職等の既存対象guardを維持する。実装への適用は[Employeeロードマップ](roadmaps/employee.md)で管理する。
+- Employeeの退職・訂正等の業務状態更新はManagerとSchemasクラスの標準更新で行う。退職日等の業務条件はクラスへ任せる。退職に伴うUser/Auth変更は厳密な専用処理へ分離し、同社の有効な本登録会社管理者・統括・人事という既存account操作のactor条件と自己操作等の対象guardを維持する。状態更新だけにaccount操作用のserver認可を課さない。適用は[Employeeロードマップ](roadmaps/employee.md)で管理する。
 - Employeeの退職に伴って本登録Userを削除する場合は、旧accountが別tenantでの同じメールアドレスの新規登録を妨げないようAuthentication accountとUser documentを物理削除し、User email予約とEmployee予約を解放する。Employee documentとEmployeeに紐付く勤怠・配置・請求等の業務記録は削除せず、Employeeを`RESIGNED`として保持する。Employeeだけ、仮登録User連携、本登録User連携を予約pointerから識別し、queryの先頭Userへfallbackしない。仮登録User連携は退職操作内でAuthをemailから推定・削除せず、既存の仮登録削除を完了してEmployee-only状態を確認してから退職を再実行する。signup途中のAuth-only部分状態は退職操作の対象にせず、別のaccount repairで扱う。Auth削除直後に同emailの別Authが作成される競合では新UIDを自動削除せず、再登録を無条件には保証しない。
 - Employeeに紐付かない単独本登録Userの物理削除は、退職とは別のaccount offboarding操作とし、有効な本登録会社管理者だけに許可する。自己、会社管理者、super-user、他社User、仮登録User、Employee連携Userは対象外とし、Employee連携UserにはEmployee退職操作、仮登録Userには既存の仮登録削除操作を使用する。
 - 物理削除したUser/Authは`Users_archive`へ保存せず、旧UID、email、role、通知設定、User/Auth全文を復元しない。Employee連携Userは必要なEmployee状態を訂正した後にEmployee連携User作成、単独Userは会社管理者による単独仮User作成を改めて実行し、新しいAuth UIDとUser、role・設定を作る。旧UIDを持つ履歴は新UIDへ書き換えず、一般表示で解決できない場合は削除済みUserとして扱う。
-- Employee退職、単独本登録User削除、誤退職訂正の実行状態と監査は、server-onlyの`LifecycleOperations`を操作単位の唯一の正本とする。operation ID、対象別lock、Auth削除前の永続的intent、phase、再試行、部分失敗reconcile、完了結果を保持し、clientからの直接read/writeを許可しない。email、email hash、role、通知設定、User/Auth全文、FCM tokenは保存しない。actor UIDと最大6文字の表示名、target UIDと最大6文字の表示名、Employee ID、退職日・現在上限20文字の退職理由、単独User削除理由を操作種別に必要な最小snapshotとしてserver-onlyで保持する。
+- Employee退職・訂正に伴うUser/Auth変更と、単独本登録User削除の実行状態と監査は、server-onlyの`LifecycleOperations`を操作単位の唯一の正本とする。operation ID、対象別lock、Auth削除前の永続的intent、phase、再試行、部分失敗reconcile、完了結果を保持し、clientからの直接read/writeを許可しない。email、email hash、role、通知設定、User/Auth全文、FCM tokenは保存しない。actor UIDと最大6文字の表示名、target UIDと最大6文字の表示名、Employee ID、退職日・現在上限20文字の退職理由、単独User削除理由を操作種別に必要な最小snapshotとしてserver-onlyで保持する。 Employeeの業務状態更新だけのためにこの認証用ledgerを要求しない。
 - UWB-07の全Callableは、ID tokenだけでなく現在のAuthentication accountと同社の有効な本登録Userを再取得し、UID、確認済みemail、company claim、super-user、disabled状態を照合してから認可する。Userをaccess-revoked状態へ移した後は通知dispatcherも有効な本登録User・会社一致・非disabledを送信直前に再検証し、FcmTokensのcreateを同じ条件・token/document ID一致・field allowlistへ限定してclient updateを拒否する。client deleteは本人所有tokenの削除だけ、server cleanupはAdmin SDKだけに許可する。外部FCM送信と退職transactionはatomicにできないため、commit前にeligibility確認を通過したin-flight messageは回収不能riskとして区別する。raw・partial tokenとtoken由来識別子、通知本文、custom dataをlogへ保存しない。
-- 誤って完了したEmployee退職は、会社管理者専用の訂正操作で同じEmployee documentを`ACTIVE`へ戻し、現在値の退職日・退職理由を消去できる。元の退職operationは変更・削除せず、訂正operationから参照する。訂正は完了済みのUWB-07退職だけを対象とし、旧User/Authを自動復元せず、業務記録を変更しない。UWB-07導入前の退職者は別のbackfillまたは管理者repair、実際の退職期間を伴う再雇用は別の雇用状態設計として扱う。
+- 誤退職の訂正はManagerとSchemasクラスの標準更新で同じEmployeeをACTIVEへ戻し、退職日・理由を訂正する。旧User/Authは自動復元しない。認証処理の既存operation・監査記録は標準CRUDの対象にせず保持する。実際の退職期間を伴う再雇用の業務条件は別事項のままとする。
 - `LifecycleOperations`は現段階で固定の保存期間を設けず、自動削除しない。operation、event、head、reverse参照を維持し、削除を前提とするlegal hold、完了後識別子縮小、purgeは実装しない。data量、法令・社内規程、privacy、費用、運用上の必要性から見直しが必要と判断した時点で、参照整合性、訂正可能性、移行、復旧を含めて改めて仕様変更する。履歴一覧はFirestoreをclientへ直接公開せず、有効な本登録会社管理者だけが専用Callableの最小projectionで閲覧できるものとする。
 - 履歴一覧は`listLifecycleOperations` Callableだけから取得し、`/settings/lifecycle-history`の「退職・アカウント削除履歴」へ新しい順に20件ずつ表示する。入力は同じ会社の次page開始位置を表す`cursor`だけとし、会社ID、件数、検索・filter・sort条件をclientから受け取らない。会社IDは検証済みAuthentication identityからserverが導出し、現在のAuthと同社Userを再取得して、有効・本登録・非super-user・会社管理者であることを毎回確認する。super-user、manager、human-resource、直接permissionだけのUserにはroute、navigation、Callableを許可しない。
 - 履歴projectionはschema version、最大20件のitem、次page cursorだけを返す。各itemは操作種別、`processing|retrying|completed`へ丸めた公開状態、実行者表示名、Employee IDまたは削除対象表示名、User account削除を含む操作かどうか、退職日、理由、作成・完了時刻だけに限定する。raw state、actor/target UID、request fingerprint、Auth・cleanup disposition、attempt、内部error、event、lock、head、email、role、claim、tokenを返さない。operation IDは次page cursorとしてclientへ渡り得る非秘密の同社内位置情報であり、認可token、会社特定、画面表示、logには使用しない。検索、filter、CSV export、total count、全page事前取得、永続client cacheは初期範囲外とする。
@@ -237,7 +237,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 一つのCompany documentを通常情報の既定とし、同じactorが読める会社情報・通常設定・利用状態は同居できる。ただし、[共通のFirestoreドキュメント構成](#firestoreドキュメントの構成)で機微・機密情報に該当するfieldはこの既定より優先して別documentへ分割する。それ以外の分割は読取actor、保存・削除・復旧条件、増加し続ける量、具体的なdocument size、独立query、field限定updateで解消できない実測競合、またはRules簡素化による総保守コスト低減を根拠に判断する。
 - 顧客向け請求に使うCompanyの振込先はCompany rootから別documentへ分割する。変更actorは同じtenantの有効な本登録会社管理者または統括とし、既存のsuper-user拒否条件を維持する。exact path、schema、read actor、請求snapshot・export、既存root fieldの移行とcutoverは別checkpointで確定する。現行root同居と全本登録User readは未解消の実装差であり、この仕様変更だけでdata、Rules、Callableを変更しない。システム利用料の契約・課金とは別の情報として扱う。
 - 通常の可逆なCompany編集も現行のfield別保存とoperation固有の競合制御を維持する。共通revision、全Company共通lock、operation ledgerは、新たな具体的被害が確認されない限り追加しない。
-- expected value、transaction、idempotency、lock、ledgerは、Stripe、請求確定、archive・復旧・物理削除、順序が重要な状態遷移、権限・利用停止、外部service、複数resource、復旧困難なdata loss、二重実行の具体的被害があるoperationだけに限定する。
+- expected value、transaction、idempotency、lock、ledgerは、Stripe、権限・利用停止、外部service、複数resource、復旧困難なdata loss、二重実行の具体的被害があるoperationだけに限定する。
 - `siteOrder`と`scheduleOrder`は各最大2000件という現行候補上限と実際のdocument sizeを再計測し、Company本体と分ける必要性を判断する。分割前提にはしない。
 - Devで確認済みのCompany rootは4件であり、旧新形式を通常運用で併存させず、UWBと同じFirestore全体snapshot、fresh dry-run、旧2 fieldだけの一括削除、post-check、Dev受入れを一つのbounded migrationとして実施する。Stripeは未使用で外部からの更新経路もなく、現行client・Functionsも旧fieldを生成・更新しないため、この恒久cleanupではmaintenance、外部Stripeの前後確認、旧field専用backup・data rollbackを要求しない。実data migrationは対象commit、件数、全体snapshot、停止条件、検証を固定した別の明示承認を必要とする。
 - 設定文字列の長さはUnicode Extended Grapheme Cluster単位、すなわち利用者が見た目上1文字と認識する単位で数える。結合文字で表した`が`も合成済みの`が`も1文字である。外側の空白はtrimするが、保存値へNFC/NFKC等のUnicode正規化を自動適用しない。1行fieldはCR/LFとcontrol characterを拒否する。
@@ -253,25 +253,47 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 給与計算へ用いる勤務回数、日勤・夜勤、同日複数勤務、夜勤跨ぎ、休憩、訂正、認可、CSVの詳細は勤怠実績管理改修で改めて決める。CCBは現在の集計方法を最終仕様として固定しない。
 - Company既定の`agreementsV2`とCompany位置情報・geocodingは廃止する。Company設定画面から既定取極めの編集入口とwriterを撤去し、Site固有の取極めUI・dataは維持する。SiteはCustomerに従属するため、将来のSite既定取極めはCustomer側の契約で扱う。既存fieldの削除はbackup、dry-run、rollbackを固定した別migrationでだけ行い、Customer・Site・Employeeのgeolocationへ廃止範囲を広げない。
 - Companyの`ACTIVE/SUSPENDED/CLOSED` lifecycle、provider maintenance、法的削除、tenant移転・統合・分割はCCB restartへ含めず、具体的な利用停止機能を実装する別仕様・別roadmapで扱う。現行maintenance挙動をCCBだけを理由に拡張しない。
-- 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
+- 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後も標準CRUDで訂正でき、新revisionの作成を必須条件にしない。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
 - Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBへ含めない。checkout、reader、未公開Functions、依存package、Company schema fieldはlocal codeから削除済みで、`StripeData`は全actor・全階層で拒否する。利用者用localとDevのlegacy field削除も完了している。Devでの実行結果は[immutable receipt](verification/stripe-05-dev-release.md)を参照し、将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
 - 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rulesと専用testは2026-08-30のcorrective rollbackで主repositoryから除去した。当時はSchemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardを保持したが、AirGuardV2 root/FunctionsはSTRIPE-02で`3.0.0-dev.1`へ更新した。Admin SDKは`.167`を維持し、公開packageをunpublishしない。旧8 targetへのmigrationまたはrestore経路は現在提供しない。
+
+### 標準CRUDと後続処理
+
+2026-09-15の質疑応答で確定。以下は承認済みの保存方式であり、実装の適用状態は[CRUD棚卸し](implementation/operation-crud-simplification-inventory.md)を参照する。旧来の「状態変更・請求確定・実績化だから専用Callable」という規定を置換する。
+
+- 取引終了・退職・再開・訂正などマスターの業務状態変更は、ManagerとSchemasクラスの標準更新を使う。認証account、User、tenant管理の変更を伴う部分は厳密な専用処理として分離する。業務上の状態・入力条件と保存経路は区別し、終了・退職後の通常情報編集など未変更の提供条件を一律撤去しない。
+- 請求の通常編集・確定・確定後の訂正・削除を標準CRUDに統一する。確定済み請求も直接編集・削除でき、確定を理由とする専用Callable・新revision作成を必須としない。請求documentの削除と、稼働請求管理から元の稼働実績を削除することは別であり、後者は提供しない。
+- 予定からの実績化もManagerとSchemasクラスの標準処理を使う。クラスが持つ関連documentの更新・transactionを利用し、処理が複数documentに及ぶことだけを理由に独自Callableへ移さない。
+- ArrangementNotificationの作成と、配置確認・上番・下番の更新は標準クラスの処理を使う。その作成・状態変更を受けたFunctionsが送信用Notificationsを生成し、Notificationsの作成トリガーがFCM送信と結果記録を行う既存構成を維持する。通知対象・受信設定・送信抑止条件の変更はこの保存方式の採用に含めない。
+- 稼働実績自体は標準CRUDで保存し、請求・勤怠・勤務回数・履歴等への反映は既存Functionsトリガーへ任せる。実績の保存成功と後続処理の完了は区別する。
+- これらのCRUDのserver認可は認証・同一tenantの共通境界とする。Schemasクラスがschema・業務検証を担う。提供UIを介さない操作はサポート対象外とし、画面別の編集制限を理由に独自Callableやrole別Rulesを追加しない。本節で標準処理と確定した操作へ、複数document・順序・監査等の一般的な例外候補を根拠に旧専用経路を再要求しない。認証・tenant管理、FCM送信等の外部作用の専用境界は維持する。
+
+### 稼働実績ロックと画面別操作
+
+ロックは、経理側が調整した実績を稼働実績管理側から編集されないようにするためのもの。請求確定やdocument全体の変更禁止を意味しない。
+
+| 操作画面 | ロックなしの編集 | ロックありの編集 | 稼働実績の削除 | ロック設定・解除 |
+|---|---|---|---|---|
+| 稼働実績管理 | 可 | 不可 | ロックなしの場合だけ可 | 不可 |
+| 稼働請求管理 | 可 | 可 | 常に不可 | 可 |
+
+経理担当者の制限は稼働請求管理への画面アクセスで行う。CRUDのserver認可は認証・同一tenantに統一し、画面の違いをserver permissionやロック中の一律write拒否へ置き換えない。更新者・日時は標準クラスの既存記録を使用し、新たな理由・承認・変更履歴collectionを要求しない。
 
 ### Employeeの操作権限と保持
 
 - Employeeの通常業務情報は、機微・機密情報とUser/Auth lifecycleを除き、同じtenantの有効な認証済み本登録Userに同じread・通常編集権限を許可する。roleなし、未知role、直接permission、会社管理者、super-user等を通常Employeeのserver認可条件にしない。本人向けEmployee Self Accessはtenant内業務利用とは別境界とする。適用状態と旧経路の置換範囲は[FGA-04実装記録](implementation/employee-master.md#fga-04での情報分類)を参照する。
 - 退職後（RESIGNED）のEmployeeは、会社管理者・統括・人事も通常情報を訂正できない。基本・国籍・警備員登録・資格・保険と保険履歴復元を含む。閲覧は上記範囲で継続する。
 - Employeeの健康保険、厚生年金、雇用保険の番号・状態・日付・理由・履歴は機微・機密情報の例外にせず、Employee本体documentの通常業務情報として扱う。在職中は同じtenantの有効な認証済み本登録Userへ他の通常Employee情報と同じread・編集権限を許可し、roleをserver認可条件にしない。historyあり・手続中不可等の状態遷移と退職後編集禁止は、情報の機密性ではなくdata保護条件として維持する。理由と移行境界は[ADR 0070](decisions/0070-employee-insurance-normal-business-boundary.md)を参照する。
-- 通常編集、退職、誤退職訂正、誤登録のarchive・物理削除、User/Auth操作を分ける。退職は会社管理者・統括・人事、archive・物理削除は会社管理者・統括だけに許可し、人事単独には許可しない。誤退職訂正は既存の会社管理者専用条件を維持する。Employee編集権限からUser/Authのrole管理・account変更を導かない。
-- 誤登録・重複のEmployeeは、同IDの`Employees_archive`へ移動する。User、予約、lock、head、lifecycle operationが残る場合は認証・処理状態の保護として拒否するが、予定・実績・通知・請求・勤怠・従業員別稼働・現場勤務履歴がEmployee IDを保持していても拒否しない。通常退職はEmployeeをRESIGNEDとして業務記録とともに保持する。archiveでUser/Authやトランザクション文書を連鎖削除しない。
+- 通常編集、退職・誤退職訂正の業務状態更新、archive・restore、User/Auth操作を分ける。業務状態更新は[標準CRUDと後続処理](#標準crudと後続処理)、archive・restoreは[共通仕様](#ドキュメントのアーカイブと物理削除)に従う。Employeeの編集からUser/Authのrole管理・account変更の権限を導かない。
+- Employeeのarchive・restore方式と従属確認は[共通仕様](#ドキュメントのアーカイブと物理削除)に従う。通常退職はEmployeeをRESIGNEDとして業務記録とともに保持し、archiveでUser/Authや従属documentを連鎖削除しない。
 - トランザクション文書はlive Employeeの存在を通常保存・背景同期の必須条件にせず、archive検索専用の集約`employeeIds`も保持しない。同じ作業員が同じ文書内に複数回含まれることを整合性検査だけで拒否しない。全masterの同時変更や既存archive・実dataの削除・変換、通常restoreの提供、定期purgeの実行は含めない。変更理由・境界は[ADR 0074](decisions/0074-transaction-parent-reference-independence.md)を正とする。
 - 自宅座標は、将来の配置先現場と従業員自宅の経路図に利用するため必要とする。Employeeの住所から座標を取得・保存する機能を継続する。経路図の描画、経路検索、距離による配置判断は将来工程であり、今回のCRUD改修では追加しない。座標を含むEmployeeの閲覧は上記の全項目read境界に従う。
 - 住所保存・座標取得失敗・旧座標消去・未取得通知・住所不変時の保持は[共通仕様](#住所と座標)に従う。Employee固有の用途と閲覧actorを上記に定める。
 
 - codeは任意・手入力・重複可とし、document IDをidentityとする。姓名だけの変更では表示名を再生成し、同じ保存で表示名も明示変更した場合は入力した表示名を優先する。表示名カナは独立入力とし、過去記録の表示は現在master名を使う既存方式を維持する。
 - 新規登録は在職者一覧から行い、退職者検索には作成入口を設けない。在職一覧は空検索で`updatedAt`が新しい在職Employeeを最大20件表示し、退職者一覧は空検索で`dateOfTermination`が新しい退職Employeeを最大20件表示する。検索文字列がある場合は、ひらがな・カタカナを同一視して正規化した既存`tokenMap`検索結果を表示する。通常候補のACTIVE/RESIGNEDと期間内在籍者の既存条件を維持し、新たな在職者限定を加えない。
-- `Employees_archive`のget/listは通常Employeeと同じ会社管理者・統括・人事・労務・法務・管制・経理へ全項目を許可する。同社Userであることだけでは許可しない。通常一覧・選択候補から除外し、直接client CUDとrestoreは拒否する。今回archive管理一覧は新設しない。
-- Employeeの通常可逆更新はdocument単位のlast-write-winsとし、整合したdocument全体、server管理field、必要な派生fieldを保存する。編集中の外部更新を理由に拒否・再読込要求を行わず、保存後はlistenerの最新状態へ収束させる。User/Auth・lifecycle、archive・物理削除、順序が重要な状態遷移、およびFGA-04で機微・機密と分類するfieldは固有の保存・競合制御を優先する。通常保険保存の検証境界は次項に従い、適用経緯は[FGA-04実装記録](implementation/employee-master.md#fga-04での情報分類)を参照する。
+- `Employees_archive`の操作境界は[共通仕様](#ドキュメントのアーカイブと物理削除)に従う。通常一覧・選択候補から除外し、archive管理一覧の新設はこの方式採用に含めない。
+- Employeeの通常可逆更新はdocument単位のlast-write-winsとし、整合したdocument全体、server管理field、必要な派生fieldを保存する。編集中の外部更新を理由に拒否・再読込要求を行わず、保存後はlistenerの最新状態へ収束させる。User/Auth・lifecycle、およびFGA-04で機微・機密と分類するfieldは固有の保存・競合制御を優先する。通常保険保存の検証境界は次項に従い、適用経緯は[FGA-04実装記録](implementation/employee-master.md#fga-04での情報分類)を参照する。
 - 保険の加入・加入完了・取消・適用除外・喪失・履歴復元は、入力に用いたEmployeeの状態に対して既存の遷移条件・入力検証を行い、通常Employeeのdocument単位last-write-winsで保存する。専用Callableでserverの最新保険map・世代値を比較して競合拒否する旧方式は使用しない。世代値と期待値を用いたclient側の遷移計算を、複数端末間の競合検出・二重適用防止の保証として扱わない。通常操作の保存方式の適用経緯は[ADR 0070](decisions/0070-employee-insurance-normal-business-boundary.md)、実装上の検証境界は[保険実装記録](implementation/employee-insurance.md#fga-04後の保存と検証境界)を参照する。
 - `insuranceOperationVersions`はEmployee本体のapplication所有fieldとして保持する。新規作成は3保険とも0、既存fieldが不存在なら読取りだけで補完しない。保険操作のcandidateでは不存在をlegacy 0として計算し、対象保険だけを1増やす。履歴復元でも同じ入力時点の値を増やし、他保険の値を保持する。不正値・欠損key・上限超過は拒否する。この値はserver最新値に対する単調増加や原子的な競合拒否を保証するrevisionではなく、文書整理を理由に削除・一括変換しない。
 - 保険項目が不存在の場合は未加入・手続きなし・履歴なしの初期状態として操作する。閲覧・編集開始・編集dialogの取消では書き込まず、保存するcandidateへ対象保険を含める。null・不正mapを初期値で上書きせず、不存在と区別する。入力時点の他保険・履歴・他sectionを保ったdocument全体を保存するが、入力開始後の他端末の変更が自動mergeされるとは保証しない。一括補完は行わない。
@@ -295,33 +317,32 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 ### 取引先・現場・取極め
 
-- 取引先の閲覧、作成、基本情報変更、支払条件変更は通常業務とし、同じtenantの有効な認証済み本登録Userに同じserver権限で許可する。role、permission、会社管理者、super-user区分を認可根拠にせず、仮登録、無効User、User不在、claim不正、他tenantは拒否する。口座情報等の機微・機密情報とarchive・復旧・物理削除は例外とし、この通常権限から導出しない。現行の`customers:write`等の制限はFGA-02で段階的に置換する実装差である。
+- 取引先の閲覧、作成、基本情報変更、支払条件変更は通常業務とし、同じtenantの有効な認証済み本登録Userに同じserver権限で許可する。role、permission、会社管理者、super-user区分を認可根拠にせず、仮登録、無効User、User不在、claim不正、他tenantは拒否する。口座情報等の機微・機密情報は例外とし、この通常権限から導出しない。現行の`customers:write`等の制限はFGA-02で段階的に置換する実装差である。
 - 取引先一覧は、検索文字列がない場合に選択中の契約状態を適用し、`updatedAt`が新しい取引先を最大20件表示する。検索文字列がある場合は、選択中の契約状態を維持したまま、ひらがな・カタカナを同一視して正規化した既存`tokenMap`検索結果を表示する。
 - 取引先の作成は`ACTIVE`で行い、作成フォームに状態選択を設けない。作成後の`contractStatus`変更は基本情報変更に含め、同じtenantの通常業務actorに許可する。通常更新は整合したCustomer document全体と更新者・更新時刻を保存する。名称変更時の検索用情報、住所主要部変更時の位置・表示住所情報は同じ保存で再生成する。document全体のvalidationと派生fieldの整合を維持する。
 - 取引先の`contractStatus`（`ACTIVE` / `TERMINATED`）は、その時点の取引状況を表すだけのフラグとする。稼働中の現場・現場稼働予定が存在しても変更でき、状態だけを理由にCustomerの選択・編集や関連する業務操作を禁止しない。過去に作成されたdocumentでも、もともとCustomerを選択できる操作は選択可能なままとし、再開を選択の前提にしない。状態変更によって現場・予定等を自動終了・取消ししない。tenant・認証・data保護その他の業務条件は緩和せず、通常業務のrole差だけを[ADR 0065](decisions/0065-tenant-trust-normal-business-authorization.md)に従って扱う。
 - 取引状態の変更に終了日時・原因・理由・専用履歴を新設または必須化しない。通常の更新者・更新時刻は維持するが、これを契約終了日時と解釈しない。将来、状態に応じた動作制限を設ける場合は、状態になった日時・原因と過去documentへの適用条件を含めて別途仕様を合意する。判断理由は[ADR 0044](decisions/0044-customer-status-as-descriptive-flag.md)を参照する。
 - 取引先の通常更新はdocument単位のlast-write-winsとし、同時更新を理由に保存拒否、競合通知、入力破棄、再読込要求を行わない。保存後はlistenerの最新Customerを正本とする。現行の部分保存、同一field競合拒否、専用editor、Manager非依存はFGA-02で段階的に置換する実装差である。
-- 取引先のclient直接deleteと`Customers_archive`のclient read・作成・変更・削除は許可しない。取引状態の編集と、参照確認・監査を伴うarchive・緊急restoreは別の操作とする。archiveは専用Callable、archive非公開・参照barrier、権限制御されたCustomer詳細の確認画面入口を使用する。緊急restoreは通常画面へ入口を設けず、別の権限制御された操作として設計・承認する。単なる状態フラグという扱いを削除・復元の安全条件へ拡張しない。実装・環境への適用状態は[Customer archive safety roadmap](roadmaps/customer-archive-safety.md)を参照する。
-- 取引先archiveは誤登録・重複だけを対象とする`archiveCustomer`専用Callableで行う。会社は検証済みidentityから導出し、同社の有効な本登録会社管理者または既知role preset由来の`customers:write`だけを許可する。入力はCustomer ID、必須reason、operation IDだけとし、actor・時刻はserverで確定する。一つのtransactionでactive Customer、同ID archive、live SitesのcustomerId参照を確認し、Site参照・衝突・不正状態ではwrite 0とする。OperationResultsとBillingsは過去のCustomer IDを保持でき、archiveを妨げない。version付きCustomer snapshotと監査をsame-ID archiveへ上書きせず保存してactiveを削除し、同operationの再試行だけを冪等に扱う。generic delete/restoreは使用しない。
-- Site masterでcustomerIdを新規設定または変更する場合は同じ会社のlive Customerを必須とする。OperationResultsと既存Billingsはlive Customerの存在を一般条件にしない。ただし新規Billingの入金予定日をCustomer支払条件から計算する処理は、必要な計算入力としてCustomerを読む。Customer createは同ID archiveが存在すれば拒否し、archive documentを削除済みIDのtombstoneとして扱う。詳細は[ADR 0074](decisions/0074-transaction-parent-reference-independence.md)を正とする。
-- Firestore Rulesは取引先の同一tenantかつ有効な認証済み本登録Userを必須とし、create・updateでは保存documentの`uid`が認証UIDと一致することを強制する。active Customerのclient delete、archiveのclient read/write、archive済み同一IDの再作成は拒否する。通常CRUDではrole・permission、exact field集合、型、長さ、状態、時刻、操作別変更fieldをallow条件にせず、Customer schemaと正規application writerがdocument全体のvalidation、管理field、検索・住所派生fieldを担う。
+- Customerのarchive・restoreは[共通仕様](#ドキュメントのアーカイブと物理削除)に従う。取引状態の編集とは別操作とし、現行専用CallableとRulesからの切替え状況は[archive実装差](implementation/archive-restore.md)を参照する。
+- Site masterでcustomerIdを新規設定または変更する場合は同じ会社のlive Customerを必須とする。OperationResultsと既存Billingsはlive Customerの存在を一般条件にしない。ただし新規Billingの入金予定日をCustomer支払条件から計算する処理は、必要な計算入力としてCustomerを読む。archive・restore時の同IDの扱いは共通仕様に従う。詳細は[ADR 0074](decisions/0074-transaction-parent-reference-independence.md)を正とする。
+- Firestore Rulesは取引先の同一tenantかつ有効な認証済み本登録Userを必須とし、create・updateでは保存documentの`uid`が認証UIDと一致することを強制する。archive・restoreのclient操作は共通仕様の認証・tenant境界に従う。通常CRUDではrole・permission、exact field集合、型、長さ、状態、時刻、操作別変更fieldをallow条件にせず、Customer schemaと正規application writerがdocument全体のvalidation、管理field、検索・住所派生fieldを担う。
 - 現場は取引先に紐づく。
 - 稼働中現場一覧は、検索文字列がない場合に`updatedAt`が新しいACTIVE Siteを最大20件表示する。取引先・警備種別の絞込みはFirestore queryへ含め、絞込み後の最大20件とする。検索文字列がある場合は同じ絞込みを維持し、ひらがな・カタカナを同一視して正規化した既存`tokenMap`検索結果を表示する。終了現場一覧は、検索文字列がない場合に`updatedAt`が新しいTERMINATED Siteを最大20件表示し、検索文字列がある場合は同じ`tokenMap`検索結果を表示する。
 - 現場の取引先は、同じ会社に存在する別のCustomerへ変更できる。一度設定したcustomerIdを未設定へ戻す操作は提供しない。変更後に新規作成される、または別の更新条件でSiteから再同期される稼働実績は変更後のCustomerを参照するが、既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更しない。既存実績へCustomer・取極めを再適用する場合は、対象・請求影響・監査を明示する別操作とし、空更新へ暗黙の移管処理を持たせない。詳細は[ADR 0048](decisions/0048-site-customer-change-and-historical-snapshots.md)を正とする。
 - Siteへ埋め込むCustomerは、通常作成時とCustomer変更時にSite schemaが同じ会社の現在のCustomerから生成するsnapshotとし、項目数をapplication固有のprojectionへ固定しない。Customer master更新triggerは表示と取極め判定に必要な項目を更新する現行処理を維持するため、保存時点によって埋込みCustomerの項目集合は異なり得る。既存Siteの一括変換は行わず、通常のSite保存ではSite schemaの現行形式へ収束させる。取極めだけの更新では埋込みCustomerを書き換えない。
 - 現場の通常の利用終了は`TERMINATED`で表し、liveの`Sites` collectionに保持する。TERMINATEDはSite masterの通常編集を制限するが、残工事等の一時利用に備えて稼働予定その他の新規業務参照先として選択できる。候補ではACTIVEを先、TERMINATEDを後に分け、終了済みChipと取引先・code・住所等の識別情報を表示して選択時に確認する。選択だけでACTIVEへ戻さず、単発利用はTERMINATEDのまま行える。
-- 継続的に再開する場合は、現在のCustomer設定を変更せず、同じtenantの有効な認証済み本登録Userが必須reasonと新しい工期を一つの再有効化operationで保存してACTIVEへ戻す。role、permission、会社管理者、super-user区分を認可根拠にしないが、予定競合、現在status、工期、server確定metadataを専用Callableとtransactionで再確認する。Customer未設定の仮Siteは未設定のまま再開でき、Customer変更が必要な場合は再開後の別の許可されたSite更新として扱う。終了・選択・再有効化によって既存の予定、実績、請求、取極めを自動変更しない。
+- 継続的に再開する場合は、現在のCustomer設定を変更せず、同じtenantの有効な認証済み本登録Userが必須reasonと新しい工期を一つの再有効化operationで保存してACTIVEへ戻す。role、permission、会社管理者、super-user区分を認可根拠にしないが、状態変更はManagerとSchemasクラスの標準更新で行う。工期・状態等の業務検証はクラスの責務とし、状態変更という理由だけで専用Callable・追加の競合制御を要求しない。Customer未設定の仮Siteは未設定のまま再開でき、Customer変更が必要な場合は再開後の別の許可されたSite更新として扱う。終了・選択・再有効化によって既存の予定、実績、請求、取極めを自動変更しない。
 - ACTIVE Siteの工期終了後は、永続statusを増やさず「工期終了済み」「自動終了予定」「工期終了済み・予定あり」を派生Chipとして表示し、自動終了予定日を示す。通常のACTIVE Siteを先、終了候補を後に並べる。工期終了日が未設定のSiteは自動終了せず「工期未設定」として識別可能にする。
 - 自動終了はJSTの暦日で工期終了日の90日後00:00以降に実行する。実行時にACTIVE、有効な工期終了日、90日経過、JST当日以降のSiteOperationScheduleなし、実績へ変換されていない未処理SiteOperationScheduleなしを同じtransactionまたは同等のpreconditionで再確認し、すべて満たすSiteだけをTERMINATEDへ変更する。予定があれば取消・削除せずwrite 0で見送り、工期日の訂正を促す。
-- SiteOperationScheduleの新規client writeは`operationResultId=null`を必須とし、実績化は同じtransactionで作成する同IDのOperationResultとSite・予定参照が一致する場合だけ`null`から同IDへ変更できる。単独変更、偽参照、別IDへの置換、非nullからnullへの巻戻しを拒否する。既存dataで`operationResultId`または日付fieldが欠損していないことはDev反映前に確認し、欠損があれば自動終了を有効化せず別承認の互換対応を行う。
+- 予定と作成実績の紐付け、実績化済み状態への更新はSchemasクラスの標準実績化処理に任せる。実績化という操作名だけで専用CallableやRulesへの業務検証の重複を要求しない。自動終了に必要な日付等の欠損が確認された場合の互換対応は別途扱う。
 - 自動終了はcleanupと失敗境界を分け、page/cursorと制御されたbatch、部分失敗の非成功扱い、再試行・照合、maintenance中の停止を備える。工期訂正、再有効化、予定作成との競合で古い判定を後勝ち適用しない。予定作成が先なら終了を見送り、自動終了が先でもTERMINATED選択確認後の新規予定を許可する。
 - 手動終了・自動終了・再有効化は現在の遷移を説明する`statusChangedAt`、`statusChangedBy`、`statusChangeSource`、`statusChangeReason`を保存する。自動終了はsystem actor、AUTO source、工期終了後90日経過の既知reasonを使う。専用のappend-only lifecycle履歴は設けない。初期実装では現場ごとのemail・FCMを送らず、ダッシュボードの候補件数、一覧Chip、予定日、予定矛盾表示で通知する。詳細は[ADR 0054](decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
-- Site archiveは誤登録・重複だけを対象とし、通常の利用終了には使用しない。`sites:write`を持つ許可actorだけが専用`archiveSite` Callableから実行し、入力はSite ID、必須reason、operation IDに限定する。serverは現在のAuth・同社User・permissionを再確認し、actor・時刻を確定する。一つのtransactionでactive Siteと同ID archiveを確認し、archive衝突・不正状態ではwrite 0とする。予定、実績、通知、請求、勤怠、従業員別稼働、現場勤務履歴がSite IDを保持していてもarchiveを妨げない。version付きSite snapshotと監査をsame-ID archiveへ上書きせず保存してactiveを削除し、同operationの再試行だけを冪等に扱う。
-- トランザクション文書の保存・再計算ではlive Siteの存在を一般条件にしない。予定または実績へ取極め・警備種別を新たに適用する処理は、必要な計算入力としてSiteを読む。Company表示順の不存在SiteはADR 0036どおり表示時に無視し、次回の明示保存で除去する。generic delete／restoreと物理deleteは使用せず、通常画面からrestoreを提供しない。詳細は[ADR 0074](decisions/0074-transaction-parent-reference-independence.md)を正とする。
+- Siteのarchive・restoreは[共通仕様](#ドキュメントのアーカイブと物理削除)に従う。通常の利用終了はTERMINATEDとしてlive documentを保持する。
+- トランザクション文書の保存・再計算ではlive Siteの存在を一般条件にしない。予定または実績へ取極め・警備種別を新たに適用する処理は、必要な計算入力としてSiteを読む。Company表示順の不存在SiteはADR 0036どおり表示時に無視し、次回の明示保存で除去する。archive・restoreの方式と操作提供範囲は共通仕様に従う。詳細は[ADR 0074](decisions/0074-transaction-parent-reference-independence.md)を正とする。
 - SiteOperationScheduleは計画dataとして`siteId`を保持し、稼働実績へ変換されるまではSite名称・Customer・住所・警備種別・取極めをlive Siteから表示・選択する。Site master変更だけを理由に予定documentへsnapshotを複製または一括更新しない。
-- OperationResultは作成時に、Site IDに加えてSite名称・表示名、Customer ID・表示情報、住所、警備種別、適用取極めを実績snapshotとして固定する。Site masterの後日の変更では既存OperationResultを更新しない。Site・稼働日・勤務区分等を明示的に訂正して適用条件が変わる場合だけ、請求影響、発行状態、before/after、actor、reasonを確認する専用の実績訂正契約でsnapshotを更新する。
-- Billing draftと未確定の請求表示はOperationResultのsnapshotを集計し、live Siteを請求表示の正本にしない。請求確定時には、そのrevisionで表示するSite・Customer・取極め由来の請求明細情報をBilling側へ固定する。確定後の再生成は保存済みsnapshotを使い、訂正・再発行は旧snapshotを書き換えず新しいrevisionで行う。稼働実績・請求・帳票側のsnapshot write、確定、revisionは各transaction機能の改修checkpointで実装する。
-- 現在・予定を扱う画面と帳票はlive Site、稼働実績を表す画面と帳票はOperationResult snapshot、確定請求書はBilling revision snapshotを使用する。Site master変更は将来作成される予定・実績・請求へ反映し、既存OperationResult・確定Billingへ自動反映しない。snapshot fieldを持たないlegacy documentは推測で過去値をbackfillせず、移行までは現行のlive fallbackと再現不能riskを明示して扱う。具体的なlegacy件数・shapeが確認され、正しい過去値を根拠から復元できる場合だけ別承認のmigrationを設計する。詳細は[ADR 0052](decisions/0052-site-downstream-snapshot-timing.md)を正とする。
+- OperationResultは作成時に、Site IDに加えてSite名称・表示名、Customer ID・表示情報、住所、警備種別、適用取極めを実績snapshotとして固定する。Site masterの後日の変更では既存OperationResultを更新しない。Site・稼働日・勤務区分等を明示的に訂正して適用条件が変わる場合だけ、画面別の操作条件に従い、Schemasクラスの標準更新でsnapshotを更新する。
+- Billing draftと未確定の請求表示はOperationResultのsnapshotを集計し、live Siteを請求表示の正本にしない。請求確定時には、そのrevisionで表示するSite・Customer・取極め由来の請求明細情報をBilling側へ固定する。確定後の再生成は保存済みsnapshotを使い、訂正は標準CRUDで行い、確定済みであることだけを理由に拒否したり新revisionを必須にしたりしない。稼働実績・請求・帳票側のsnapshot writeと確定は各transaction機能の改修checkpointで実装する。
+- 現在・予定を扱う画面と帳票はlive Site、稼働実績を表す画面と帳票はOperationResult snapshot、確定請求書はBillingに保存したsnapshotを使用する。Site master変更は将来作成される予定・実績・請求へ反映し、既存OperationResult・確定Billingへ自動反映しない。snapshot fieldを持たないlegacy documentは推測で過去値をbackfillせず、移行までは現行のlive fallbackと再現不能riskを明示して扱う。具体的なlegacy件数・shapeが確認され、正しい過去値を根拠から復元できる場合だけ別承認のmigrationを設計する。詳細は[ADR 0052](decisions/0052-site-downstream-snapshot-timing.md)を正とする。
 - 取極めは現場、適用開始日、勤務区分に基づいて一つを選び、その取極め内の曜日区分別RateSetを適用する。
 - 同じ適用開始日・勤務区分の取極めを重複登録しない。曜日区分は一つの取極め内に内包されるため、重複keyには含めない。
 - 既存の稼働実績へ適用済みの取極めは、取極めマスタの後日の変更で自動更新しない。
@@ -336,7 +357,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 - 現場稼働予定は、現場、稼働日、勤務区分、予定時間、必要人数、配置作業員を管理する。
 - 配置管理画面は、現場と勤務区分を行、日付を列として現場稼働予定を表示し、従業員・外注先の配置、並べ替え、個別勤務時間の編集、配置通知、予定の作成・編集・複製を扱う。
-- 現場稼働予定の作成・複製・基本情報変更・配置作業員変更・表示順変更・削除と配置通知の通常保存は、同じtenantの有効な認証済み本登録Userが行える通常業務とする。role、permission、会社管理者、super-user区分を認可根拠にせず、仮登録、無効User、User不在、claim不正、他tenantを拒否する。正式保存境界は`SiteOperationScheduleManager`／`SiteOperationSchedulesManager`、`AirItemManager`／`AirArrayManager`、`SiteOperationSchedule` modelの標準client保存とする。RulesではSiteの予定revision、maintenance、live Site、通常fieldの形状を重複検査しない。正規applicationはmodelのvalidationと実績化済み予定の変更・削除拒否を使用する。現場稼働予定から稼働実績への確定は複数documentを扱う既存server処理を維持し、通常CRUDへ含めない。詳細は[ADR 0073](decisions/0073-schedule-manager-and-rules-restoration.md)を正とする。
+- 現場稼働予定の作成・複製・基本情報変更・配置作業員変更・表示順変更・削除と配置通知の通常保存は、同じtenantの有効な認証済み本登録Userが行える通常業務とする。role、permission、会社管理者、super-user区分を認可根拠にせず、仮登録、無効User、User不在、claim不正、他tenantを拒否する。正式保存境界は`SiteOperationScheduleManager`／`SiteOperationSchedulesManager`、`AirItemManager`／`AirArrayManager`、`SiteOperationSchedule` modelの標準client保存とする。RulesではSiteの予定revision、maintenance、live Site、通常fieldの形状を重複検査しない。正規applicationはmodelのvalidationと実績化済み予定の変更・削除拒否を使用する。現場稼働予定から稼働実績への確定もManagerとSchemasクラスの標準処理を使う。詳細は[ADR 0073](decisions/0073-schedule-manager-and-rules-restoration.md)を正とする。
 - 配置管理画面の作業員タグは、配置された作業員名と勤務時間を表示する。個別勤務時間または配置通知上の実勤務時間が予定時間と異なる場合は、該当時刻を強調表示する。実効的に OJT である作業員には、資格者アイコンと作業員名の間に、OJT であることと配置人数に含まれないことを識別できる表示を付ける。表示幅が不足する場合は、資格者アイコン、OJT 表示、連勤警告などの状態表示を維持し、作業員名だけを末尾の省略記号付きで省略する。
 - 配置予定の作業員と配置通知が同種の業務プロパティを持つ場合、配置管理上の実効値は配置通知を優先し、配置通知がない場合だけ配置予定の値を使用する。真偽値の `false` も配置通知による有効な上書きとして扱う。OJT、資格、実勤務時間など、配置通知側で編集可能な共有プロパティにこの規則を適用する。
 - 配置管理画面は、日付ごとの稼働数、配置人数、過不足を日付ヘッダーに表示する。稼働数は当日の現場稼働予定の必要人数合計とする。配置人数は、作業員ごとに配置通知を優先して解決した OJT 状態に基づき、実効的な OJT を除外して集計する。現場稼働予定カードの過不足も同じ配置人数を使用する。
@@ -349,7 +370,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 連勤は配置予定に基づく注意喚起であり、配置の保存を禁止する条件とはしない。連勤関係を構成する双方の従業員配置タグに警告アイコンを表示し、ツールチップで該当理由を示す。
 - 現場稼働予定は稼働日から60日経過後に自動削除され、復元できない。
 - 配置通知がある場合、上下番確定では通知の実勤務時間を使用する。通知がない場合は予定勤務時間を使用する。
-- 配置通知の状態遷移は `ARRANGED`、`CONFIRMED`、`ARRIVED`、`LEAVED` の順を基本とし、専用の状態遷移メソッドを使用する。
+- 配置通知の状態遷移は `ARRANGED`、`CONFIRMED`、`ARRIVED`、`LEAVED` の順を基本とし、Schemasクラスの標準状態遷移メソッドで更新し、後続通知はFunctionsトリガーへ任せる。
 - ユーザーが上下番確定を開始してから処理が終了するまでは、処理中ダイアログを表示し、別の現場稼働予定を再選択できないようにする。成功・失敗にかかわらず処理終了時にダイアログを解除する。
 
 ### 稼働実績
@@ -358,11 +379,12 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 稼働予定の上下番確定または管理画面から作成できる。
 - 作成時に適用可能な取極めを自動適用する。取極めがなくても記録は作成できるが、原則として無効状態とし請求へ反映しない。
 - `allowEmptyAgreement` が明示された稼働実績は、売上へ連動しない実績として取極めなしを許容する。
-- 請求処理でロックされた稼働実績は更新・削除できない。
+- ロックによる操作制限は[稼働実績ロックと画面別操作](#稼働実績ロックと画面別操作)に従う。
 - 日付や勤務区分の変更は、関連する従業員の日次勤怠へ影響し得る。
 
 ### 請求・税・丸め
 
+- 請求の確定後を含む編集・削除と保存方式は[標準CRUDと後続処理](#標準crudと後続処理)に従う。
 - 稼働実績から稼働請求を生成し、取引先・現場・締め期間を単位として請求を集約する。
 - 稼働請求画面から、元となる稼働実績を伴わない稼働請求を直接作成しない。稼働外の商品・調整項目は定められた追加明細として扱う。
 - 消費税率は稼働実績の日付から判定し、消費税額は請求書内の税率別税抜合計に対して計算する。
@@ -406,11 +428,9 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 ## エラーと整合性
 
 - 必須の取極めや請求締日がない稼働実績は、理由を識別できる無効状態として保持し、請求へ反映しない。
-- `OperationResult` は管制等の稼働実績担当者と請求担当者が共用する。`isLocked` は請求確定、承認済み、またはドキュメント全体の変更禁止を表すものではなく、請求担当者が調整した内容を後続の管制側更新による上書きから保護するための管制側編集ロックとする。
-- 同じtenantの有効な本登録Userは、ロックされていない稼働実績の基本情報と従業員・外注先明細をroleに依存せず編集し、製品が提供する物理削除をclientから実行できる。物理削除後の請求・勤怠・勤務回数・履歴・予定・日報等の関連data連携はOperationResultの削除Triggerへ委譲し、transaction dataにarchiveを設けない。稼働実績の作成・複製はこの共通権限へ含めず、既存の`operation-results:write`等によるserver認可を維持する。`operation-billings:write`を持つ利用者は請求項目を編集し、`isLocked`を設定・解除できる。
-- ロック中も `operation-billings:write` による請求項目の編集を許可し、追加の承認や理由入力を要求しない。更新者と更新日時は既存の `uid` と `updatedAt` へ自動記録し、変更前後の永続履歴や履歴用コレクションは現時点の必須要件としない。
+- 稼働実績の編集・削除・ロック設定解除は[画面別操作](#稼働実績ロックと画面別操作)、保存と関連dataへの反映は[標準CRUDと後続処理](#標準crudと後続処理)を正とする。
 - 外部 API、通知、ファイル処理、非同期トリガーの失敗は、再試行しても重複結果を生まない設計を優先する。
-- ロック済み、権限不足、テナント不一致は拒否する。親マスターがarchive済みまたは不存在であることだけでは、既存トランザクション文書の保存・再計算を拒否しない。
+- ロックによる拒否は画面別操作に従う。認証・認可不成立、テナント不一致は拒否する。親マスターがarchive済みまたは不存在であることだけでは、既存トランザクション文書の保存・再計算を拒否しない。
 - 利用者に修正可能なエラーを示し、秘密情報や内部認証情報を表示しない。
 
 ## 非機能要件

@@ -6,7 +6,17 @@
 - 対象: 現場稼働予定、稼働実績、稼働請求の画面、Manager、`saveOperation` Callable、Firestore Rules
 - 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、進捗は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)
 
-## 確認済み実装事実
+## 2026-09-15仕様回答の反映と残作業
+
+保存方式と画面別lock条件は[現行仕様](../specification.md#標準crudと後続処理)・[画面別操作表](../specification.md#稼働実績ロックと画面別操作)で確定した。今回の文書変更で製品code・Rules・dataは切り替えていない。以下の確認日付き実装記録を移行済みと読み替えない。
+
+- 請求の保存・確定後の訂正削除、ロックの設定解除、実績化に残る専用経路を標準Manager／Classへ合わせる。稼働請求管理から元の実績を削除する操作は追加しない。
+- 実績lockの画面別制約と、現在のRules・クラスhook・Managerの一律拒否条件を照合し、経理側の編集が標準CRUDで成立するよう対象実装工程で揃える。
+- 配置通知は既存schedule.notify()でdocumentを作成し、作成・状態変更TriggerがNotificationsを生成、別TriggerがFCM送信と結果記録を行う。標準クラスへの接続整理で後段を撤去しない。
+- 実績の作成・更新・削除から請求・勤怠等への既存Triggerを維持し、保存成功と後続処理完了を分けて検証する。
+- 業務状態更新とAuth変更を併合した旧master経路は、各master工程で分離方法を確認する。今回の仕様承認をAuth処理の削除や実装着手・外部操作の承認へ拡張しない。
+
+## 確認済み実装事実（2026-09-14の記録）
 
 1. 現場稼働予定の単数・複数Managerは09で`AirItemManager`／`AirArrayManager`へ戻し、`SiteOperationSchedule` modelの作成・更新・削除を使う。請求には`OperationManager`／`OperationArrayManager`と`saveOperation`が残る。
 2. 予定の配置作業員は09で親`SiteOperationSchedule` modelの追加・変更・削除と`update()`へ戻した。実績詳細の作業員は07で通常client保存へ移行済みだが、稼働外売上は表示・操作・Callable経路を変更していない。
@@ -16,9 +26,9 @@
 6. Firestore Rulesは`SiteOperationSchedules`と`ArrangementNotifications`を同一tenantの有効な本登録Userによる通常read/writeへ開き、Site revision、maintenance、live Site、通常field形状を重複検査しない。未認証、User不在、仮登録、無効User、claim不正、他tenantは拒否する。`OperationResults`の個別境界は08までの実装を維持する。
 7. `saveOperation`の実績`create`・`overview`・`workers`・`delete`は正規画面から到達しない旧互換経路であり、入力契約で拒否する。予定の旧分岐は正規画面から外れた互換codeとして残す。実績複製、稼働外売上、請求、予定から実績への確定は変更せず、従来経路を維持する。
 
-## 操作別の予備分類
+## 操作別の予備分類（2026-09-14の履歴）
 
-この表は実装checkpointを選ぶための予備分類であり、client化またはCallable維持を確定しない。特に「技術要件候補」は、現行server処理の存在だけでなく、client transaction・batch・trigger等で満たせない理由を次の設計で確認する。
+この表は改訂前の調査記録である。回答済み操作の保存方式は上記の現行仕様を優先し、表中の分類待ち・専用処理候補を再適用しない。特に「技術要件候補」は、現行server処理の存在だけでなく、client transaction・batch・trigger等で満たせない理由を次の設計で確認する。
 
 | 対象 | 現行action | 現行の主な処理 | 予備分類 | 後続で確認する点 |
 |---|---|---|---|---|

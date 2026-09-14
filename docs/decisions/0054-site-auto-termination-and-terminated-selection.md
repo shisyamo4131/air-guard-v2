@@ -2,7 +2,8 @@
 
 - 日付: 2026-09-05
 - 状態: Accepted
-- 認可の部分置換: 2026-09-11のFGA-03と[ADR 0065](0065-tenant-trust-normal-business-authorization.md)により、手動終了・再有効化のactorは同一tenantの有効な認証済み本登録Userへ置換した。以下の`sites:write`記述は採用時点の履歴であり、専用Callable／transaction、status・予定・工期・metadata保護、自動終了のsystem-only境界は引き続き有効である。
+- 2026-09-15の部分置換: [ADR 0071改訂](0071-normal-business-manager-and-callable-boundary.md)の承認済み標準CRUDを優先する。手動の終了・再開の専用Callable固定は置換する。以下の自動終了のsystem処理・業務条件を、この変更だけで撤去しない。
+- 認可の部分置換: 2026-09-11のFGA-03と[ADR 0065](0065-tenant-trust-normal-business-authorization.md)により、手動終了・再有効化のactorは同一tenantの有効な認証済み本登録Userへ置換した。以下の`sites:write`記述は採用時点の履歴であり、専用Callable／transaction等の維持は2026-09-11時点の判断記録である。現在の手動状態更新は上記2026-09-15改訂を優先し、自動終了のsystem-only境界は維持する。
 - 関連仕様: [取引先・現場・取極め](../specification.md#取引先現場取極め)
 - 関連判断: [0031 必要十分なデータ境界](0031-proportional-data-boundary-and-change-safeguards.md)、[0048 SiteのCustomer変更と既存実績snapshot](0048-site-customer-change-and-historical-snapshots.md)、[0051 Siteの誤登録archive](0051-site-mistaken-registration-archive-boundary.md)、[0052 Site下流情報のsnapshot時点](0052-site-downstream-snapshot-timing.md)
 

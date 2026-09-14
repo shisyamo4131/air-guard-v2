@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-14
 - 状態: Accepted
+- 一部置換: 予定からの実績化を既存server処理へ残す判断は[ADR 0071の2026-09-15改訂](0071-normal-business-manager-and-callable-boundary.md)で標準クラス処理へ置換する。以下の実装・検証記録は当時の状態を示す。
 - 対象: 現場稼働予定、配置作業員、配置通知、Domain Manager、Firestore Rules
 - 関連仕様: [稼働予定・配置通知・上下番](../specification.md#稼働予定配置通知上下番)
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)

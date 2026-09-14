@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-05
 - 状態: Accepted
+- 2026-09-15の部分置換: [ADR 0071改訂](0071-normal-business-manager-and-callable-boundary.md)の承認済み標準CRUDを優先する。確定後の請求訂正に新revision・旧snapshot不変を要求する条件は置換し、snapshotの用途は維持する。
 - 関連仕様: [取引先・現場・取極め](../specification.md#取引先現場取極め)
 - 関連判断: [0003 稼働実績と請求の整合性](0003-operation-result-billing-integrity.md)、[0031 必要十分なデータ境界](0031-proportional-data-boundary-and-change-safeguards.md)、[0048 SiteのCustomer変更と履歴snapshot](0048-site-customer-change-and-historical-snapshots.md)、[0051 Siteの誤登録archive](0051-site-mistaken-registration-archive-boundary.md)
 

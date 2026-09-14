@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- 質疑応答で確定した業務状態変更・請求確定後の編集削除・実績化・配置通知の標準CRUD化と、実績ロックの画面別制約を[現行仕様](docs/specification.md#標準crudと後続処理)へ反映した。認証account操作は専用処理、通知送信と実績から請求・勤怠等への反映は既存Functionsトリガーへ維持する。今回は文書のみで、製品実装・Rules・data・deployは未変更。
+
+- マスタdataのarchive・restoreを当面client-adapterの標準処理へ揃える方針を定義し、削除機能全体の将来見直しをFUT-0146へ記録した。今回は文書のみで、専用Callable・Rules・既存archive形式・復旧UIの切替えは未実施。[共通仕様](docs/specification.md#ドキュメントのアーカイブと物理削除)と[ADR 0060改訂](docs/decisions/0060-common-archive-purge-and-address-contract.md)を参照。
+
 - トランザクション文書について、親Customer／Site／Employeeが現在存在することを保存・背景同期・マスターarchiveの一般条件にする仕組みをLocalで撤去した。Customer→SiteとEmployeeのUser/Auth・lifecycle等のマスター／認証上の制約、金額・時間計算に必要な読取りは維持する。Billing・日次集約のarchive検索用`employeeIds`を廃止し、同じ作業員の重複を追加整合性検査で拒否しない。OperationResult後続処理は一つの派生先が失敗しても残る請求・勤怠・勤務回数・履歴を順に試し、最後に失敗を報告する。Dev反映と欠落dataのdry-run／repairは未実施。[ADR 0074](docs/decisions/0074-transaction-parent-reference-independence.md)と[復旧計画](docs/implementation/operation-result-projection-recovery.md)を参照。
 
 - FUT-0190、FUT-0174、FUT-0175、FUT-0176をLocal修正した。予定入力内の現場新規登録を引数なしのManager作成へ戻し、請求明細を作業員分・稼働外売上・消費税率・税抜合計に分け、稼働実績の現場変更時は表示cacheではなく明示読取の完了後に最新選択の警備種別を反映する。稼働予定表の行追加を作成dialogへ接続し、行追加・削除を名前付きbuttonにした。既に接続済みだった請求専用input、予定表の行削除、配置管理buttonは作り直していない。Localの上下番確定は6名配置の1件で成功表示、未確定一覧からの消失、稼働実績一覧への追加を確認した。Dev勤怠欠落の調査では、9月8日以降に既存Billingの従業員参照index不一致と作業員明細形式不一致が先頭のBilling同期を失敗させ、後続のDailyAttendance同期を止める実logを確認した。既存data補正、失敗実績の再同期、Dev反映、Prodは未実施である。

@@ -326,9 +326,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: 閲覧・取極め適用・手動調整・OperationResult lock・Billing集計writeをどのpermissionへ分割するか。
 - Why needed: read利用者による請求変更を防ぐため。
 - Options and impact: read/write/lock分離、請求管理role、現行一体。
-- Current provisional treatment: 権限はUserまたはrole presetが持つ機能permissionで判定する。`operation-results:write`はlockされていない稼働実績の編集・削除、`operation-billings:write`は請求項目の編集とlock設定・解除を担う。その他のBilling lifecycle権限は未確定とする。
+- Current provisional treatment: 2026-09-15の回答を優先する。稼働請求管理へのアクセスは画面側で制御し、CRUDのserver認可は認証・同一tenantへ統一する。画面別の編集・削除・lock設定解除は[現行仕様](../specification.md#稼働実績ロックと画面別操作)を正とする。
 - Related FUT IDs: FUT-0031
-- Answer: 2026-08-13 追加部分回答。特別な「指定管理者」は設けず、対象操作に必要なpermissionを持つUserを権限者とする。`operation-results:write`はlockされていない稼働実績の編集・削除、`operation-billings:write`は請求項目の編集と`isLocked`の設定・解除を許可する。請求書発行・入金・取消等の正式permission modelは未確定のため、StatusはOpenを維持する。
+- Answer: 2026-09-15更新。請求の保存・確定後の編集削除は標準CRUD、実績lockの操作条件も回答済み。旧permission別server認可案は置換する。画面にアクセスできる経理担当者の具体的role対応と、未提供の発行・入金等のUI仕様は今回確定していないためOpenを維持し、回答済みCRUD境界は再質問しない。
 
 ## CONF-0020 請求稼働の手動新規作成要否
 
@@ -494,9 +494,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: triggerがdraft集計と請求済みBillingをどう識別するかを先に定めた上で、各状態の再集計・削除・訂正・支払処理をどう設計するか。
 - Why needed: 確定・支払済み請求額と監査履歴を保護するため。
 - Options and impact: 請求済み識別field/status、別collection/path、発行snapshot。識別確定後に再集計・revision・支払workflowを選ぶ。
-- Current provisional treatment: 現行statusと全status更新可能な挙動を暫定実装として記録する。DRAFTの正式意味、請求済み識別、revision、paymentはいずれも確定しない。
+- Current provisional treatment: 確定済み請求も標準CRUDで直接編集・削除でき、実績からの請求反映は既存Triggerが担当する。確定後の訂正に新revisionを必須にしない。[現行仕様](../specification.md#標準crudと後続処理)を正とする。
 - Related FUT IDs: FUT-0045, FUT-0049
-- Answer: 2026-08-11 部分回答。DRAFTを含むBilling statusは暫定であり、まずtriggerがdraftと請求済みを識別する契約を決める必要がある。支払処理は未定義である。status別再集計・revision推奨は採用せず、状態model・識別・paymentが未決のためOpenを維持する。
+- Answer: 2026-09-15部分確定。確定後の編集・削除可と標準CRUD、既存Trigger維持を採用した。DRAFT等の詳細な状態modelや入金処理・外部決済の業務仕様は未決のためOpenを維持するが、確定後の編集・削除可否を未決へ戻さない。
 
 ## CONF-0034 Billing adjustmentの使用・課税契約
 
@@ -542,9 +542,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: lockを通常稼働編集だけの保護とし請求編集を許すか、請求field/集計も凍結するか。
 - Why needed: 利用者のlock認識と実際の変更可能範囲を一致させるため。
 - Options and impact: 現行scope、全OperationResult凍結、Billing statusへ統合。
-- Current provisional treatment: `isLocked`は`operation-results:write`による管制側の稼働編集・削除を止めるlockであり、`operation-billings:write`によるOperationBilling請求編集とlock設定・解除は許可する。全体immutable lockや請求確定とは表示・文書上で明確に区別する。
+- Current provisional treatment: [稼働実績ロックと画面別操作](../specification.md#稼働実績ロックと画面別操作)を唯一の正本とする。
 - Related FUT IDs: FUT-0050
-- Answer: 2026-08-13 補足確定。OperationResultは管制等の稼働実績担当者と請求担当者が共用する。`isLocked`は請求担当者の調整を後続の管制側更新から保護するもので、請求確定、承認済み、全体immutableを意味しない。lock中も`operation-billings:write`による請求編集を許可し、同permissionを持つUserがlockを設定・解除する。追加承認・理由入力UI・変更前後の永続履歴は要求せず、現行classが自動設定する`uid`・`updatedAt`を最終更新者・日時として利用する。新しい履歴collectionは現時点で作成しない。invoice-issued後のBilling lifecycleは別事項として扱う。
+- Answer: 2026-09-15更新。稼働実績管理は非lockの場合だけ編集・削除可、稼働請求管理はlockを問わず編集可・実績削除は常に不可。lock設定解除は稼働請求管理のみ。経理担当者制限は画面アクセス、server CRUD認可は認証・同一tenantと確定した。ロックを請求確定や全体変更禁止と扱わない。旧permission別server認可条件を置換する。
 
 ## CONF-0038 請求書PDFの必須項目・番号・status別発行
 
@@ -625,9 +625,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: 支払条件、宛名、住所等を作成時・確定時・発行時のどこで固定し、訂正・再発行をどう扱うか。
 - Why needed: 過去請求書の再現性とmaster訂正の反映範囲を確定するため。
 - Options and impact: Billing作成snapshot、CONFIRMED snapshot、発行revision、常時live。監査性と訂正容易性が異なる。
-- Current provisional treatment: draft作成時にinitial copy、正式発行時にfull snapshotを固定する。再printはsnapshotを使い、master変更は発行済みartifactへ反映しない。訂正はreason/history付きnew revisionとする。
+- Current provisional treatment: draft作成時にinitial copy、正式発行時にfull snapshotを固定する。再printはsnapshotを使い、master変更は発行済みartifactへ反映しない。訂正は標準CRUDとし、reason/history付きnew revisionを必須とする旧条件は[2026-09-15の仕様](../specification.md#標準crudと後続処理)で置換する。
 - Related FUT IDs: FUT-0058
-- Answer: 2026-08-11 回答済み。draft作成時にinitial copyを保存し、正式発行時にCustomer等のfull snapshotを固定する。再printは発行snapshotを使い、master変更で発行済み請求書を変えない。訂正はreason/historyを伴うnew revisionとする。live masterからのPDF生成はdraftだけに限定する。
+- Answer: 2026-08-11 回答済み。draft作成時にinitial copyを保存し、正式発行時にCustomer等のfull snapshotを固定する。再printは発行snapshotを使い、master変更で発行済み請求書を変えない。訂正のnew revision必須条件は2026-09-15に撤回し、標準CRUDで直接訂正できる。live masterからのPDF生成はdraftだけに限定する。
 
 ## CONF-0045 CustomerのTERMINATEDとarchiveの使い分け
 

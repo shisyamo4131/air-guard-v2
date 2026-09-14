@@ -2141,21 +2141,15 @@ EMP-01再照合（2026-09-06）: 現行の自宅座標readerは検索範囲で�
 
 ## FUT-0146 archive audit metadata・retention・purge・Rulesを共通設計する
 
-EMP-07分類（2026-09-07）: Employee archiveはreason・actor・operation ID・archivedAtを持つ専用envelopeとclient直接CUD拒否を実装済みである。retention、legal hold、匿名化、最小ID記録、自動purge、他master共通化はEMP外の後続専用工程とする採用済み境界を維持し、EMP-08へ取り込まない。
+- 状態: Needs decision（将来のマスタdata削除機能見直し）
+- 発見セグメント: SPEC-SEG-042。2026-09-15の利用者判断で対応方針を更新。
+- 現在の採用方針: [共通仕様](../specification.md#ドキュメントのアーカイブと物理削除)に従い、当面はclient-adapter標準の論理削除・restoreを利用する。
+- 将来対応: マスタdataの削除機能を見直す。対象master、削除と終了・退職の使い分け、restoreの提供範囲、同ID衝突、最終的な物理削除・保持、必要な監査を利用者と決める。独自envelope・専用Callable・参照barrier・最小ID記録の採用を前提にしない。
+- 実装差: [archive実装差](archive-restore.md)に集約する。標準方式への切替え、既存archiveの互換性確認、復旧入口は未完了。今回の記録で移行・復旧を実施したとは扱わない。
+- 対応時期: 標準方式への切替えと区別した将来の機能見直し工程。見直し完了を標準方式採用の前提にせず、具体的な時期・範囲は未決とする。
+- 必要な検証: 見直し時に確定する操作・対象dataに対し、同ID移動と復旧、従属あり拒否、認証・tenant境界、失敗時の挙動、関連処理と保存形式の互換性を確認する。実行証拠はまだない。
 
-2026-09-06共通原則採用: [仕様](../specification.md#ドキュメントのアーカイブと物理削除)と[実装差・物理削除案](archive-restore.md)を正とする。Customer/Siteは専用envelope・参照保護を持ち、下記のmetadataなし/広域writeは旧generic調査の範囲である。Employeeのpurge実行をEMP外の後続専用工程へ分離することは最終採用済み。具体的な最小ID記録・保持/エラー表示の運用は未採用である。purge・他master適用は未実装であり、共通仕様化を実装完了と扱わない。
-
-- 状態: Needs decision
-- 重大度: High
-- 発見セグメント: SPEC-SEG-042
-- 対象ファイル・シンボル: adapter delete、`*_archive` collections/Rules、master delete UI、admin-sdk collection catalog
-- 確認済み実装事実: archiveは元dataだけをcopyし、archivedAt/by/reason/version/retention metadataがない。同社認証User全員がarchive全read/writeでき、UI restore/purgeなし。subcollectionは移動せず、Admin SDKのbackup/完全復旧catalogもArticles_archiveを欠くため同archiveは保守artifactへ含まれない。
-- 想定影響と発生条件: 誰がなぜ削除したか追跡不能、個人/取引dataを無期限保持または直接消去、orphan subcollection、backup漏れ、復旧不能が起き得る。
-- 未確認点・仮説: 法定保持、legal hold、匿名化、archive閲覧者、subcollection実在は未決定・未確認。
-- 推奨する将来対応: CONF-0123とmaster別CONFを決め、metadata envelope、least-privilege server API、retention/hold/anonymize/purge、subcollection/backup catalogを統一する。
-- Customerについては通常User restore不可、運営者inspection/緊急restore、reason/actor/time、active同ID拒否、自動purge保留を確認済み制約として共通設計へ反映する。
-- 必要なテスト: actor/reason/time、role別archive/restore/purge、retention/hold、PII匿名化、nested subcollection、backup/restore catalog、監査log。
-- ユーザー判断が必要な事項: CONF-0123およびmaster別archive CONF。
+旧metadata・専用APIを必須とする推奨は上記に置換した。FUT IDと見出しは既存参照のため維持する。server adapter固有の契約不一致はFUT-0144、restore固有の調査はFUT-0145を参照し、今回package修正は行わない。
 
 ## FUT-0147 Admin backupのscope catalogとcoverageをversion管理する
 

@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-14
 - 状態: Accepted
+- 2026-09-15改訂: マスターarchive・restoreは[ADR 0060の改訂](0060-common-archive-purge-and-address-contract.md)と[共通仕様](../specification.md#ドキュメントのアーカイブと物理削除)を正とする。以下の専用archive維持・transaction従属による拒否なしという旧条件は、その範囲で現行要件に使用しない。通常保存・背景同期とtransaction削除の判断は維持する。
 - 対象: Firestore上のマスタdataとtransaction dataのarchive・物理削除、Domain Manager、Callable、Firestore Rules、Trigger
 - 関連仕様: [Pageとcomponentの構成](../specification.md#pageとcomponentの構成)、[表示dataと従属参照](../specification.md#表示dataと従属参照)、[テナントと認証](../specification.md#テナントと認証)
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
