@@ -16,6 +16,7 @@ import { parsePrepareRepairArgs, REPAIR_COUNTS } from "../../scripts/prepare-ope
 import { canonicalProjectionDigest } from "../../scripts/lib/operation-result-projection-plan.mjs";
 
 const sha = "a".repeat(64), commit = "b".repeat(40);
+const runtimeTimestamp = (seconds) => ({ seconds, nanoseconds: 0, toDate: () => new Date(seconds * 1000) });
 const common = ["--project", "air-guard-v2-dev", "--database", "(default)", "--expected-commit", commit];
 const files = ["--snapshot-file", "D:\\private\\snapshot.json"];
 const applyArgs = ["--apply", ...common, ...files];
@@ -208,7 +209,7 @@ test("crash reconciliation distinguishes before, applied and ambiguous states", 
   const firestore = { doc: (path) => ({ path, get: async () => documents.get(path) || { exists: false } }) };
   assert.equal((await inspectBatchState({ firestore, batch })).state, "before");
   for (const item of batch.writes) documents.set(item.path, { exists: true, updateTime: { seconds: 9, nanoseconds: Number(item.path.endsWith("1")) },
-    data: () => ({ ...item.expected, uid: "system", createdAt: { seconds: 9 }, updatedAt: { seconds: 9 } }) });
+    data: () => ({ ...item.expected, uid: "system", createdAt: runtimeTimestamp(9), updatedAt: runtimeTimestamp(9) }) });
   const applied = await inspectBatchState({ firestore, batch }); assert.equal(applied.state, "after");
   assert.equal(await inspectRollbackState({ firestore, batch, post: applied.post }), "applied");
   documents.delete(batch.writes[0].path);
@@ -216,16 +217,61 @@ test("crash reconciliation distinguishes before, applied and ambiguous states", 
   assert.equal(await inspectRollbackState({ firestore, batch, post: applied.post }), "ambiguous");
 });
 
-test("intent plus expected current data is not auto-adopted after a crash", async () => {
-  const item = write(1), snapshot = { writes: [item] }, mutations = [];
+test("applied-state verification ignores only server-managed fields", async () => {
+  const created = write(1);
+  created.expected = { ...created.expected, uid: "snapshot-user", createdAt: { seconds: 1 }, updatedAt: { seconds: 1 } };
+  const updated = write(2);
+  updated.expected = { ...updated.expected, uid: "original-user", createdAt: { seconds: 2 }, updatedAt: { seconds: 2 } };
+  const batch = buildRepairBatches([created, updated])[0];
+  const documents = new Map([
+    [created.path, { exists: true, updateTime: { seconds: 10, nanoseconds: 1 },
+      data: () => ({ ...created.expected, uid: "system", createdAt: runtimeTimestamp(10), updatedAt: runtimeTimestamp(10) }) }],
+    [updated.path, { exists: true, updateTime: { seconds: 10, nanoseconds: 2 },
+      data: () => ({ ...updated.expected, updatedAt: runtimeTimestamp(10) }) }],
+  ]);
+  const firestore = { doc: (path) => ({ path, get: async () => documents.get(path) }) };
+  assert.equal((await inspectBatchState({ firestore, batch })).state, "after");
+  documents.get(created.path).data = () => ({ ...created.expected, uid: "changed-user",
+    createdAt: runtimeTimestamp(10), updatedAt: runtimeTimestamp(10) });
+  assert.equal((await inspectBatchState({ firestore, batch })).state, "ambiguous");
+  documents.get(created.path).data = () => ({ ...created.expected, uid: "system", updatedAt: runtimeTimestamp(10) });
+  assert.equal((await inspectBatchState({ firestore, batch })).state, "ambiguous");
+  documents.get(created.path).data = () => ({ ...created.expected, uid: "system", createdAt: runtimeTimestamp(10) });
+  assert.equal((await inspectBatchState({ firestore, batch })).state, "ambiguous");
+  documents.get(created.path).data = () => ({ ...created.expected, uid: "system",
+    createdAt: runtimeTimestamp(10), updatedAt: runtimeTimestamp(10) });
+  documents.get(updated.path).data = () => {
+    const { updatedAt: _updatedAt, ...withoutUpdatedAt } = updated.expected;
+    return withoutUpdatedAt;
+  };
+  assert.equal((await inspectBatchState({ firestore, batch })).state, "ambiguous");
+  documents.get(updated.path).data = () => ({ ...updated.expected, uid: "changed-user", updatedAt: runtimeTimestamp(10) });
+  assert.equal((await inspectBatchState({ firestore, batch })).state, "ambiguous");
+  documents.get(updated.path).data = () => ({ ...updated.expected, updatedAt: runtimeTimestamp(10) });
+  documents.get(created.path).data = () => ({ ...created.expected, manual: { preserved: false }, uid: "system",
+    createdAt: runtimeTimestamp(10), updatedAt: runtimeTimestamp(10) });
+  assert.equal((await inspectBatchState({ firestore, batch })).state, "ambiguous");
+});
+
+test("intent plus fully applied batch records post state and resumes without rewriting", async () => {
+  const item = write(1);
+  item.expected = { ...item.expected, uid: "snapshot-user", createdAt: { seconds: 1 }, updatedAt: { seconds: 1 } };
+  const snapshot = { writes: [item] }, mutations = [];
   const current = { exists: true, updateTime: { seconds: 10, nanoseconds: 1 },
-    data: () => ({ ...item.expected, uid: "system", createdAt: { seconds: 10 }, updatedAt: { seconds: 10 } }) };
-  const firestore = { doc: (path) => ({ path, get: async () => current }) };
+    data: () => ({ ...item.expected, uid: "system", createdAt: runtimeTimestamp(10), updatedAt: runtimeTimestamp(10) }) };
+  const firestore = { doc: (path) => ({ path, get: async () => current }),
+    runTransaction: async () => { throw new Error("must-not-rewrite"); } };
   const receipt = { state: "intent", batches: [{ state: "intent", post: [] }] };
-  await assert.rejects(runApplyOrRollback({ options: { mode: "apply", receiptFile: "unused" }, snapshot, receipt,
-    receiptState: {}, firestore, FieldValue: {}, dependencies: { replaceArtifact: async () => { mutations.push("receipt"); } }, repositoryRoot: process.cwd() }),
-  (error) => error.code === "crash-state-ambiguous");
-  assert.deepEqual(mutations, []);
+  await runApplyOrRollback({ options: { mode: "apply", receiptFile: "unused" }, snapshot, receipt,
+    receiptState: {}, firestore, FieldValue: {}, dependencies: { replaceArtifact: async (_path, _kind, value) => {
+      mutations.push({ batchState: value.batches[0].state, postCount: value.batches[0].post.length, receiptState: value.state });
+      return { artifactSha256: sha };
+    } }, repositoryRoot: process.cwd() });
+  assert.deepEqual(mutations, [
+    { batchState: "committed", postCount: 1, receiptState: "intent" },
+    { batchState: "verified", postCount: 1, receiptState: "intent" },
+    { batchState: "verified", postCount: 1, receiptState: "verified" },
+  ]);
 });
 
 test("receipt rejects impossible state and partial post combinations", () => {

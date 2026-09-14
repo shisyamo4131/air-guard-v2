@@ -88,7 +88,7 @@ node scripts/apply-operation-result-projection-repair.mjs `
 
 modeを省略した場合、または`--apply`と`--rollback`を同時指定した場合は書込み0件で拒否する。applyはcompanyごと、最大50件かつ計画data 4 MiB以下のtransactionに分割し、最初の失敗で後続batchを止める。OperationResult自体は更新せず、Triggerを再発火させない。receiptと同時実行防止lockはbackup pathから内部で決めるため、operatorが個別指定する必要はない。
 
-apply後は同じ条件のread-only dry-runを再実行し、不足・更新候補が0であることを確認する。intent記録後にprocessが落ち、現在値だけが期待値になっていて今回のrepairによる変更か断定できない場合は、自動的に成功扱いしない。backupとDevを確認し、新しいbackupと明示承認でやり直す。
+apply後は同じ条件のread-only dry-runを再実行し、不足・更新候補が0であることを確認する。intent記録後にprocessが止まっても、batch内の全件がbackupの期待値と一致する場合は、そのbatchを完了済みとしてreceiptへ記録し、次のbatchから再開する。一部だけ一致する場合は自動で続行しない。
 
 利用者承認により、Devではメンテナンスモードを必須にしない。既存source・targetの変更はtransaction前提条件で止めるが、backup作成後から各batch実行までに新しいOperationResultが追加される競合は技術的に完全排除できない。この残存riskを受け入れて進め、apply後のdry-runと画面確認で差分を検出する。完全な排他性があるとは主張しない。
 

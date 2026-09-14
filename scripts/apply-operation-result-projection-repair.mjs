@@ -12,6 +12,10 @@ const fail = (code, exitCode) => { throw new ApplyError(code, exitCode); };
 const sha = (value) => typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
 const safeSegment = (value) => typeof value === "string" && value.length > 0 && value.length <= 1500 && value === value.trim() && !/[\/\u0000-\u001f\u007f]/u.test(value);
 const validRevision = (value) => value && Number.isInteger(value.seconds) && Number.isInteger(value.nanoseconds) && value.nanoseconds >= 0 && value.nanoseconds < 1000000000;
+const validFirestoreTimestamp = (value) => {
+  if (!validRevision(value) || typeof value.toDate !== "function") return false;
+  try { return value.toDate() instanceof Date && Number.isFinite(value.toDate().getTime()); } catch { return false; }
+};
 const sameRevision = (actual, expected) => actual && expected && actual.seconds === expected.seconds && actual.nanoseconds === expected.nanoseconds;
 const exactKeys = (value, keys) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === keys.length && Object.keys(value).every((key) => keys.includes(key));
 
@@ -165,10 +169,14 @@ function expectedWithRuntimeFields(write, FieldValue) {
   return payload;
 }
 function verifyAppliedData(write, data) {
-  const { updatedAt: _updatedAt, createdAt: _createdAt, ...rest } = data;
-  if (write.action === "create") return rest.uid === "system" && projectionValuesEqual({ ...rest, uid: undefined }, { ...write.expected, uid: undefined });
+  if (write.action === "create") {
+    const { updatedAt, createdAt, uid, ...current } = data;
+    const { updatedAt: _expectedUpdatedAt, createdAt: _expectedCreatedAt, uid: _expectedUid, ...expected } = write.expected;
+    return validFirestoreTimestamp(createdAt) && validFirestoreTimestamp(updatedAt) && uid === "system" && projectionValuesEqual(current, expected);
+  }
+  const { updatedAt, ...rest } = data;
   const { updatedAt: _expectedUpdatedAt, ...expected } = write.expected;
-  return projectionValuesEqual(rest, expected);
+  return validFirestoreTimestamp(updatedAt) && projectionValuesEqual(rest, expected);
 }
 
 async function readAndCheck(transaction, firestore, write, mode) {
@@ -276,7 +284,12 @@ export async function runApplyOrRollback({ options, snapshot, receipt, receiptSt
         entry.state = "verified"; await saveReceipt(options.receiptFile, receipt, receiptState, dependencies, repositoryRoot);
         continue;
       }
-      if (observed.state === "after") fail("crash-state-ambiguous");
+      if (observed.state === "after") {
+        if (entry.state !== "intent") fail("crash-state-ambiguous");
+        entry.state = "committed"; entry.post = observed.post; await saveReceipt(options.receiptFile, receipt, receiptState, dependencies, repositoryRoot);
+        entry.state = "verified"; await saveReceipt(options.receiptFile, receipt, receiptState, dependencies, repositoryRoot);
+        continue;
+      }
       if (observed.state === "before") {
         entry.state = "intent"; await saveReceipt(options.receiptFile, receipt, receiptState, dependencies, repositoryRoot);
         await commitApplyBatch({ firestore, FieldValue, batch });
