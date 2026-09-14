@@ -2,7 +2,7 @@
 
 - 確認日: 2026-09-14
 - checkpoint: FGA-06-SCHEDULE-MANAGER-RESTORE-09
-- 状態: 稼働実績の08以前はDev受入れ済み。現場稼働予定のAir Manager／model保存と単純なtenant Rulesへの復元・Firestore／HostingのDev反映後、上下番確定の左右画面が表示されない不具合を確認した。重複した`table`表示口のLocal補正・回帰test・全domain・buildは完了し、補正版のcommit・Dev再反映、配置管理・上下番確定の再受入れ待ち
+- 状態: 稼働実績の08以前はDev受入れ済み。現場稼働予定のAir Manager／model保存と単純なtenant Rulesへの復元・Firestore／HostingのDev反映後、上下番確定の左右画面が表示されない不具合を確認した。重複した`table`表示口を補正したcommit `12f05e5a`はHostingへDev再反映済み。配置管理・上下番確定の再受入れ待ち
 - 対象: 現場稼働予定、稼働実績、稼働請求の画面、Manager、`saveOperation` Callable、Firestore Rules
 - 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、進捗は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)
 
@@ -93,7 +93,7 @@ checkpointは後続07と同じDev release・受入れで完了した。schema変
 - Rulesは予定と配置通知をtenant共通の通常read/writeへ簡素化し、Site revision、maintenance、live Site、field形状、実績化済み状態の重複検査を撤去した。identityとtenant境界、nested pathの既定拒否は維持する。
 - 予定から実績への確定、請求、実績複製、稼働外売上、schema package、data shape、migration、Dev・Prodは変更しない。
 - Dev受入れで、上下番確定の左一覧と右詳細・日報写真が表示されず、外枠のManagerだけが表示される不具合を確認した。原因は予定Managerの明示的な`table`表示口と汎用転送の同名表示口の重複であり、汎用転送から`table`を除外するLocal補正と回帰testを追加した。
-- 対象test 36/36件、全domain 1,434/1,434件、buildはexit status 0。補正版のcommit・Dev再反映と、配置管理・上下番確定処理そのものの再受入れは未実施であり、エラー解消済みとは扱わない。
+- 対象test 36/36件、全domain 1,434/1,434件、buildはexit status 0。補正版commit `12f05e5a`をGitHub ActionsでHostingへDev再反映した。配置管理・上下番確定処理そのものの再受入れは未実施であり、エラー解消済みとは扱わない。
 
 ## 未確認事項
 
