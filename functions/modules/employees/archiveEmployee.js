@@ -2,10 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { archiveIdentifier, archiveActorAllowed, archiveFail, parseEmployeeArchiveInput, validateEmployeeArchiveRaw, validateEmployeeArchiveEnvelope } from "../../shared/employeeArchiveContract.js";
 
 export const EMPLOYEE_ARCHIVE_QUERIES = Object.freeze([
-  ["SiteOperationSchedules", "employeeIds", "array-contains"], ["OperationResults", "employeeIds", "array-contains"],
-  ["ArrangementNotifications", "employeeId", "=="], ["SiteEmployeeHistories", "employeeId", "=="], ["Users", "employeeId", "=="],
-  ["LifecycleOperations", "employeeId", "=="], ["Billings", "employeeIds", "array-contains"],
-  ["DailyAttendances", "employeeIds", "array-contains"], ["DailyOperationsByEmployee", "employeeIds", "array-contains"],
+  ["Users", "employeeId", "=="], ["LifecycleOperations", "employeeId", "=="],
 ]);
 export const EMPLOYEE_ARCHIVE_DOCUMENTS = Object.freeze(["EmployeeUserReservations", "EmployeeLifecycleLocks", "EmployeeLifecycleHeads"]);
 export function parseArchiveTenants(setting) {
@@ -28,11 +25,12 @@ export async function archiveEmployee({ firestore, resolveIdentity, input, resol
       ...EMPLOYEE_ARCHIVE_QUERIES.map(([name, field, operator]) => transaction.get(firestore.collection(`${prefix}/${name}`).where(field, operator, parsed.employeeId).limit(1))),
       ...EMPLOYEE_ARCHIVE_DOCUMENTS.map((name) => transaction.get(firestore.doc(`${prefix}/${name}/${parsed.employeeId}`))),
     ]);
-    for (const snapshot of [actor, system, active, archived, ...dependencies.slice(9)]) if (typeof snapshot?.exists !== "boolean" || (snapshot.exists && typeof snapshot.data !== "function")) archiveFail();
+    const queryCount = EMPLOYEE_ARCHIVE_QUERIES.length;
+    for (const snapshot of [actor, system, active, archived, ...dependencies.slice(queryCount)]) if (typeof snapshot?.exists !== "boolean" || (snapshot.exists && typeof snapshot.data !== "function")) archiveFail();
     if (!actor.exists || !archiveActorAllowed(identity, actor.data())) archiveFail("permission-denied", "アーカイブ権限がありません。");
     if (!system.exists || system.data()?.isMaintenance !== false) archiveFail("failed-precondition", "メンテナンス状態を確認してください。");
-    for (const snapshot of dependencies.slice(0, 9)) if (!Number.isInteger(snapshot?.size) || snapshot.size < 0 || snapshot.size > 1) archiveFail();
-    if (dependencies.slice(0, 9).some((snapshot) => snapshot.size > 0) || dependencies.slice(9).some((snapshot) => snapshot.exists)) archiveFail("failed-precondition", "参照されている従業員はアーカイブできません。");
+    for (const snapshot of dependencies.slice(0, queryCount)) if (!Number.isInteger(snapshot?.size) || snapshot.size < 0 || snapshot.size > 1) archiveFail();
+    if (dependencies.slice(0, queryCount).some((snapshot) => snapshot.size > 0) || dependencies.slice(queryCount).some((snapshot) => snapshot.exists)) archiveFail("failed-precondition", "利用中の従業員はアーカイブできません。");
     if (active.exists && archived.exists) archiveFail("already-exists", "原本とアーカイブが両方存在します。");
     if (archived.exists) {
       const envelope = validateEmployeeArchiveEnvelope(archived.data(), parsed.employeeId);

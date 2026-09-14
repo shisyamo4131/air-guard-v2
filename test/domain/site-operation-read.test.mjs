@@ -42,7 +42,7 @@ function site(docId = "site-a", overrides = {}) {
 function snapshot(value) {
   return { exists: () => value !== null, data: () => value };
 }
-function createHarness({ fetch, component, access = true } = {}) {
+function createHarness({ fetch, component, access = true, itemOverrides = {} } = {}) {
   const scope = effectScope();
   const auth = reactive({ companyId: "company-a", uid: "actor-a" });
   const canRead = ref(access);
@@ -50,6 +50,7 @@ function createHarness({ fetch, component, access = true } = {}) {
     siteId: "site-a", date: "2026-09-06", shiftType: "DAY", securityType: "UNSET",
     startTime: "09:00", endTime: "18:00", isStartNextDay: false,
     breakMinutes: 0, regulationWorkMinutes: 540,
+    ...itemOverrides,
   });
   const messages = [];
   const requests = [];
@@ -57,7 +58,7 @@ function createHarness({ fetch, component, access = true } = {}) {
   const updates = [];
   const props = reactive({ item, disabled: false, componentAttrs: {}, updateProperties(fields) {
     updates.push(fields);
-    Object.assign(item, fields);
+    Object.assign(props.item, fields);
   } });
   const dependencies = {
     computed, onScopeDispose, watch, toValue, createSiteDetailReadSession,
@@ -197,7 +198,7 @@ test("regular time discards stale failures and older concurrent clicks", async (
 });
 
 test("operation readers wait for verified access and become usable after it arrives", async () => {
-  for (const component of [undefined, "schedule"]) {
+  for (const component of [undefined, "schedule", "result"]) {
     const harness = createHarness({ component, access: false });
     try {
       await harness.regular.set();
@@ -205,23 +206,26 @@ test("operation readers wait for verified access and become usable after it arri
       harness.canRead.value = true;
       await settle();
       await harness.regular.set();
-      if (component) assert.equal(harness.item.securityType, "TRAFFIC");
+      if (component === "schedule") assert.equal(harness.item.securityType, "TRAFFIC");
+      else if (component === "result") assert.equal(harness.item.securityType, "UNSET");
       else assert.deepEqual(harness.callbacks, [agreement]);
     } finally { harness.scope.stop(); }
   }
 });
 
-test("schedule keeps manual security type edits made before access verification completes", async () => {
-  const harness = createHarness({ component: "schedule", access: false });
-  try {
-    harness.item.securityType = "FACILITY";
-    harness.canRead.value = true;
-    await settle();
-    assert.deepEqual(harness.requests, []);
-    assert.deepEqual(harness.updates, []);
-    assert.equal(harness.item.securityType, "FACILITY");
-  } finally { harness.scope.stop(); }
-});
+for (const component of ["schedule", "result"]) {
+  test(`${component} keeps manual security type edits made before access verification completes`, async () => {
+    const harness = createHarness({ component, access: false });
+    try {
+      harness.item.securityType = "FACILITY";
+      harness.canRead.value = true;
+      await settle();
+      assert.deepEqual(harness.requests, []);
+      assert.deepEqual(harness.updates, []);
+      assert.equal(harness.item.securityType, "FACILITY");
+    } finally { harness.scope.stop(); }
+  });
+}
 
 test("schedule preset Site security type awaits the explicit read without a provider", async () => {
   const pending = deferred();
@@ -236,18 +240,78 @@ test("schedule preset Site security type awaits the explicit read without a prov
   } finally { harness.scope.stop(); }
 });
 
-for (const [label, change] of Object.entries({
-  manualType: (h) => { h.item.securityType = "FACILITY"; },
-  ...Object.fromEntries(Object.entries(staleChanges).filter(([key]) => ["site", "tenant", "actor", "access", "unmount", "siteRoundTrip"].includes(key))),
-})) {
-  test(`schedule security type ignores stale responses after ${label}`, async () => {
+test("result preserves historical security type on initial display and item replacement", async () => {
+  const harness = createHarness({
+    component: "result",
+    itemOverrides: { securityType: "FACILITY" },
+    fetch: (reference) => site(reference.segments.at(-1)),
+  });
+  try {
+    await settle();
+    assert.equal(harness.props.item.securityType, "FACILITY");
+    assert.deepEqual(harness.requests, []);
+    assert.deepEqual(harness.updates, []);
+
+    harness.props.item = reactive({
+      ...harness.props.item,
+      siteId: "site-b",
+      securityType: "FACILITY",
+    });
+    await settle();
+    assert.equal(harness.props.item.securityType, "FACILITY");
+    assert.deepEqual(harness.requests, []);
+    assert.deepEqual(harness.updates, []);
+
+    harness.props.item.siteId = "site-c";
+    await settle();
+    assert.equal(harness.props.item.securityType, "TRAFFIC");
+    assert.equal(harness.requests.length, 1);
+    assert.deepEqual(harness.updates, [{ securityType: "TRAFFIC" }]);
+  } finally { harness.scope.stop(); }
+});
+
+for (const component of ["schedule"]) {
+  for (const [label, change] of Object.entries({
+    manualType: (h) => { h.item.securityType = "FACILITY"; },
+    ...Object.fromEntries(Object.entries(staleChanges).filter(([key]) => ["site", "tenant", "actor", "access", "unmount", "siteRoundTrip"].includes(key))),
+  })) {
+    test(`${component} security type ignores stale responses after ${label}`, async () => {
+      const pending = deferred();
+      const unresolved = deferred();
+      let reads = 0;
+      const harness = createHarness({ component, fetch: () => ++reads === 1 ? pending.promise : unresolved.promise });
+      try {
+        change(harness);
+        pending.resolve(site());
+        await settle();
+        assert.deepEqual(harness.updates, []);
+        assert.deepEqual(harness.messages, []);
+      } finally { harness.scope.stop(); }
+    });
+  }
+}
+
+const resultStaleChanges = {
+  manualType: (h) => { h.props.item.securityType = "FACILITY"; },
+  site: (h) => { h.props.item.siteId = "site-c"; },
+  tenant: staleChanges.tenant,
+  actor: staleChanges.actor,
+  access: staleChanges.access,
+  unmount: staleChanges.unmount,
+  siteRoundTrip: (h) => { h.props.item.siteId = "site-c"; h.props.item.siteId = "site-b"; },
+};
+for (const [label, change] of Object.entries(resultStaleChanges)) {
+  test(`result security type ignores stale responses after ${label}`, async () => {
     const pending = deferred();
     const unresolved = deferred();
     let reads = 0;
-    const harness = createHarness({ component: "schedule", fetch: () => ++reads === 1 ? pending.promise : unresolved.promise });
+    const harness = createHarness({ component: "result", fetch: () => ++reads === 1 ? pending.promise : unresolved.promise });
     try {
+      harness.props.item.siteId = "site-b";
+      await settle();
+      assert.equal(harness.requests.length, 1);
       change(harness);
-      pending.resolve(site());
+      pending.resolve(site("site-b"));
       await settle();
       assert.deepEqual(harness.updates, []);
       assert.deepEqual(harness.messages, []);
@@ -256,20 +320,49 @@ for (const [label, change] of Object.entries({
 }
 
 test("schedule read failure preserves inputs and allows a later selection retry", async () => {
+    let failed = true;
+    const harness = createHarness({ component: "schedule", fetch: (reference) => {
+      if (failed) throw new Error("private synthetic error");
+      return site(reference.segments.at(-1));
+    } });
+    try {
+      await settle();
+      assert.equal(harness.item.securityType, "UNSET");
+      assert.equal(harness.messages.length, 1);
+      assert.doesNotMatch(harness.messages[0].text, /private/u);
+      failed = false;
+      harness.item.siteId = "site-b";
+      await settle();
+      assert.equal(harness.item.securityType, "TRAFFIC");
+    } finally { harness.scope.stop(); }
+});
+
+test("result reports a failed Site change and retries only after another Site change", async () => {
   let failed = true;
-  const harness = createHarness({ component: "schedule", fetch: (reference) => {
-    if (failed) throw new Error("private synthetic error");
-    return site(reference.segments.at(-1));
-  } });
+  const harness = createHarness({
+    component: "result",
+    itemOverrides: { securityType: "FACILITY" },
+    fetch: (reference) => {
+      if (failed) throw new Error("private synthetic error");
+      return site(reference.segments.at(-1));
+    },
+  });
   try {
     await settle();
-    assert.equal(harness.item.securityType, "UNSET");
+    assert.equal(harness.props.item.securityType, "FACILITY");
+    assert.deepEqual(harness.requests, []);
+    assert.deepEqual(harness.messages, []);
+
+    harness.props.item.siteId = "site-b";
+    await settle();
+    assert.equal(harness.props.item.securityType, "FACILITY");
     assert.equal(harness.messages.length, 1);
     assert.doesNotMatch(harness.messages[0].text, /private/u);
+
     failed = false;
-    harness.item.siteId = "site-b";
+    harness.props.item.siteId = "site-c";
     await settle();
-    assert.equal(harness.item.securityType, "TRAFFIC");
+    assert.equal(harness.props.item.securityType, "TRAFFIC");
   } finally { harness.scope.stop(); }
 });
 

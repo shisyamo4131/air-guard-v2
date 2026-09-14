@@ -15,7 +15,6 @@ export const SITE_ARCHIVE_ERROR_CODES = Object.freeze({
   MAINTENANCE: "maintenance",
   SITE_NOT_FOUND: "site-not-found",
   SITE_INVALID: "site-invalid",
-  REFERENCES_EXIST: "references-exist",
   ARCHIVE_INVALID: "archive-invalid",
   ARCHIVE_CONFLICT: "archive-conflict",
 });
@@ -86,7 +85,6 @@ export function parseSiteArchiveInput(input) {
 
 function assertDependencies(firestore, identity, timestampFactory) {
   if (!firestore || typeof firestore.doc !== "function" ||
-      typeof firestore.collection !== "function" ||
       typeof firestore.runTransaction !== "function" ||
       typeof timestampFactory !== "function" || !isPlainObject(identity) ||
       typeof identity.isSuperUser !== "boolean") {
@@ -123,23 +121,11 @@ function assertMaintenanceOff(snapshot) {
   }
 }
 
-function limitedQuery(firestore, companyId, collectionName, siteId) {
-  return firestore.collection(`Companies/${companyId}/${collectionName}`)
-    .where("siteId", "==", siteId).limit(1);
-}
-
 function assertDocumentSnapshot(snapshot) {
   if (!snapshot || typeof snapshot.exists !== "boolean" ||
       (snapshot.exists && typeof snapshot.data !== "function")) {
     fail(SITE_ARCHIVE_ERROR_CODES.INVALID_DEPENDENCY, "[archiveSite] Document snapshot is invalid");
   }
-}
-
-function hasReference(snapshot) {
-  if (!snapshot || !Number.isSafeInteger(snapshot.size) || snapshot.size < 0 || snapshot.size > 1) {
-    fail(SITE_ARCHIVE_ERROR_CODES.INVALID_DEPENDENCY, "[archiveSite] Query snapshot is invalid");
-  }
-  return snapshot.size > 0;
 }
 
 export async function archiveSite({
@@ -155,26 +141,18 @@ export async function archiveSite({
   const actorRef = firestore.doc(`${prefix}/Users/${identity.uid}`);
   const activeRef = firestore.doc(`${prefix}/Sites/${parsed.siteId}`);
   const archiveRef = firestore.doc(`${prefix}/Sites_archive/${parsed.siteId}`);
-  const referenceQueries = [
-    "SiteOperationSchedules", "OperationResults", "ArrangementNotifications",
-    "Billings", "SiteEmployeeHistories",
-  ].map((name) => limitedQuery(firestore, identity.companyId, name, parsed.siteId));
-
   await firestore.runTransaction(async (transaction) => {
     if (!transaction || typeof transaction.get !== "function" ||
         typeof transaction.create !== "function" || typeof transaction.delete !== "function") {
       fail(SITE_ARCHIVE_ERROR_CODES.INVALID_DEPENDENCY, "[archiveSite] Transaction is invalid");
     }
-    const [system, actor, active, archived, ...references] = await Promise.all([
+    const [system, actor, active, archived] = await Promise.all([
       transaction.get(systemRef), transaction.get(actorRef), transaction.get(activeRef),
-      transaction.get(archiveRef), ...referenceQueries.map((query) => transaction.get(query)),
+      transaction.get(archiveRef),
     ]);
     [system, actor, active, archived].forEach(assertDocumentSnapshot);
     assertMaintenanceOff(system);
     assertActor(identity, actor.exists ? actor.data() : null);
-    if (references.some(hasReference)) {
-      fail(SITE_ARCHIVE_ERROR_CODES.REFERENCES_EXIST, "[archiveSite] Site references exist");
-    }
     if (active.exists && archived.exists) {
       fail(SITE_ARCHIVE_ERROR_CODES.ARCHIVE_CONFLICT, "[archiveSite] Active and archive both exist");
     }

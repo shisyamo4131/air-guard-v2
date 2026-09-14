@@ -2,7 +2,6 @@ import { getFirestore } from "firebase-admin/firestore";
 import { Billing, Customer } from "@shisyamo4131/air-guard-v2-schemas";
 import { rawForClass } from "../../shared/employeeContract.js";
 import { getBillingKey } from "./utils.js";
-import { assertLiveSiteReference } from "../sites/liveSiteReference.js";
 import { assertBackgroundId, assertOperationRaw, inspectAggregate, aggregateCandidate, commitBackgroundPlans, failReference } from "../employees/backgroundReferencePlan.js";
 
 export async function syncBillingReferences({ companyId, before = null, after = null, firestore = getFirestore() }) {
@@ -31,7 +30,6 @@ export async function syncBillingReferences({ companyId, before = null, after = 
     if (newId && !plans.get(newId).before) {
       const customer = await transaction.get(firestore.doc(`Companies/${companyId}/Customers/${after.customerId}`));
       if (!customer.exists) failReference();
-      await assertLiveSiteReference({ firestore, transaction, companyId, siteId: after.siteId });
       const billingDateAt = rawForClass(after.billingDateAt);
       if (!(billingDateAt instanceof Date) || !Number.isFinite(billingDateAt.getTime())) failReference();
       const paymentDueDateAt = new Customer(rawForClass(customer.data())).getPaymentDueDateAt(billingDateAt);

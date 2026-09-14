@@ -2,7 +2,7 @@ import { operationDateTime } from "../../shared/operationDateTime.js";
 import { FieldValue } from "firebase-admin/firestore";
 import { Site, SiteOperationSchedule, OperationResult, OperationResultDetail, ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
 import { plain, identifier, equal, rawForClass } from "../../shared/employeeContract.js";
-import { OperationWriteError, operationEmployeeReferences, notificationEmployeeReferences, readAddedEmployees } from "../../shared/operationReferences.js";
+import { OperationWriteError, operationEmployeeReferences, notificationEmployeeReferences } from "../../shared/operationReferences.js";
 import { parseOperationCommand, operationAllowed, assertOperationExpected, applyOperationCommand, calculateOperation, mergeCalculated, notificationExpectation, WORKER_PARENT_FIELDS } from "../../shared/operationWriteContract.js";
 
 const fail = (code = "failed-precondition", message) => { throw new OperationWriteError(code, message); };
@@ -36,8 +36,9 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
       const system = await read("System/system");
       if (system?.isMaintenance !== false) fail("failed-precondition", "メンテナンス中は予定を変更できません。");
     }
-    // All read plans, including query results and every Employee existence read,
-    // complete before the final write loop. No schema persistence hooks run here.
+    // All reads needed to calculate the operation complete before the final
+    // write loop. Transaction records do not require their master records to
+    // remain live solely for referential-integrity enforcement.
     const plans = new Map();
     const siteRevisions = new Map();
     const rowPositions = new Map();
@@ -64,7 +65,7 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
     }
     async function applySiteAgreement(raw, kind) {
       const siteRaw = await requireSite(raw.siteId);
-      if (!identifier(siteRaw.customerId) || await read(`${root}/Customers/${siteRaw.customerId}`) === null) fail("failed-precondition", "参照先の取引先が存在しません。");
+      if (!identifier(siteRaw.customerId)) fail("failed-precondition", "現場の取引先情報を確認できません。");
       if (!Array.isArray(siteRaw.agreementsV2)) fail();
       const site = new Site(rawForClass(siteRaw));
       return calculateOperation(raw, kind, (model) => { model.customerId = siteRaw.customerId; model.agreement = site.getValidAgreement(model); }).value;
@@ -268,8 +269,6 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
       }
       results.push({ documentId, ...(action === "convert" ? { resultId: documentId } : {}) });
     }
-    const referencePlans = [...plans.values()].map((entry) => ({ ...entry, references: entry.referenceKind === "notification" ? notificationEmployeeReferences : (raw) => operationEmployeeReferences(raw, entry.referenceKind === "schedule" ? { scheduleId: entry.path.split("/").at(-1) } : {}) }));
-    await readAddedEmployees(transaction, firestore, identity.companyId, referencePlans);
     let updated = false;
     const audit = { uid: identity.uid, updatedAt: timestamp() };
     for (const entry of plans.values()) {

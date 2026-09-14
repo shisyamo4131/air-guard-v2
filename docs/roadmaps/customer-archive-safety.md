@@ -1,5 +1,7 @@
 # Customer archive safetyロードマップ
 
+> 2026-09-14現行訂正: CAS-03で実装したOperationResults／Billingsの参照確認とlive Customer存在barrierは[ADR 0074](../decisions/0074-transaction-parent-reference-independence.md)で撤去した。Customerからlive Siteへのマスター間確認は維持する。下記の工程得点は当時の完了履歴である。
+
 - 状態: Completed
 - 開始日: 2026-09-04
 - 現在の進捗: 100%

@@ -7,6 +7,8 @@
 - 最終確認日: 2026-09-12（既存FGA-03完了記録への文書整合）
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/dataLayers/site/useSiteUiReads.js`、`composables/domain/site/siteUiPresentation.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所
 
+2026-09-14の現行訂正: [ADR 0074](../decisions/0074-transaction-parent-reference-independence.md)により、Site archiveの5トランザクション参照queryと、OperationResults／Billings／ArrangementNotifications／SiteEmployeeHistoriesのlive Site存在barrierを撤去した。以下のSITE-05参照保護記述は過去実装の記録であり、現在仕様として使用しない。
+
 ## 入口・書込み権限
 
 Page 3ファイルのroute、query/filter、終了・削除到達性、navigation・error境界のfile単位確認は[Article・Customer・Site pages deep review](article-customer-site-pages-deep-review.md)を参照する。

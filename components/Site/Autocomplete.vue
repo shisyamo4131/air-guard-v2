@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
             size="small"
             aria-label="現場を新規登録"
             @click.capture="rememberCreateCompany"
-            @click="toCreate"
+            @click="() => toCreate()"
           />
         </template>
       </SiteManager>

@@ -14,10 +14,9 @@ export function mapSiteArchiveError(error) {
       return { code: "permission-denied", message: "現場をアーカイブする権限がありません。" };
     case SITE_ARCHIVE_ERROR_CODES.SITE_NOT_FOUND:
       return { code: "not-found", message: "現場が見つかりません。" };
-    case SITE_ARCHIVE_ERROR_CODES.REFERENCES_EXIST:
     case SITE_ARCHIVE_ERROR_CODES.SITE_INVALID:
     case SITE_ARCHIVE_ERROR_CODES.MAINTENANCE:
-      return { code: "failed-precondition", message: "現場の状態または参照を確認してください。" };
+      return { code: "failed-precondition", message: "現場の状態を確認してください。" };
     case SITE_ARCHIVE_ERROR_CODES.ARCHIVE_CONFLICT:
     case SITE_ARCHIVE_ERROR_CODES.ARCHIVE_INVALID:
       return { code: "aborted", message: "現場のアーカイブ状態が競合しています。" };

@@ -337,7 +337,7 @@ test("invalid, revoked, cross-tenant, temporary, disabled, and super-user actors
   }
 });
 
-test("active-only archive reads every dependency before create then delete", async () => {
+test("active-only archive checks the live Site master dependency before create then delete", async () => {
   const customer = validCustomer();
   const sentinel = FieldValue.serverTimestamp();
   let timestampCalls = 0;
@@ -363,19 +363,13 @@ test("active-only archive reads every dependency before create then delete", asy
       "Companies/company-a/Customers/customer-a",
       "Companies/company-a/Customers_archive/customer-a",
       "Companies/company-a/Sites",
-      "Companies/company-a/OperationResults",
-      "Companies/company-a/Billings",
     ],
   );
   assert.deepEqual(
     calls
       .filter((call) => call.method === "firestore.collection")
       .map((call) => call.path),
-    [
-      "Companies/company-a/Sites",
-      "Companies/company-a/OperationResults",
-      "Companies/company-a/Billings",
-    ],
+    ["Companies/company-a/Sites"],
   );
   for (const call of calls.filter((item) => item.method === "query.where")) {
     assert.deepEqual(
@@ -385,7 +379,7 @@ test("active-only archive reads every dependency before create then delete", asy
   }
   assert.deepEqual(
     calls.filter((call) => call.method === "query.limit").map((call) => call.count),
-    [1, 1, 1],
+    [1],
   );
 
   assert.deepEqual(writes.map((call) => call.method), [
@@ -501,28 +495,17 @@ test("active and archive states enforce not-found, conflict, and exact idempoten
   }
 });
 
-test("each Customer reference blocks archive after all three reference reads", async () => {
-  for (const collectionName of ["Sites", "OperationResults", "Billings"]) {
-    const { calls, firestore, writes } = createFirestore({
-      references: { [collectionName]: true },
-    });
-    await rejectsCode(
-      () => archiveCustomer({ firestore, identity, input: validInput() }),
-      CUSTOMER_ARCHIVE_ERROR_CODES.REFERENCES_EXIST,
-    );
-    assert.deepEqual(writes, []);
-    assert.deepEqual(
-      calls
-        .filter((call) => call.method === "transaction.get")
-        .map((call) => call.path)
-        .slice(-3),
-      [
-        "Companies/company-a/Sites",
-        "Companies/company-a/OperationResults",
-        "Companies/company-a/Billings",
-      ],
-    );
-  }
+test("a live Site master blocks Customer archive, while transaction collections are not queried", async () => {
+  const { calls, firestore, writes } = createFirestore({ references: { Sites: true } });
+  await rejectsCode(
+    () => archiveCustomer({ firestore, identity, input: validInput() }),
+    CUSTOMER_ARCHIVE_ERROR_CODES.REFERENCES_EXIST,
+  );
+  assert.deepEqual(writes, []);
+  assert.deepEqual(
+    calls.filter((call) => call.method === "firestore.collection").map((call) => call.path),
+    ["Companies/company-a/Sites"],
+  );
 });
 
 test("Customer decoded-value contract rejects field, type, derived, coordinate, token, and timestamp corruption", async () => {
@@ -644,7 +627,7 @@ test("default timestamp factory writes the actual serverTimestamp sentinel", asy
 test("read failures and non-server timestamp factory values produce no writes", async () => {
   {
     const { firestore, writes } = createFirestore({
-      readErrorPath: "Companies/company-a/Billings",
+      readErrorPath: "Companies/company-a/Sites",
     });
     await assert.rejects(() =>
       archiveCustomer({ firestore, identity, input: validInput() }),

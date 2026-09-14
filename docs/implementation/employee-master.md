@@ -42,7 +42,7 @@ Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連�
 
 05-Bでは`saveOperation`と`operationWriteContract`へ予定・実績・OperationBillingのoperation保存を集約した。最新rawから保存先ごとの追加Employee参照を導き、全read後に所有fieldだけを確定する。予定の即時表示/rollbackには表示Classと同時点のraw contextを接続し、通知状態の管理側・本人側は同じ期待値照合付き部分transactionを使う。購読はserver確認済み値だけを公開し、そのmetadata変更通知も受け取る。計算用instanceのJST補正と寿命条件は下の操作契約を参照する。
 
-05-Cでは`backgroundReferencePlan`・`dailyReferencePlan`・`billingReferencePlan`へ背景保存のraw検査/計算/書込計画を分離した。日次2種とBillingの最終payloadに埋込み全Employeeの索引を合成し、各保存先の現在rawとの差分から追加Employeeを同transactionで読む。履歴は現在のfirst/last実績とSiteを同transactionで確認する。旧`onEmployeeDeleted`は同名の無作用handlerとし、User/Auth削除を行わない。指定tenantの提供rawを検査する`inspectEmployeeReferences`/`runEmployeeReferenceDryRun`は、整合してもarchive開放を許可しない。
+05-Cでは背景保存へEmployee参照索引と親存在検査を追加していたが、2026-09-14の[ADR 0074](../decisions/0074-transaction-parent-reference-independence.md)で撤去した。日次2種とBillingは集約`employeeIds`を作らず、追加Employeeを読まない。履歴はlive Employee／Siteを必須にしない。旧`onEmployeeDeleted`を無作用としUser/Auth削除を行わない点は維持する。以下の索引・整合dry-run・12従属設計は過去の実装記録であり、現在仕様として使用しない。
 
 取引先請求の入金予定日は`updateBillingPaymentDate`と専用`PaymentDateEditor`/`useBillingPaymentDate`へ移した。日付3fieldと監査だけを部分保存し、日次2種・Billing・履歴の直接client CUDを閉じる。専用UIの背景trigger実行は既定offの明示opt-inで、通常API harnessへの継承はrunnerが除去する。
 

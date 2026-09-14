@@ -6,14 +6,12 @@ import { OperationResult, DailyAttendance, DailyOperationByEmployee, Billing, Cu
 import { Timestamp, FieldValue } from "../../functions/node_modules/firebase-admin/lib/firestore/index.js";
 import { operationDateTime } from "../../functions/shared/operationDateTime.js";
 import { parseDate, encodeExpected } from "../../functions/shared/employeeContract.js";
-import { aggregateEmployeeIndex, aggregateEmployeeReferences } from "../../functions/shared/operationReferences.js";
 import { syncOperationResultToDailyAttendances } from "../../functions/modules/dailyAttendances/index.js";
 import { syncOperationResultToDailyOperationsByEmployee } from "../../functions/modules/dailyOperationsByEmployee/index.js";
 import { fetchDailyTargets, changeDailyResults, saveDailyTargets } from "../../functions/modules/employees/dailyReferencePlan.js";
 import { addOperationResultToBilling, removeOperationResultFromBilling, syncOperationResultToBilling } from "../../functions/modules/billings/index.js";
 import { rebuildHistory } from "../../functions/modules/siteEmployeeHistories/rebuildHistory.js";
 import { rebuildAllHistories } from "../../functions/modules/siteEmployeeHistories/rebuildAllHistories.js";
-import { inspectEmployeeReferences, runEmployeeReferenceDryRun, EMPLOYEE_REFERENCE_COLLECTIONS } from "../../functions/modules/employees/inspectEmployeeReferences.js";
 
 import { operation, runtime } from "./employeeBackgroundTestSupport.mjs";
 const root = "Companies/company";
@@ -32,7 +30,7 @@ for (const attendance of [true, false]) test(`daily ${attendance}: successful mo
   assert.deepEqual(retry.data.get(`${root}/${collection}/a_2026-09-01`).operationResultIds, ["other"]);
   assert.deepEqual(retry.data.get(`${root}/${collection}/a_2026-09-02`).operationResultIds, ["operation"]);
   assert.strictEqual(retry.data.get(`${root}/${collection}/a_2026-09-01`).operationResults[0], other);
-  assert.equal(retry.employeeReads().length, 2, "one added destination reference on each attempt");
+  assert.equal(retry.employeeReads().length, 0, "transaction projections do not require live Employee masters");
 });
 
 test("Billing successful move retains other results and fixed nonzero subtotal", async () => {
@@ -83,18 +81,18 @@ test("C aggregate calculations and nonempty history use fixed JST dates in UTC a
 for (const attendance of [true, false]) {
   const collection = attendance ? "DailyAttendances" : "DailyOperationsByEmployee";
   const sync = attendance ? syncOperationResultToDailyAttendances : syncOperationResultToDailyOperationsByEmployee;
-  test(`${collection}: new ten-person raw aggregate reads ten Employees; unchanged and deletion read zero`, async () => {
+  test(`${collection}: new ten-person raw aggregate does not read Employee masters and preserves source snapshots`, async () => {
     const ids = Array.from({ length: 10 }, (_, i) => `employee-${i}`), raw = operation(ids), state = runtime({ employees: ids });
     raw.unknown = { stamp: new Timestamp(1788200000, 123456789), optional: null }; raw.employees[0].unknown = { retained: true };
     await sync({ companyId: "company", afterData: raw, firestore: state.firestore });
-    assert.equal(state.employeeReads().length, 10); assert.equal(state.writes.length, 10);
-    for (const id of ids) { const saved = state.data.get(`${root}/${collection}/${id}_2026-09-01`); assert.equal(saved.employeeIds.length, 10); aggregateEmployeeReferences(saved, { daily: true }); assert.strictEqual(saved.operationResults[0], raw); }
+    assert.equal(state.employeeReads().length, 0); assert.equal(state.writes.length, 10);
+    for (const id of ids) { const saved = state.data.get(`${root}/${collection}/${id}_2026-09-01`); assert.equal(Object.hasOwn(saved, "employeeIds"), false); assert.strictEqual(saved.operationResults[0], raw); }
     state.events.length = 0; const path = `${root}/${collection}/${ids[0]}_2026-09-01`, current = state.data.get(path); current.unknown = { stamp: raw.unknown.stamp, nullable: null }; delete current.remarks;
     const after = { ...raw, remarks: "corrected" }; await sync({ companyId: "company", beforeData: raw, afterData: after, firestore: state.firestore });
     assert.equal(state.employeeReads().length, 0); assert.strictEqual(state.data.get(path).unknown.stamp, raw.unknown.stamp); assert.equal(Object.hasOwn(state.data.get(path), "remarks"), false);
     state.events.length = 0; await sync({ companyId: "company", beforeData: after, firestore: state.firestore }); assert.equal(state.employeeReads().length, 0); assert.equal(state.data.has(path), false);
   });
-  test(`${collection}: a same-destination replacement reads exactly one added embedded Employee`, async () => {
+  test(`${collection}: a same-destination replacement does not read embedded Employee masters`, async () => {
     const before = operation(), state = runtime(); await sync({ companyId: "company", afterData: before, firestore: state.firestore }); state.events.length = 0;
     const after = operation(["a", "c"]);
     await state.firestore.runTransaction(async (transaction) => {
@@ -102,80 +100,54 @@ for (const attendance of [true, false]) {
       const selected = entries.filter(({ instance }) => instance.employeeId === "a");
       changeDailyResults(selected, after, attendance); await saveDailyTargets({ companyId: "company", entries: selected, transaction, attendance, firestore: state.firestore });
     });
-    assert.deepEqual(state.employeeReads(), [`${root}/Employees/c`]); assert.deepEqual(state.data.get(`${root}/${collection}/a_2026-09-01`).employeeIds, ["a", "c"]);
+    assert.deepEqual(state.employeeReads(), []); assert.equal(Object.hasOwn(state.data.get(`${root}/${collection}/a_2026-09-01`), "employeeIds"), false);
   });
-  test(`${collection}: move and deleted-destination late event cannot recreate an absent embedded Employee`, async () => {
+  test(`${collection}: move and late event succeed even when an embedded Employee master is absent`, async () => {
     const before = operation(), state = runtime(); await sync({ companyId: "company", afterData: before, firestore: state.firestore });
     state.data.delete(`${root}/Employees/b`); state.writes.length = 0;
     const after = operation(["a", "b"], "2026-09-02");
-    await assert.rejects(sync({ companyId: "company", beforeData: before, afterData: after, firestore: state.firestore })); assert.equal(state.writes.length, 0);
+    await sync({ companyId: "company", beforeData: before, afterData: after, firestore: state.firestore }); assert.ok(state.writes.length > 0);
     state.data.delete(`${root}/${collection}/a_2026-09-01`);
-    await assert.rejects(sync({ companyId: "company", beforeData: before, afterData: before, firestore: state.firestore })); assert.equal(state.writes.length, 0);
+    state.writes.length = 0;
+    await sync({ companyId: "company", beforeData: before, afterData: before, firestore: state.firestore }); assert.ok(state.writes.length > 0);
   });
-  for (const corruption of ["missing-index", "false-index", "worker-type", "read-error"]) test(`${collection}: ${corruption} rejects before write`, async () => {
+  test(`${collection}: obsolete aggregate employeeIds are ignored and removed on the next projection write`, async () => {
     const raw = operation(), state = runtime(); await sync({ companyId: "company", afterData: raw, firestore: state.firestore }); state.writes.length = 0;
     const saved = state.data.get(`${root}/${collection}/a_2026-09-01`);
-    if (corruption === "missing-index") delete saved.employeeIds;
-    if (corruption === "false-index") saved.employeeIds = ["a"];
-    if (corruption === "worker-type") saved.operationResults = [{ ...raw, employees: [{ ...raw.employees[0], isEmployee: false }] }];
-    if (corruption === "read-error") state.firestore.doc = state.firestore.collection = () => { throw new Error("read rejected"); };
-    await assert.rejects(sync({ companyId: "company", beforeData: raw, afterData: raw, firestore: state.firestore })); assert.equal(state.writes.length, 0);
+    saved.employeeIds = ["stale"];
+    await sync({ companyId: "company", beforeData: raw, afterData: { ...raw, remarks: "rewrite" }, firestore: state.firestore });
+    assert.equal(Object.hasOwn(state.data.get(`${root}/${collection}/a_2026-09-01`), "employeeIds"), false);
   });
 }
 
-test("Billing current raw controls new 10 / unchanged 0 / replacement 1 Employee reads and preserves history", async () => {
+test("Billing never reads Employee masters and preserves unrelated stored fields", async () => {
   const ids = Array.from({ length: 10 }, (_, i) => `employee-${i}`), raw = operation(ids), state = runtime({ employees: [...ids, "new"] });
-  await addOperationResultToBilling({ companyId: "company", doc: raw, firestore: state.firestore }); assert.equal(state.employeeReads().length, 10);
+  await addOperationResultToBilling({ companyId: "company", doc: raw, firestore: state.firestore }); assert.equal(state.employeeReads().length, 0);
   const path = `${root}/Billings/customer_site_2026-09-01`, initial = state.data.get(path), nano = new Timestamp(1788200000, 123456789); initial.unknown = { nano, nil: null }; initial.paymentDueDateAt = nano;
   state.events.length = 0; await syncOperationResultToBilling({ companyId: "company", before: raw, after: { ...raw, remarks: "changed" }, firestore: state.firestore }); assert.equal(state.employeeReads().length, 0); assert.strictEqual(state.data.get(path).paymentDueDateAt, nano);
-  state.events.length = 0; const replaced = operation([...ids.slice(0, 9), "new"]); await syncOperationResultToBilling({ companyId: "company", before: raw, after: replaced, firestore: state.firestore }); assert.deepEqual(state.employeeReads(), [`${root}/Employees/new`]); assert.strictEqual(state.data.get(path).unknown.nano, nano);
+  state.events.length = 0; const replaced = operation([...ids.slice(0, 9), "new"]); await syncOperationResultToBilling({ companyId: "company", before: raw, after: replaced, firestore: state.firestore }); assert.deepEqual(state.employeeReads(), []); assert.strictEqual(state.data.get(path).unknown.nano, nano);
   state.events.length = 0; await removeOperationResultFromBilling({ companyId: "company", operationResult: replaced, firestore: state.firestore }); assert.equal(state.employeeReads().length, 0); assert.equal(state.data.has(path), false);
 });
 
-test("Billing move reads destination delta and failure commits neither source nor destination; late recreation checks all", async () => {
+test("Billing move and late recreation succeed without embedded Employee masters", async () => {
   const before = operation(), after = operation(["a", "b"], "2026-09-02"), state = runtime(); await addOperationResultToBilling({ companyId: "company", doc: before, firestore: state.firestore });
   state.data.delete(`${root}/Employees/b`); state.writes.length = 0;
-  await assert.rejects(syncOperationResultToBilling({ companyId: "company", before, after, firestore: state.firestore })); assert.equal(state.writes.length, 0);
+  await syncOperationResultToBilling({ companyId: "company", before, after, firestore: state.firestore }); assert.equal(state.data.has(`${root}/Billings/customer_site_2026-09-02`), true);
   state.data.delete(`${root}/Billings/customer_site_2026-09-01`);
-  await assert.rejects(syncOperationResultToBilling({ companyId: "company", before, after: before, firestore: state.firestore })); assert.equal(state.writes.length, 0);
+  state.writes.length = 0;
+  await syncOperationResultToBilling({ companyId: "company", before, after: before, firestore: state.firestore }); assert.equal(state.data.has(`${root}/Billings/customer_site_2026-09-01`), true);
 });
 
-test("history reads destination raw, validates results, keeps nanos and rejects late regeneration after Employee removal", async () => {
+test("history keeps nanos and can be rebuilt after Employee master removal", async () => {
   const first = operation(), last = operation(["a", "b"], "2026-09-12", { docId: "last" }), state = runtime({ records: [[`${root}/OperationResults/operation`, first], [`${root}/OperationResults/last`, last]] });
   await rebuildHistory("company", "site", "a", { firestore: state.firestore });
   const path = `${root}/SiteEmployeeHistories/site_a`, raw = state.data.get(path); assert.equal(raw.firstDateAt.toDate().toISOString(), "2026-08-31T15:00:00.000Z"); assert.equal(raw.lastDateAt.toDate().toISOString(), "2026-09-11T15:00:00.000Z");
   const nano = new Timestamp(raw.firstDateAt.seconds, 123456789); raw.firstDateAt = nano; raw.unknown = { nano }; state.events.length = 0;
   await rebuildHistory("company", "site", "a", { firestore: state.firestore }); assert.equal(state.employeeReads().length, 0); assert.strictEqual(state.data.get(path).firstDateAt, nano);
   state.data.delete(path); state.data.delete(`${root}/Employees/a`); state.writes.length = 0;
-  await assert.rejects(rebuildHistory("company", "site", "a", { firestore: state.firestore })); assert.equal(state.writes.length, 0);
+  await rebuildHistory("company", "site", "a", { firestore: state.firestore }); assert.equal(state.data.has(path), true);
+  state.writes.length = 0;
   first.employeeIds = []; await assert.rejects(rebuildAllHistories("company", { firestore: state.firestore })); assert.equal(state.writes.length, 0);
-});
-
-test("reference dry-run requires all six selected-tenant collections and never grants archive readiness", async () => {
-  const collections = Object.fromEntries(EMPLOYEE_REFERENCE_COLLECTIONS.map((name) => [name, []])); collections.OperationResults.push({ id: "operation", raw: operation() });
-  const valid = inspectEmployeeReferences({ companyId: "company", collections }); assert.equal(valid.consistent, true); assert.equal(valid.archiveReady, false);
-  const absent = { ...collections }; delete absent.Billings; assert.equal(inspectEmployeeReferences({ companyId: "company", collections: absent }).consistent, false);
-  collections.OperationResults[0].raw.employeeIds = []; assert.equal(inspectEmployeeReferences({ companyId: "company", collections }).consistent, false);
-  const called = []; await assert.rejects(runEmployeeReferenceDryRun({ companyId: "company", readCollection: async (companyId, collection) => { called.push([companyId, collection]); throw new Error("read failed"); } })); assert.deepEqual(called, [["company", "SiteOperationSchedules"]]);
-});
-
-test("dry-run validates each of six raw collection shapes and rejects hidden mirror references", () => {
-  const raw = operation(["a"]), schedule = { ...operation([]), docId: "schedule" };
-  const notification = { ...raw.employees[0], docId: "schedule_a", siteOperationScheduleId: "schedule", notificationKey: "schedule_a" };
-  const daily = { docId: "a_2026-09-01", employeeId: "a", operationResults: [raw], operationResultIds: [raw.docId], employeeIds: ["a"] };
-  const values = { SiteOperationSchedules: schedule, OperationResults: raw, ArrangementNotifications: notification, DailyAttendances: daily, DailyOperationsByEmployee: daily, Billings: { docId: "customer_site_2026-09-01", operationResults: [raw], employeeIds: ["a"] } };
-  const make = () => Object.fromEntries(Object.entries(values).map(([name, value]) => [name, [{ id: value.docId, raw: { ...value } }]]));
-  assert.equal(inspectEmployeeReferences({ companyId: "company", collections: make() }).consistent, true);
-  for (const name of EMPLOYEE_REFERENCE_COLLECTIONS) {
-    const collections = make(), value = collections[name][0].raw;
-    if (name === "ArrangementNotifications") delete value.workerId; else delete value.employeeIds;
-    const report = inspectEmployeeReferences({ companyId: "company", collections });
-    assert.equal(report.consistent, false, name); assert.equal(report.archiveReady, false); assert.deepEqual(report.issues, [{ collection: name, reason: "invalid-reference-data" }]);
-  }
-  const collections = make(); collections.OperationResults[0].raw.workers = [...raw.workers, { ...raw.workers[0], id: "hidden" }];
-  assert.equal(inspectEmployeeReferences({ companyId: "company", collections }).consistent, false);
-  const wrongTenant = make(); wrongTenant.Billings[0].raw.companyId = "other";
-  assert.equal(inspectEmployeeReferences({ companyId: "company", collections: wrongTenant }).consistent, false);
 });
 
 test("old Employee deletion events have no User/Auth read or write effects", async () => {

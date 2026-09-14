@@ -236,7 +236,7 @@ function createTargets(firestore, companyId, actorUid, customerId) {
       actorRef,
       activeRef,
       archiveRef,
-      referenceQueries: ["Sites", "OperationResults", "Billings"].map(
+      referenceQueries: ["Sites"].map(
         (collectionName) =>
           createLimitedReferenceQuery(
             firestore,
@@ -300,10 +300,6 @@ export async function archiveCustomer({
     const activeSnapshot = await transaction.get(targets.activeRef);
     const archiveSnapshot = await transaction.get(targets.archiveRef);
     const siteSnapshot = await transaction.get(targets.referenceQueries[0]);
-    const operationResultSnapshot = await transaction.get(
-      targets.referenceQueries[1],
-    );
-    const billingSnapshot = await transaction.get(targets.referenceQueries[2]);
 
     for (const snapshot of [actorSnapshot, activeSnapshot, archiveSnapshot]) {
       assertDocumentSnapshot(snapshot);
@@ -319,13 +315,13 @@ export async function archiveCustomer({
     );
 
     if (
-      [siteSnapshot, operationResultSnapshot, billingSnapshot].some(
+      [siteSnapshot].some(
         (snapshot) => querySnapshotSize(snapshot) > 0,
       )
     ) {
       fail(
         CUSTOMER_ARCHIVE_ERROR_CODES.REFERENCES_EXIST,
-        "[archiveCustomer] Customer references exist",
+        "[archiveCustomer] Customer is used by a Site",
       );
     }
 

@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-04
 - 状態: Accepted
+- 一部置換: 2026-09-14の[ADR 0074](0074-transaction-parent-reference-independence.md)により、OperationResults／Billingsの参照確認と、トランザクションwriterのlive Customer存在barrierを廃止した。Customerからlive Siteへのマスター間確認、archive監査、同ID衝突防止は維持する。
 - 関連仕様: `docs/specification.md` の「取引先・現場・取極め」
 - 関連ロードマップ: `docs/roadmaps/customer-archive-safety.md`
 

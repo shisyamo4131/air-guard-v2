@@ -16,7 +16,7 @@ for (const kind of ["schedule", "result"]) test(`${kind} duplicate reads the ori
   const saved = state.records.get(path(kind, "copy"));
   assert.equal(saved.docId, "copy"); assert.equal(saved.date, "2026-09-02");
   assert.deepEqual(saved.employeeIds, raw.employeeIds); assert.equal(saved.employees[0].unknown.stamp, stamp);
-  assert.equal(state.employeesRead().length, 2); assert.strictEqual(state.records.get(path(kind)), raw);
+  assert.equal(state.employeesRead().length, 0); assert.strictEqual(state.records.get(path(kind)), raw);
   if (kind === "schedule") { assert.equal(saved.operationResultId, null); assert.ok(saved.workers.every((row) => row.siteOperationScheduleId === "copy" && row.hasNotification === false)); }
   else { assert.equal(saved.siteOperationScheduleId, null); assert.equal(saved.adjustedQuantityBase, 3); assert.equal(saved.useAdjusted, true); assert.equal(saved.articles[0].unknown.stamp, stamp); }
   const before = state.writes.length;
@@ -25,12 +25,12 @@ for (const kind of ["schedule", "result"]) test(`${kind} duplicate reads the ori
   await assert.rejects(state.save({ ...copy, documentId: "other-copy" }), { code: "aborted" }); assert.equal(state.writes.length, before);
 });
 
-test("duplicate rejects a missing/locked source or missing Employee before writing and validates the source expectation", async () => {
+test("duplicate accepts an absent Employee master but rejects locked or missing source", async () => {
   const raw = operation("result"), state = harness(raw, { kind: "result" });
   const copy = command(raw, "duplicate", { dateAt: "2026-09-02" }, { kind: "result", documentId: "copy", sourceId: "operation" });
   state.records.delete(`${root}/Employees/employee-a`);
-  await assert.rejects(state.save(copy), { code: "failed-precondition" }); assert.equal(state.writes.length, 0);
-  state.records.set(`${root}/Employees/employee-a`, {});
+  await state.save(copy); assert.equal(state.records.has(path("result", "copy")), true);
+  state.records.delete(path("result", "copy")); state.writes.length = 0;
   const locked = { ...raw, isLocked: true }; state.records.set(path("result"), locked);
   await assert.rejects(state.save(command(locked, "duplicate", copy.changes, { ...copy, expected: undefined })), { code: "failed-precondition" }); assert.equal(state.writes.length, 0);
   state.records.delete(path("result"));
@@ -158,7 +158,7 @@ function harness(raw = operation(), options = {}) {
   return { records, reads, writes, save: (...operations) => saveOperation({ firestore, input: { operations }, timestamp: () => new Timestamp(1790000000, 123456789), resolveIdentity: async () => { auths++; return options.identity?.(auths) || identity; } }), employeesRead: () => reads.filter((key) => key.startsWith(`${root}/Employees/`)) };
 }
 
-test("schedule worker row operations preserve unknown raw and nanos, reject stale positions, and only read added IDs", async () => {
+test("schedule worker row operations preserve unknown raw and nanos without reading Employee masters", async () => {
   const raw = operation();
   const stamp = new Timestamp(1788200000, 123456789);
   raw.employees[0].unknown = { stamp };
@@ -175,7 +175,7 @@ test("schedule worker row operations preserve unknown raw and nanos, reject stal
   await assert.rejects(state.save(command(raw, "workers", { id: "employee-c" }, { rowAction: "update", array: "employees", position: 0 })), { code: "aborted" });
   assert.equal(state.writes.length, count);
   await state.save(command(saved, "workers", { id: "employee-c" }, { rowAction: "update", array: "employees", position: 0 }));
-  assert.deepEqual(state.employeesRead(), [`${root}/Employees/employee-c`]);
+  assert.deepEqual(state.employeesRead(), []);
   assert.deepEqual(state.records.get(path("schedule")).employeeIds, ["employee-c", "employee-b"]);
 });
 
@@ -191,17 +191,20 @@ test("same-value and reorder use no Employee read; deleting remains zero-read", 
   assert.equal(state.employeesRead().length, 0);
 });
 
-test("invalid actor state, current identity, maintenance, raw corruption and missing added Employee all refuse write", async () => {
+test("invalid actor state, current identity, maintenance, and raw corruption refuse write while missing Employee master does not", async () => {
   const raw = operation();
   const changes = command(raw, "workers", { id: "employee-missing" }, { rowAction: "add", array: "employees", position: 0 });
   for (const options of [{ actor: { disabled: true } }, { actor: { isTemporary: true } }, { identity: (count) => count === 2 ? { ...identity, companyId: "other" } : identity }]) {
     const state = harness(raw, options);
     await assert.rejects(state.save(changes), { code: "permission-denied" }); assert.equal(state.writes.length, 0);
   }
-  for (const corrupt of [(state) => state.records.set("System/system", { isMaintenance: true }), (state) => state.records.set(path("schedule"), { ...raw, employeeIds: [] }), () => {}]) {
+  for (const corrupt of [(state) => state.records.set("System/system", { isMaintenance: true }), (state) => state.records.set(path("schedule"), { ...raw, employeeIds: [] })]) {
     const state = harness(raw); corrupt(state);
     await assert.rejects(state.save(changes), { code: "failed-precondition" }); assert.equal(state.writes.length, 0);
   }
+  const missing = harness(raw);
+  await missing.save(changes);
+  assert.deepEqual(missing.records.get(path("schedule")).employeeIds, ["employee-missing", "employee-a", "employee-b"]);
 });
 
 test("active same-tenant users can update and delete schedules while restricted commands still reject the whole batch", async () => {
@@ -296,7 +299,7 @@ test("schedule create and moved date retain Site status, Customer reference and 
 test("notify and conversion read each destination, preserve actual false/zero and reject notification-only conflict atomically", async () => {
   const raw = operation(), state = harness(raw);
   await state.save(command(raw, "notify", { shouldNotify: false }));
-  assert.equal(state.employeesRead().length, 2, "each new notification adds its Employee even though schedule already referenced it");
+  assert.equal(state.employeesRead().length, 0);
   const prepared = state.records.get(path("schedule"));
   const notifications = {};
   for (const worker of prepared.workers) {
@@ -316,7 +319,7 @@ test("notify and conversion read each destination, preserve actual false/zero an
   const result = state.records.get(path("result"));
   assert.equal(state.records.get(path("schedule")).operationResultId, "operation");
   for (const worker of result.workers) { assert.equal(worker.startTime, "09:00"); assert.equal(worker.breakMinutes, 0); assert.equal(worker.isStartNextDay, false); assert.equal(worker.isQualified, true); }
-  assert.equal(state.employeesRead().length, 4, "result is another new destination");
+  assert.equal(state.employeesRead().length, 0);
   await assert.rejects(state.save(convert));
 });
 
@@ -425,7 +428,7 @@ test("worker change/notify and conversion cannot skip the completed preparation 
   }
 });
 
-test("actual server create plus ten worker adds checks ten unique Employee paths across two new destinations", async () => {
+test("actual server create plus ten worker adds do not read Employee masters", async () => {
   const state = harness(null), commands = [];
   const ids = Array.from({ length: 10 }, (_, index) => `new-${index}`);
   for (const id of ids) state.records.set(`${root}/Employees/${id}`, { docId: id, employmentStatus: "RESIGNED" });
@@ -439,50 +442,49 @@ test("actual server create plus ten worker adds checks ten unique Employee paths
     }
   }
   await state.save(...commands);
-  assert.deepEqual(state.employeesRead().sort(), ids.map((id) => `${root}/Employees/${id}`).sort());
+  assert.deepEqual(state.employeesRead(), []);
   for (const id of ["first", "second"]) assert.deepEqual(state.records.get(path("schedule", id)).employeeIds, ids);
   assert.equal(state.writes.filter(([kind, key]) => kind === "create" && key.includes("/SiteOperationSchedules/")).length, 2);
   const first = state.records.get(path("schedule", "first"));
   await state.save(command(first, "delete", {}, { documentId: "first" }));
   const before = state.employeesRead().length;
   await state.save(...commands.filter((entry) => entry.documentId === "first"));
-  assert.equal(state.employeesRead().length - before, 10, "recreated destination is empty even though another destination still references all ten");
+  assert.equal(state.employeesRead().length - before, 0);
 });
 
-for (const kind of ["schedule"]) test(`${kind} rejects duplicate outsourcer workerId but allows one outsourcer at distinct indexes`, async () => {
+for (const kind of ["schedule"]) test(`${kind} does not add a duplicate-worker rejection beyond the standard model behavior`, async () => {
   const model = new (kind === "schedule" ? SiteOperationSchedule : OperationResult)(operation(kind));
   model.addWorker({ id: "other-outsourcer", isEmployee: false }, -1);
   const raw = model.toObject(), state = harness(raw, { kind });
   const replace = command(raw, "workers", { id: "other-outsourcer" }, { kind, array: "outsourcers", rowAction: "update", position: 0 });
-  await assert.rejects(state.save(replace), { code: "failed-precondition" });
-  assert.equal(state.writes.length, 0);
+  await state.save(replace);
+  assert.deepEqual(state.records.get(path(kind)).outsourcers.map((row) => row.workerId), ["other-outsourcer:1", "other-outsourcer:1"]);
   const duplicate = { ...raw, outsourcers: [raw.outsourcers[0], raw.outsourcers[0]], outsourcerIds: ["outsourcer", "outsourcer"], workers: [...raw.employees, raw.outsourcers[0], raw.outsourcers[0]] };
   const corrupt = harness(duplicate, { kind });
-  await assert.rejects(corrupt.save(command(duplicate, "overview", { remarks: "correction" }, { kind })), { code: "failed-precondition" });
-  assert.equal(corrupt.writes.length, 0);
-  await state.save(command(raw, "workers", { id: "outsourcer" }, { kind, array: "outsourcers", rowAction: "add", position: 2 }));
+  await corrupt.save(command(duplicate, "overview", { remarks: "correction" }, { kind }));
+  assert.equal(corrupt.records.get(path(kind)).remarks, "correction");
+  const current = state.records.get(path(kind));
+  await state.save(command(current, "workers", { id: "outsourcer" }, { kind, array: "outsourcers", rowAction: "add", position: 2 }));
   const added = state.records.get(path(kind));
-  assert.deepEqual(added.outsourcers.map((row) => row.workerId), ["outsourcer:1", "other-outsourcer:1", "outsourcer:2"]);
-  if (kind === "schedule") await state.save(command(added, "notify", { shouldNotify: false }));
-  const baseline = state.records.get(path(kind));
-  await state.save(command(baseline, "workers", { id: "third-outsourcer" }, { kind, array: "outsourcers", rowAction: "update", position: 0 }));
-  const updated = state.records.get(path(kind));
-  assert.deepEqual(updated.outsourcers.slice(1), baseline.outsourcers.slice(1));
-  assert.equal(updated.outsourcers[0].workerId, "third-outsourcer:1");
-  if (kind === "schedule") {
-    assert.equal(state.records.has(`${root}/ArrangementNotifications/operation_outsourcer:1`), false);
-    assert.equal(state.records.has(`${root}/ArrangementNotifications/operation_outsourcer:2`), true);
-    assert.equal(updated.outsourcers[0].hasNotification, false);
-  }
+  assert.deepEqual(added.outsourcers.map((row) => row.workerId), ["other-outsourcer:1", "other-outsourcer:1", "outsourcer:1"]);
 });
 
-test("actual server moving an existing employee to a different destination checks exactly that one added ID", async () => {
+test("schedule employee add and update do not reject duplicate employee ids", async () => {
+  const raw = operation(), state = harness(raw);
+  await state.save(command(raw, "workers", { id: "employee-a" }, { rowAction: "add", array: "employees", position: 2 }));
+  const added = state.records.get(path("schedule"));
+  assert.deepEqual(added.employeeIds, ["employee-a", "employee-b", "employee-a"]);
+  await state.save(command(added, "workers", { id: "employee-a" }, { rowAction: "update", array: "employees", position: 1 }));
+  assert.deepEqual(state.records.get(path("schedule")).employeeIds, ["employee-a", "employee-a", "employee-a"]);
+});
+
+test("actual server moving an existing employee to a different destination does not read Employee masters", async () => {
   const raw = operation(), state = harness(raw);
   const targetModel = new SiteOperationSchedule({ docId: "target", siteId: "site", securityType: "TRAFFIC", dateAt: new Date("2026-09-01"), startTime: "08:00", endTime: "17:00", requiredPersonnel: 2 });
   targetModel.addWorker({ id: "employee-b", isEmployee: true }, -1);
   const target = targetModel.toObject(); state.records.set(path("schedule", "target"), target);
   await state.save(command(raw, "workers", {}, { rowAction: "remove", array: "employees", position: 0 }), command(target, "workers", { id: "employee-a" }, { rowAction: "add", array: "employees", position: 1 }));
-  assert.deepEqual(state.employeesRead(), [`${root}/Employees/employee-a`]);
+  assert.deepEqual(state.employeesRead(), []);
   assert.deepEqual(state.records.get(path("schedule")).employeeIds, ["employee-b"]);
   assert.deepEqual(state.records.get(path("schedule", "target")).employeeIds, ["employee-b", "employee-a"]);
 });

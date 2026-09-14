@@ -23,14 +23,6 @@ const { FieldValue, Timestamp } = requireFromFunctions(
   "firebase-admin/firestore",
 );
 
-const REFERENCES = Object.freeze([
-  "SiteOperationSchedules",
-  "OperationResults",
-  "ArrangementNotifications",
-  "Billings",
-  "SiteEmployeeHistories",
-]);
-
 const identity = Object.freeze({
   uid: "actor-a",
   email: "actor@example.invalid",
@@ -269,7 +261,7 @@ test("strict Site archive actor matrix allows only administrators and known site
   }
 });
 
-test("ACTIVE and TERMINATED Sites archive after every direct reference read and no Company order read", async () => {
+test("ACTIVE and TERMINATED Sites archive without scanning transaction collections", async () => {
   for (const status of ["ACTIVE", "TERMINATED"]) {
     const site = validSite({ status });
     const sentinel = FieldValue.serverTimestamp();
@@ -288,7 +280,6 @@ test("ACTIVE and TERMINATED Sites archive after every direct reference read and 
         "Companies/company-a/Users/actor-a",
         "Companies/company-a/Sites/site-a",
         "Companies/company-a/Sites_archive/site-a",
-        ...REFERENCES.map((name) => `Companies/company-a/${name}`),
       ],
     );
     assert.equal(calls.some(({ path }) => path === "Companies/company-a"), false);
@@ -311,26 +302,7 @@ test("ACTIVE and TERMINATED Sites archive after every direct reference read and 
   }
 });
 
-test("each of the exact five direct reference collections and mixed references block with write zero", async () => {
-  for (const references of [
-    ...REFERENCES.map((name) => ({ [name]: true })),
-    Object.fromEntries(REFERENCES.map((name) => [name, true])),
-  ]) {
-    const { calls, firestore, writes } = createFirestore({ references });
-    await rejectsCode(
-      () => archiveSite({ firestore, identity, input: validInput() }),
-      SITE_ARCHIVE_ERROR_CODES.REFERENCES_EXIST,
-    );
-    assert.deepEqual(writes, []);
-    assert.deepEqual(
-      calls.filter(({ method }) => method === "transaction.get")
-        .map(({ path }) => path).slice(-REFERENCES.length),
-      REFERENCES.map((name) => `Companies/company-a/${name}`),
-    );
-  }
-});
-
-test("missing, malformed, maintenance, and invalid query states fail with write zero", async () => {
+test("missing, malformed, and maintenance states fail with write zero", async () => {
   const missingField = validSite();
   delete missingField.name;
   for (const [options, code] of [
@@ -340,7 +312,6 @@ test("missing, malformed, maintenance, and invalid query states fail with write 
     [{ system: null }, SITE_ARCHIVE_ERROR_CODES.MAINTENANCE],
     [{ system: { isMaintenance: true } }, SITE_ARCHIVE_ERROR_CODES.MAINTENANCE],
     [{ system: { isMaintenance: "false" } }, SITE_ARCHIVE_ERROR_CODES.MAINTENANCE],
-    [{ invalidQuery: REFERENCES[0] }, SITE_ARCHIVE_ERROR_CODES.INVALID_DEPENDENCY],
   ]) {
     const { firestore, writes } = createFirestore(options);
     await rejectsCode(() => archiveSite({ firestore, identity, input: validInput() }), code);

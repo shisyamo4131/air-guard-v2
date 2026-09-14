@@ -52,13 +52,22 @@ const tooltipText = computed(() => {
   if (!site.value) return null;
   return `${site.value.name}【${shiftTypeTitle.value}】の行を削除します。`;
 });
+
+const ariaLabel = computed(() =>
+  site.value && shiftTypeTitle.value
+    ? `${site.value.name}【${shiftTypeTitle.value}】の行を削除`
+    : "現場勤務区分の行を削除",
+);
 </script>
 
 <template>
-  <v-icon
+  <v-btn
     v-bind="$attrs"
+    :aria-label="ariaLabel"
     icon="mdi-close"
-    size="x-small"
+    density="compact"
+    size="small"
+    variant="text"
     class="me-2"
     v-tooltip:top="tooltipText"
   />

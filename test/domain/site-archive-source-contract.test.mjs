@@ -32,38 +32,18 @@ test("Site archive UI reaches only the dedicated Callable and exposes no generic
   assert.doesNotMatch(combined, /restoreSite|SiteRestore|物理削除|復元する/u);
 });
 
-test("archive use-case fixes the exact five direct reference queries and excludes snapshots, operations, and Company order", async () => {
+test("archive use-case does not scan transaction collections", async () => {
   const source = await read("functions/modules/sites/archiveSite.js");
-  const catalog = source.match(/const referenceQueries = \[([\s\S]*?)\]\.map/u)?.[1];
-  assert.ok(catalog);
-  assert.deepEqual(
-    [...catalog.matchAll(/"([A-Za-z]+)"/gu)].map((match) => match[1]),
-    [
-      "SiteOperationSchedules",
-      "OperationResults",
-      "ArrangementNotifications",
-      "Billings",
-      "SiteEmployeeHistories",
-    ],
-  );
-  for (const excluded of [
-    "LifecycleOperations", "Company", "siteShiftTypeOrder", "Snapshots", "ArchiveOperations",
-  ]) assert.equal(catalog.includes(excluded), false, excluded);
-  assert.match(source, /Promise\.all\(\[[\s\S]*?transaction\.get\(activeRef\)[\s\S]*?transaction\.get\(archiveRef\)[\s\S]*?referenceQueries\.map/u);
+  assert.doesNotMatch(source, /SiteOperationSchedules|OperationResults|ArrangementNotifications|Billings|SiteEmployeeHistories/u);
+  assert.doesNotMatch(source, /firestore\.collection|referenceQueries/u);
+  assert.match(source, /Promise\.all\(\[[\s\S]*?transaction\.get\(activeRef\)[\s\S]*?transaction\.get\(archiveRef\)/u);
   assert.match(source, /transaction\.create\(archiveRef, envelope\);\s*transaction\.delete\(activeRef\);/u);
   assert.doesNotMatch(source, /transaction\.(?:set|update)\(archiveRef|\.restore\s*\(/u);
 });
 
-test("Rules keep guarded results and open normal schedule and notification writes to the same tenant", async () => {
+test("Rules validate result identifiers without requiring live parent masters", async () => {
   const rules = await read("firestore.rules");
-  assert.match(
-    rules,
-    /function liveSiteExistsAfter\(companyId, siteId\)[\s\S]*?existsAfter\([\s\S]*?\/Sites\/\$\(siteId\)\)/u,
-  );
-  assert.match(
-    rules,
-    /function isValidSiteReferenceCreate\(companyId\)[\s\S]*?keys\(\)\.hasAll\(\['siteId'\]\)[\s\S]*?liveSiteExistsAfter/u,
-  );
+  assert.doesNotMatch(rules, /liveSiteExistsAfter|isValidSiteReferenceCreate|hasExistingCustomerReferenceAfter/u);
   assert.doesNotMatch(rules, /function isValidSiteReferenceUpdate/u);
   for (const collectionName of [
     "OperationResults", "ArrangementNotifications", "Billings", "SiteEmployeeHistories",
@@ -73,7 +53,7 @@ test("Rules keep guarded results and open normal schedule and notification write
     )?.[1];
     assert.ok(block, `${collectionName} Rules block`);
     if (collectionName === "OperationResults") {
-      assert.match(block, /isValidOperationResultClientCreate\(companyId, docId\)/u);
+      assert.match(block, /isValidOperationResultClientCreate\(docId\)/u);
       assert.match(block, /isValidOperationResultClientUpdate\(docId\)/u);
       assert.match(block, /isValidOperationResultClientDelete\(docId\)/u);
     }
@@ -111,22 +91,13 @@ test("Schedule application uses Air managers and the existing model instead of t
   }
 });
 
-test("Admin SDK Billing and SiteEmployeeHistory writers share their live Site read with the final write transaction", async () => {
-  const [liveGuard, billing, history] = await Promise.all([
-    read("functions/modules/sites/liveSiteReference.js"),
+test("Billing and SiteEmployeeHistory writers do not require a live Site master", async () => {
+  const [billing, history] = await Promise.all([
     read("functions/modules/billings/billingReferencePlan.js"),
     read("functions/modules/siteEmployeeHistories/rebuildHistory.js"),
   ]);
-  assert.match(liveGuard, /transaction\.get\([\s\S]*?\/Sites\/\$\{siteId\}/u);
-  assert.match(liveGuard, /if \(!snapshot\?\.exists\) throw/u);
-  assert.match(
-    billing,
-    /firestore\.runTransaction\(async \(transaction\)[\s\S]*?await assertLiveSiteReference\(\{ firestore, transaction, companyId, siteId: after\.siteId \}\)[\s\S]*?await commitBackgroundPlans\(\{ firestore, transaction,/u,
-  );
-  assert.match(
-    history,
-    /firestore\.runTransaction\(async \(transaction\)[\s\S]*?transaction\.get\(firestore\.doc\(`\$\{prefix\}\/Sites\/\$\{siteId\}`\)\)[\s\S]*?if \(!siteSnapshot\.exists\)[\s\S]*?transaction\.set\(historyRef, payload\)/u,
-  );
+  assert.doesNotMatch(billing, /assertLiveSiteReference|\/Sites\//u);
+  assert.doesNotMatch(history, /\/Sites\//u);
   assert.match(history, /if \(firstSnapshot\.empty\)[\s\S]*?transaction\.delete\(historyRef\)/u);
   assert.match(await read("functions/modules/billings/addOperationResultToBilling.js"), /syncBillingReferences\(/u);
   // Execute both current entry paths. The shared runtime rejects any read after
@@ -134,15 +105,14 @@ test("Admin SDK Billing and SiteEmployeeHistory writers share their live Site re
   // and billing-customer-reference-barrier tests, not in this wiring contract.
   for (const writer of ["billing", "history"]) {
     const raw = operation(["a"]), root = "Companies/company";
-    for (const siteExists of [true, false]) {
+    {
       const state = runtime({ records: [[`${root}/OperationResults/operation`, raw]] });
-      if (!siteExists) state.data.delete(`${root}/Sites/site`);
+      state.data.delete(`${root}/Sites/site`);
       const save = () => writer === "billing"
         ? addOperationResultToBilling({ companyId: "company", doc: raw, firestore: state.firestore })
         : rebuildHistory("company", "site", "a", { firestore: state.firestore });
-      if (siteExists) { await save(); assert.equal(state.writes.length, 1); }
-      else { await assert.rejects(save(), writer === "billing" ? { message: "Site not found: site" } : { code: "failed-precondition" }); assert.equal(state.writes.length, 0); }
-      assert.equal(state.events.filter((path) => path === `${root}/Sites/site`).length, 1);
+      await save(); assert.equal(state.writes.length, 1);
+      assert.equal(state.events.filter((path) => path === `${root}/Sites/site`).length, 0);
     }
   }
 });

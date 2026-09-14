@@ -32,6 +32,9 @@ const salesData = computed(() =>
     ? props.item.sales.adjusted
     : props.item.sales.original,
 );
+const workerSubtotal = computed(
+  () => salesData.value.base.total + salesData.value.qualified.total,
+);
 </script>
 
 <template>
@@ -92,9 +95,27 @@ const salesData = computed(() =>
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="3" class="text-right">合計金額</td>
+        <td colspan="3" class="text-right">作業員分 小計</td>
         <td class="text-right">
-          {{ formatNumber(salesData.base.total + salesData.qualified.total) }}
+          {{ formatNumber(workerSubtotal) }}
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3" class="text-right">稼働外売上</td>
+        <td class="text-right">
+          {{ formatNumber(props.item.salesArticles) }}
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3" class="text-right">消費税率</td>
+        <td class="text-right">
+          {{ formatNumber(props.item.taxRate * 100) }}%
+        </td>
+      </tr>
+      <tr>
+        <td colspan="3" class="text-right">税抜合計</td>
+        <td class="text-right">
+          {{ formatNumber(props.item.salesAmount) }}
         </td>
       </tr>
     </tfoot>

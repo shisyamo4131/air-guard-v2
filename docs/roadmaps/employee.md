@@ -1,5 +1,7 @@
 # Employeeマスター改修ロードマップ
 
+> 2026-09-14現行訂正: EMP-05で実装したトランザクション参照確認、live Employee存在barrier、集約`employeeIds`は[ADR 0074](../decisions/0074-transaction-parent-reference-independence.md)で撤去した。User/Auth・予約・lock・lifecycle確認は維持する。下記の工程得点は当時の完了履歴であり、現在仕様はFGAロードマップを正とする。
+
 - 状態: Completed。EMP-08 Local統合確認後、bounded Dev releaseとEMP-09の権限別受入れまで完了した。
 - 目標: Employee通常CRUDをoperation固有のeditor・application処理・保存境界へ移し、個人情報の過剰アクセス、全文上書き、保存前のlive変更、失敗・競合時の不整合を解消する。
 - 現在の進捗: 100%

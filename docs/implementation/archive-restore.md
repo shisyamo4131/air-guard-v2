@@ -4,13 +4,15 @@
 
 表は後続のEMP実装記録を反映して2026-09-12に整理した。環境状態は記録時点の証拠を参照し、live remoteを再確認したものではない。
 
+2026-09-14の[ADR 0074](../decisions/0074-transaction-parent-reference-independence.md)により、トランザクション文書が親Customer／Site／Employeeを参照していることはarchive拒否条件から外した。下記の従属検査・writer guard・Employee検索索引の記述は過去設計であり、現在仕様として使用しない。Customerからlive Siteへのマスター間確認と、EmployeeのUser/Auth・予約・lock・lifecycle確認は維持する。
+
 確認済み原則は[現行仕様の共通節](../specification.md#ドキュメントのアーカイブと物理削除)を唯一の正本とする。以下の設計案・実装事実と、製品への適用済み状態を分ける。共通仕様をまとめても既存masterを一括移行しない。
 
 | 対象 | 実装記録 | 提供条件・残対応 |
 |---|---|---|
-| Customer | 専用archive Callable、同transactionの従属検査、version付き原本・監査、参照writer guard、archive client read/CUD拒否 | 自動purge・通常restoreは提供しない。保持・運営者操作は固有仕様に従う |
-| Site | `functions/modules/sites/archiveSite.js`と`siteArchiveDocumentContract.js`。専用操作で同ID移動・監査・再送照合。参照5種類とwriter guard。archive readは同社の有効な本登録User、client CUD拒否 | 物理削除・通常restoreは未提供。Siteのfield・read・依存catalogを他masterへそのまま適用しない |
-| Employee | [EMP-05実装記録](employee-master.md#emp-05での実装差分)に専用archive、従属参照保護、旧削除triggerの無作用化を記録済み | [EMP-09受入れ](../roadmaps/employee.md#emp-09-dev受入れ完了2026-09-07)では通常APIのtenant allowlistを空のまま維持し、archiveは未実行。実装とtenant開放を区別する。通常restore・purgeは未提供で、開放・data対応は別承認 |
+| Customer | 専用archive Callable、live Siteマスター確認、version付き原本・監査、archive client read/CUD拒否 | OperationResults／Billingsはarchiveを妨げない。自動purge・通常restoreは提供しない |
+| Site | `functions/modules/sites/archiveSite.js`と`siteArchiveDocumentContract.js`。専用操作で同ID移動・監査・再送照合。archive readは同社の有効な本登録User、client CUD拒否 | トランザクション参照を走査しない。物理削除・通常restoreは未提供 |
+| Employee | 専用archive、User/Auth・予約・lock・lifecycle確認、旧削除triggerの無作用化 | トランザクション参照と集約索引はarchive条件にしない。通常restore・purgeは未提供 |
 | Outsourcer | 通常製品でarchive・restore・物理削除を提供しない | 固有の非提供条件を維持する |
 | Article / generic adapter | 下記の旧共通基盤調査を参照 | metadata、参照検査、上書き、迂回、restoreの問題が未解決。新しい共通仕様の適用済み実装ではない |
 

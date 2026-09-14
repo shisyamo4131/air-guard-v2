@@ -1,5 +1,7 @@
 # 4マスター Dev反映前 release surface inventory
 
+> 2026-09-14現行訂正: 本文のCustomer／Site／Employeeトランザクション参照barrierとEmployee検索索引は初回release時の履歴であり、[ADR 0074](../decisions/0074-transaction-parent-reference-independence.md)により現在は撤去対象である。新しいDev反映とデータ復旧は[OperationResult派生文書の復旧計画](operation-result-projection-recovery.md)を正とする。
+
 - 状態: Historical — 初回Dev反映前の準備記録。 `MASTER-DEV-PREFLIGHT-01` No.7完了
 - local source baseline: `7ce7b485c7bb1350b9112b2a12075d6bedf25e7e`
 - No.5検討baseline: `1204ba205ddf4ca2f3d2de7f32924d7404db8af5`

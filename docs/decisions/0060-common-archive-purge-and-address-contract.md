@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-06
 - 状態: Accepted
+- 一部置換: 2026-09-14の[ADR 0074](0074-transaction-parent-reference-independence.md)により、Employee archiveのためのトランザクション参照確認、集約`employeeIds`、通常・背景writerのlive Employee存在barrierを廃止した。User/Auth・予約・lock・lifecycleの確認は維持する。
 - 採用範囲: 共通原則・Employeeの方式変更と最終提案の操作/閲覧/段階移行条件。下記の実装設計・運用案は実装済みを意味しない。
 - 関連仕様: [共通データ仕様](../specification.md#共通データ仕様)、[Employee](../specification.md#employeeの操作権限と保持)
 - 一部置換: [ADR 0057](0057-employee-hard-delete-and-archive-deferral.md)の直接物理削除・archive延期、[ADR 0058](0058-employee-full-read-and-geocoding-scope.md)の従属writer変更禁止。全項目read・通常編集・退職・保険のactorと状態条件は維持する。

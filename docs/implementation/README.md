@@ -51,6 +51,7 @@
 - [Customer Dev反映・受入れ計画](customer-dev-release.md): Customer先行フェーズの閉鎖結果と、当時の反映・試験・復旧計画。
 - [4マスター Dev反映前 release surface inventory](master-dev-release-surfaces.md): 初回Dev反映前の候補・停止・復旧条件の履歴と、後続結果への参照。
 - [4マスター Dev受入れ計画](master-dev-acceptance-plan.md): 初回Dev受入れ結果と、事前判断・操作・外部作用・cleanup計画の履歴。
+- [OperationResult派生文書の復旧計画](operation-result-projection-recovery.md): Devで欠落した請求・勤怠・従業員別稼働・現場勤務履歴を、対象確定、dry-run、snapshot、競合停止、rollbackを伴って復旧する未実行計画。
 
 ## アプリ入口・認証・共通基盤
 

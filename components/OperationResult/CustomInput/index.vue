@@ -6,7 +6,7 @@
 import { useDefaults } from "vuetify";
 import { Operation } from "@/schemas";
 import { useSetRegularTime } from "@/composables/useSetRegularTime";
-import { useFetch } from "@/composables/fetch/useFetch";
+import { useSiteOperationRead } from "@/composables/dataLayers/site/useSiteOperationRead";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -47,11 +47,11 @@ const { set, addMessage } = useSetRegularTime(
   },
 );
 
-/*****************************************************************************
- * SETUP FETCH COMPOSABLE
- *****************************************************************************/
-const { fetchSiteComposable } = useFetch("OperationResultCustomInput");
-const { cachedSites } = fetchSiteComposable;
+const siteReads = useSiteOperationRead(() => [
+  props.item,
+  props.item.siteId,
+  props.item.securityType,
+]);
 
 /*****************************************************************************
  * WATCHERS
@@ -60,15 +60,26 @@ const { cachedSites } = fetchSiteComposable;
  * @description 現場IDが変更された場合、現場の警備種別を取得して更新する
  */
 watch(
-  () => props.item.siteId,
-  (newSiteId, oldSiteId) => {
-    if (newSiteId && newSiteId !== oldSiteId) {
-      const securityType = cachedSites.value?.[newSiteId]?.securityType;
-      if (securityType) {
-        props.updateProperties({ securityType });
+  () => [props.item, props.item.siteId, ...siteReads.identity.value],
+  async ([item, siteId], [oldItem, oldSiteId] = []) => {
+    if (item !== oldItem || siteId === oldSiteId) return;
+    const request = siteReads.begin(siteId);
+    if (!request) return;
+    try {
+      const site = await siteReads.read(request);
+      if (request.isCurrent() && site?.securityType) {
+        props.updateProperties({ securityType: site.securityType });
+      }
+    } catch {
+      if (request.isCurrent()) {
+        addMessage({
+          color: "warning",
+          text: "現場の警備種別を取得できませんでした。もう一度現場を選択してください。",
+        });
       }
     }
   },
+  { flush: "sync" },
 );
 </script>
 

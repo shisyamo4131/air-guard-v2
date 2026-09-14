@@ -52,14 +52,23 @@ const tooltipText = computed(() => {
   if (!site.value) return null;
   return `${site.value.name}【${shiftTypeTitle.value}】の現場稼働予定を登録します。`;
 });
+
+const ariaLabel = computed(() =>
+  site.value && shiftTypeTitle.value
+    ? `${site.value.name}【${shiftTypeTitle.value}】の現場稼働予定を追加`
+    : "現場稼働予定を追加",
+);
 </script>
 
 <template>
-  <v-icon
+  <v-btn
     v-bind="$attrs"
+    :aria-label="ariaLabel"
     :disabled="!site"
     icon="mdi-file-document-plus-outline"
-    size="x-small"
+    density="compact"
+    size="small"
+    variant="text"
     class="me-2"
     v-tooltip:top="tooltipText"
   />

@@ -145,14 +145,12 @@ export function applyOperationCommand(raw, command) {
       if (action === "workers") {
         const isEmployee = command.array === "employees";
         const index = isEmployee ? 0 : Math.max(0, ...array.filter((row) => row.id === changes.id).map((row) => row.index)) + 1;
-        if (isEmployee && array.some((row) => row.id === changes.id)) rejectInput();
         previous = operationDateTime(new Schema({ ...rawForClass(raw), id: changes.id, isEmployee, index, ...(kind === "schedule" ? { siteOperationScheduleId: command.documentId, hasNotification: false } : {}) })).toObject();
       } else previous = new Schema().toObject();
     }
     const model = operationDateTime(new Schema(rawForClass(previous)));
     const before = model.toObject();
     Object.assign(model, changes);
-    if (action === "workers" && command.array === "employees" && array.some((row, index) => index !== command.position && row.id === model.id)) rejectInput();
     try { model.validate(); } catch { rejectInput(); }
     const value = mergeCalculated(previous, before, model.toObject());
     if (command.rowAction === "add") next.splice(command.position, 0, value);

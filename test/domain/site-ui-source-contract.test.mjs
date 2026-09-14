@@ -364,7 +364,7 @@ test("Site Autocomplete uses SiteManager directly for its create affordance", as
   assert.match(autocomplete, /<SiteManager label="現場の新規登録" @created="onCreateHandler">/u);
   assert.match(
     autocomplete,
-    /<v-btn[\s\S]*?aria-label="現場を新規登録"[\s\S]*?@click="toCreate"/u,
+    /<v-btn[\s\S]*?aria-label="現場を新規登録"[\s\S]*?@click="\(\) => toCreate\(\)"/u,
   );
   assert.match(autocomplete, /:api="api"/u);
   assert.match(autocomplete, /:fetch-item-by-key-api="lookupSite"/u);

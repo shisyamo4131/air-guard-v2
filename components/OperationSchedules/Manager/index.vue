@@ -18,6 +18,7 @@ import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/
 import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteShiftTypeOrderActions } from "~/composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
+import { SiteOperationSchedule } from "@/schemas";
 
 /** SETUP COMPOSABLES */
 const { fetchSiteComposable } = useFetch("OperationSchedulesManager");
@@ -99,6 +100,15 @@ function openReorderDialog() {
   reorderDialog.open();
 }
 
+async function createSiteOperationSchedule(row) {
+  await siteOperationScheduleManager.value?.toCreate(
+    new SiteOperationSchedule({
+      siteId: row?.siteId,
+      shiftType: row?.shiftType,
+    }),
+  );
+}
+
 async function removeSiteShiftTypeOrder(orderKey) {
   if (!canUpdate.value || isSaving.value) return;
   try {
@@ -127,6 +137,7 @@ async function removeSiteShiftTypeOrder(orderKey) {
         :can-edit-site-shift-type-order="canUpdate"
         :site-shift-type-order-saving="isSaving"
         @click:cell="selector.set"
+        @click:add-schedule="createSiteOperationSchedule"
         @click:remove-site-order="removeSiteShiftTypeOrder"
       >
         <!-- セル -->

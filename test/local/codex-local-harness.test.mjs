@@ -93,9 +93,6 @@ async function emp05ArchiveFixture(suffix) {
   await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, email, displayName: "合成担当", isAdmin: true, roles: [] });
   await admin.doc(`${prefix}/Users/${uid}`).update({ docId: uid });
   await admin.doc("System/system").set({ isMaintenance: false });
-  const { runEmployeeReferenceDryRun } = await import("../../functions/modules/employees/inspectEmployeeReferences.js");
-  const checked = await runEmployeeReferenceDryRun({ companyId, readCollection: async (_, name) => (await admin.collection(`${prefix}/${name}`).get()).docs.map((snapshot) => ({ id: snapshot.id, raw: snapshot.data() })) });
-  assert.equal(checked.consistent, true); assert.equal(checked.archiveReady, false);
   const actor = { uid, companyId, email, password }, employeeId = `emp05-d-${suffix}`;
   const { Employee } = await import("@shisyamo4131/air-guard-v2-schemas");
   const convert = (value) => value instanceof Date
@@ -143,7 +140,7 @@ function emp05BeforeTransactionGate(admin) {
   } };
   return { firestore, release, entered };
 }
-test("EMP05-D HTTP archive preserves raw, checks all dependencies and recovers exact committed attempts", async () => {
+test("EMP05-D HTTP archive preserves raw, checks identity/lifecycle dependencies, and keeps transaction references", async () => {
   const state = await emp05ArchiveFixture("http"), { admin, actor, prefix, employeeId } = state;
   const { EMPLOYEE_ARCHIVE_QUERIES, EMPLOYEE_ARCHIVE_DOCUMENTS } = await import("../../functions/modules/employees/archiveEmployee.js");
   const ref = admin.doc(`${prefix}/Employees/${employeeId}`), archiveRef = admin.doc(`${prefix}/Employees_archive/${employeeId}`);
@@ -162,12 +159,23 @@ test("EMP05-D HTTP archive preserves raw, checks all dependencies and recovers e
       const dependency = admin.doc(`${prefix}/${name}/${employeeId}`); await dependency.set({ malformed: true });
       assert.equal((await call()).payload.error.status, "FAILED_PRECONDITION", name); await dependency.delete();
     }
+    const retainedTransactions = [
+      ["SiteOperationSchedules", { employeeIds: [employeeId] }],
+      ["OperationResults", { employeeIds: [employeeId] }],
+      ["ArrangementNotifications", { employeeId }],
+      ["SiteEmployeeHistories", { employeeId }],
+      ["Billings", { employeeIds: [employeeId] }],
+      ["DailyAttendances", { employeeIds: [employeeId] }],
+      ["DailyOperationsByEmployee", { employeeIds: [employeeId] }],
+    ];
+    for (const [name, value] of retainedTransactions) await admin.doc(`${prefix}/${name}/retained`).set(value);
     await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: false, roles: ["human-resource"] });
     assert.equal((await call()).payload.error.status, "PERMISSION_DENIED");
     await admin.doc(`${prefix}/Users/${actor.uid}`).update({ roles: ["manager"] });
     assert.equal((await call()).response.status, 200);
     const saved = (await archiveRef.get()).data(); assert.deepEqual(saved.employee, before); assert.equal(saved.schemaVersion, 1);
     assert.equal(saved.audit.actorUid, actor.uid); assert.equal((await ref.get()).exists, false);
+    for (const [name, value] of retainedTransactions) assert.deepEqual((await admin.doc(`${prefix}/${name}/retained`).get()).data(), value);
     assert.equal((await call()).response.status, 200); assert.deepEqual((await archiveRef.get()).data(), saved);
     assert.equal((await call({ ...state.request(employeeId), reason: "別要求" })).payload.error.status, "ALREADY_EXISTS");
     const client = authenticatedFirestore(actor.uid, { companyId: actor.companyId });
@@ -261,29 +269,26 @@ async function emp05BillingOrdering(order) {
   const customerId = `emp05-c-billing-${order}-customer`, actor = await seedCustomerArchiveActor({ uid: actorUid });
   const raw = cas03ServerBillingOperationResult({ customerId, suffix: `emp05-c-${order}` });
   const billingId = cas03ServerBillingDocumentId(raw);
-  const references = [{ collectionName: "Billings", docId: billingId }, { collectionName: "Sites", docId: raw.siteId }];
+  const references = [{ collectionName: "Billings", docId: billingId }];
   const save = () => addOperationResultToBilling({ companyId, doc: raw });
   const archive = () => archiveCustomer.run(actorCallableRequest({ actor, data: { customerId, operationId: `emp05-c-${order}-archive`, reason: "合成Billing参照順序検証" } }));
   try {
     await seedCustomerRulesDocument({ companyId, docId: customerId });
-    await seedSiteArchiveDocument({ companyId, siteId: raw.siteId });
     if (order === "reference-first") {
-      await save(); await assertCallableError(archive(), "failed-precondition");
+      await save(); await archive();
     } else if (order === "archive-first") {
       await archive(); await assert.rejects(save(), (error) => error.code === "failed-precondition");
     } else {
-      const results = splitSettled(await Promise.allSettled([save(), archive()]));
-      assert.equal(results.fulfilled.length, 1); assert.equal(results.rejected.length, 1);
-      assert.equal(results.rejected[0].reason.code, "failed-precondition");
+      const [billingResult, archiveResult] = await Promise.allSettled([save(), archive()]);
+      assert.equal(archiveResult.status, "fulfilled");
+      if (billingResult.status === "rejected") assert.equal(billingResult.reason.code, "failed-precondition");
     }
     const state = await readCustomerArchiveState(companyId, customerId);
     const billing = await readCas03Document(companyId, "Billings", billingId);
-    const referenced = Boolean(state.active) && state.archive === null && billing?.customerId === customerId
-      && billing.operationResults.some((result) => result.docId === raw.docId);
-    const archived = state.active === null && Boolean(state.archive) && billing === null;
-    assert.equal(Boolean(referenced) !== archived, true);
-    if (order === "reference-first") assert.equal(referenced, true);
-    if (order === "archive-first") assert.equal(archived, true);
+    assert.equal(state.active, null);
+    assert.ok(state.archive);
+    if (order === "reference-first") assert.equal(billing?.customerId, customerId);
+    if (order === "archive-first") assert.equal(billing, null);
   } finally { await cleanupCustomerArchiveScenario({ actorUid, customerIds: [customerId], references }); }
 }
 const emp05SiteData = (options) => ({ ...siteRulesData(options), createdAt: new Date("2026-01-01"), updatedAt: new Date("2026-01-01") });
@@ -302,32 +307,25 @@ async function emp05CustomerOrdering(order) {
     doc(client, "Companies", companyId, "OperationResults", id),
     operationResultClientCreateData({ docId: id, uid: actor.uid, customerId, siteId }),
   );
-  const seedSite = () => seedSiteArchiveDocument({ companyId, siteId, data: { customerId, customer: null, isTemporary: false } });
   try {
     await getAdminFirestore().doc(`Companies/${companyId}/Users/${actor.uid}`).update({ docId: actor.uid });
     await seedCustomerRulesDocument({ companyId, docId: customerId });
     if (order === "archive-first") {
       await archive();
-      // A legacy Site may outlive a Customer; a new result must still recheck it.
-      await seedSite();
-      await assertFails(write());
-      assert.equal(await readCas03Document(companyId, "OperationResults", id), null);
-      const state = await readCustomerArchiveState(companyId, customerId); assert.equal(state.active, null); assert.ok(state.archive);
+      await assertSucceeds(write());
     } else {
-      await seedSite();
-      if (order === "reference-first") { await assertSucceeds(write()); await assertCallableError(archive(), "failed-precondition"); }
+      if (order === "reference-first") { await assertSucceeds(write()); await archive(); }
       else {
         const [writer, archiver] = await Promise.allSettled([write(), archive()]);
-        assert.equal(Number(writer.status === "fulfilled") + Number(archiver.status === "fulfilled"), 1);
+        assert.equal(writer.status, "fulfilled");
+        assert.equal(archiver.status, "fulfilled");
       }
-      const state = await readCustomerArchiveState(companyId, customerId);
-      const reference = await readCas03Document(companyId, "OperationResults", id);
-      const referenced = Boolean(state.active) && Boolean(reference);
-      const archived = Boolean(state.archive) && reference === null;
-      assert.equal(referenced !== archived, true);
-      if (order === "reference-first") assert.equal(referenced, true);
-      if (reference) assert.equal(reference.customerId, customerId);
     }
+    const state = await readCustomerArchiveState(companyId, customerId);
+    const reference = await readCas03Document(companyId, "OperationResults", id);
+    assert.equal(state.active, null);
+    assert.ok(state.archive);
+    assert.equal(reference?.customerId, customerId);
   } finally {
     await cleanupCustomerArchiveScenario({ actorUid: actor.uid, customerIds: [customerId], references: [{ collectionName: "Sites", docId: siteId }, { collectionName: "OperationResults", docId: id }] });
   }
@@ -366,7 +364,7 @@ test("EMP05-C HTTP payment date and background aggregates preserve raw reference
     await rebuildHistory(companyId, siteId, employeeId);
     for (const [collectionName, id] of destinations.slice(0, 3)) {
       const saved = (await admin.doc(`${root}/${collectionName}/${id}`).get()).data();
-      assert.deepEqual(saved.employeeIds, [employeeId]);
+      assert.equal(Object.hasOwn(saved, "employeeIds"), false);
       assert.deepEqual(encodeExpected(saved.operationResults[0].unknown), encodeExpected(raw.unknown));
     }
     assert.equal((await admin.doc(`${root}/DailyOperationsByEmployee/${dayId}`).get()).data().totalWorkMinutes, 480);
@@ -419,8 +417,17 @@ test("EMP05-B HTTP operation writers preserve references, notification confirmat
   await succeeded([emp05Command(raw, "workers", { startTime: "09:00" }, { rowAction: "update", array: "employees", position: 0 })]);
   assert.equal((await call([stale])).payload.error.status, "ABORTED");
   raw = (await scheduleRef.get()).data();
-  const invalid = await call([emp05Command(raw, "workers", { id: "missing-employee" }, { rowAction: "add", array: "employees", position: raw.employees.length })]);
-  assert.equal(invalid.payload.error.status, "FAILED_PRECONDITION"); assert.deepEqual(encodeExpected((await scheduleRef.get()).data()), encodeExpected(raw));
+  await succeeded([emp05Command(raw, "workers", { id: "missing-employee" }, { rowAction: "add", array: "employees", position: raw.employees.length })]);
+  raw = (await scheduleRef.get()).data();
+  assert.equal(raw.employeeIds.includes("missing-employee"), true);
+  const duplicateEmployeeId = raw.employees[0].id;
+  await succeeded([emp05Command(raw, "workers", { id: duplicateEmployeeId }, { rowAction: "add", array: "employees", position: raw.employees.length })]);
+  raw = (await scheduleRef.get()).data();
+  assert.equal(raw.employeeIds.filter((employeeId) => employeeId === duplicateEmployeeId).length, 2);
+  await succeeded([emp05Command(raw, "workers", {}, { rowAction: "remove", array: "employees", position: raw.employees.length - 1 })]);
+  raw = (await scheduleRef.get()).data();
+  await succeeded([emp05Command(raw, "workers", {}, { rowAction: "remove", array: "employees", position: raw.employees.length - 1 })]);
+  raw = (await scheduleRef.get()).data();
   await succeeded([emp05Command(raw, "notify", { shouldNotify: false })]);
   raw = (await scheduleRef.get()).data();
   const notificationIds = raw.workers.map((row) => `${id}_${row.workerId}`);
@@ -5427,7 +5434,7 @@ test("Site archive Callable rejects invalid state, maintenance, and the strict a
   }
 });
 
-test("Site archive Callable blocks each exact direct reference without mutating Site or reference", async () => {
+test("Site archive Callable preserves transaction documents that retain the archived Site ID", async () => {
   const { archiveSite } = await loadRebuildApis();
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const actorUid = "site05-reference-admin";
@@ -5456,12 +5463,13 @@ test("Site archive Callable blocks each exact direct reference without mutating 
           doc(context.firestore(), "Companies", companyId, collectionName, referenceId),
           referenceData,
         ));
-        const before = await readSiteArchiveState(companyId, siteId);
-        await assertCallableError(archiveSite.run(actorCallableRequest({
+        assert.deepEqual(await archiveSite.run(actorCallableRequest({
           actor,
           data: { siteId, operationId: `site05-${suffix}-operation`, reason: "referenced" },
-        })), "failed-precondition");
-        assert.deepEqual(await readSiteArchiveState(companyId, siteId), before);
+        })), { success: true, archived: true });
+        const after = await readSiteArchiveState(companyId, siteId);
+        assert.equal(after.active, null);
+        assert.ok(after.archive);
         await testEnvironment.withSecurityRulesDisabled(async (context) => {
           const snapshot = await getDoc(doc(
             context.firestore(), "Companies", companyId, collectionName, referenceId,
@@ -5575,7 +5583,7 @@ test("Firestore Rules preserve guarded references while Notifications use normal
   }
 });
 
-test("Site archive and OperationResult writer serialize without an archived Site retaining a new reference", async () => {
+test("Site archive and transaction writers coexist without requiring a live Site parent", async () => {
   const { archiveSite } = await loadRebuildApis();
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site05-race-admin";
@@ -5608,11 +5616,12 @@ test("Site archive and OperationResult writer serialize without an archived Site
     );
     await seedSiteArchiveDocument({ companyId, siteId: referenceFirstSite, data: { customerId, customer, isTemporary: false } });
     await assertSucceeds(createResult(referenceFirstSite, referenceFirstId));
-    await assertCallableError(archiveSite.run(actorCallableRequest({
+    assert.deepEqual(await archiveSite.run(actorCallableRequest({
       actor,
       data: { siteId: referenceFirstSite, operationId: "site05-reference-first-op", reason: "race" },
-    })), "failed-precondition");
-    assert.ok((await readSiteArchiveState(companyId, referenceFirstSite)).active);
+    })), { success: true, archived: true });
+    assert.ok((await readSiteArchiveState(companyId, referenceFirstSite)).archive);
+    assert.ok(await readCas03Document(companyId, "OperationResults", referenceFirstId));
 
     const archiveFirstSite = "site05-race-archive-first";
     const archiveFirstId = "site05-race-archive-first-result";
@@ -5626,7 +5635,7 @@ test("Site archive and OperationResult writer serialize without an archived Site
       actor,
       data: { siteId: archiveFirstSite, operationId: "site05-archive-first-op", reason: "race" },
     }));
-    await assertFails(createResult(archiveFirstSite, archiveFirstId));
+    await assertSucceeds(createResult(archiveFirstSite, archiveFirstId));
 
     const { addOperationResultToBilling } = await loadBillingServerWriters();
     const billingOperation = cas03ServerBillingOperationResult({
@@ -5636,14 +5645,11 @@ test("Site archive and OperationResult writer serialize without an archived Site
     billingOperation.siteId = archiveFirstSite;
     const billingId = cas03ServerBillingDocumentId(billingOperation);
     entries.push({ companyId, collectionName: "Billings", docId: billingId });
-    await assert.rejects(
-      () => addOperationResultToBilling({ companyId, doc: billingOperation }),
-      /Site|site|現場|live/u,
-    );
+    await addOperationResultToBilling({ companyId, doc: billingOperation });
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       assert.equal((await getDoc(doc(
         context.firestore(), "Companies", companyId, "Billings", billingId,
-      ))).exists(), false);
+      ))).exists(), true);
     });
 
     const concurrentSite = "site05-race-concurrent";
@@ -5661,8 +5667,8 @@ test("Site archive and OperationResult writer serialize without an archived Site
       })),
       createResult(concurrentSite, concurrentId),
     ]));
-    assert.equal(settled.fulfilled.length, 1);
-    assert.equal(settled.rejected.length, 1);
+    assert.equal(settled.fulfilled.length, 2);
+    assert.equal(settled.rejected.length, 0);
     const finalSite = await readSiteArchiveState(companyId, concurrentSite);
     let finalReferenceExists = false;
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
@@ -5670,9 +5676,9 @@ test("Site archive and OperationResult writer serialize without an archived Site
         context.firestore(), "Companies", companyId, "OperationResults", concurrentId,
       ))).exists();
     });
-    assert.equal(Boolean(finalSite.archive) && finalReferenceExists, false);
-    assert.equal(Boolean(finalSite.active), finalReferenceExists);
-    assert.equal(Boolean(finalSite.archive), !finalReferenceExists);
+    assert.equal(Boolean(finalSite.active), false);
+    assert.equal(Boolean(finalSite.archive), true);
+    assert.equal(finalReferenceExists, true);
   } finally {
     await cleanupSiteArchiveScenario({ actorUids: [uid], entries });
   }
@@ -5829,7 +5835,7 @@ test("Customer archive Callable retries the same operation without changing the 
   }
 });
 
-test("Customer archive Callable preserves Customers blocked by every reference collection", async () => {
+test("Customer archive is blocked by live Sites but not by transaction documents", async () => {
   const { archiveCustomer } = await loadRebuildApis();
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
 
@@ -5866,26 +5872,30 @@ test("Customer archive Callable preserves Customers blocked by every reference c
           referenceData,
         );
       });
-      const before = await readCustomerArchiveState(companyId, customerId);
-
-      const error = await captureCallableError(
-        archiveCustomer.run(
-          actorCallableRequest({
-            actor,
-            data: { customerId, operationId, reason },
-          }),
-        ),
-      );
-      assertSafeCustomerArchiveError({
-        error,
-        expectedCode: "failed-precondition",
-        expectedMessage: "参照されている取引先はアーカイブできません。",
-        sensitiveValues: [customerId, operationId, reason, actorUid],
-      });
-
-      const after = await readCustomerArchiveState(companyId, customerId);
-      assert.deepEqual(after.active, before.active);
-      assert.equal(after.archive, null);
+      if (collectionName === "Sites") {
+        const before = await readCustomerArchiveState(companyId, customerId);
+        const error = await captureCallableError(archiveCustomer.run(actorCallableRequest({
+          actor,
+          data: { customerId, operationId, reason },
+        })));
+        assertSafeCustomerArchiveError({
+          error,
+          expectedCode: "failed-precondition",
+          expectedMessage: "参照されている取引先はアーカイブできません。",
+          sensitiveValues: [customerId, operationId, reason, actorUid],
+        });
+        const after = await readCustomerArchiveState(companyId, customerId);
+        assert.deepEqual(after.active, before.active);
+        assert.equal(after.archive, null);
+      } else {
+        assert.deepEqual(await archiveCustomer.run(actorCallableRequest({
+          actor,
+          data: { customerId, operationId, reason },
+        })), { success: true, archived: true });
+        const after = await readCustomerArchiveState(companyId, customerId);
+        assert.equal(after.active, null);
+        assert.ok(after.archive);
+      }
       await testEnvironment.withSecurityRulesDisabled(async (context) => {
         const referenceSnapshot = await getDoc(
           doc(
@@ -6655,7 +6665,7 @@ for (const {
 }
 
 for (const order of ["reference-first", "archive-first", "concurrent"]) {
-  test(`CAS-03 OperationResults ${order} ordering keeps the Customer reference invariant`, async () => {
+  test(`CAS-03 OperationResults ${order} ordering allows archived Customer snapshots`, async () => {
     await emp05CustomerOrdering(order);
   });
 }
@@ -6918,7 +6928,16 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
 }
 
 for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
-  test(`CAS-03 ${collectionName} reference-first ordering preserves active Customer and reference`, async () => {
+  const referenceFirstTitle = collectionName === "Billings"
+    ? "keeps Billing while allowing Customer archive"
+    : "preserves active Customer and reference";
+  const archiveFirstTitle = collectionName === "Billings"
+    ? "cannot calculate new payment terms after Customer archive"
+    : "rejects the later reference";
+  const concurrentTitle = collectionName === "Billings"
+    ? "always archives Customer while Billing depends on payment-term read order"
+    : "keeps the invariant";
+  test(`CAS-03 ${collectionName} reference-first ordering ${referenceFirstTitle}`, async () => {
     if (collectionName === "OperationResults") return emp05CustomerOrdering("reference-first");
     if (collectionName === "Billings") return emp05BillingOrdering("reference-first");
     const { archiveCustomer } = await loadRebuildApis();
@@ -6999,7 +7018,7 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
     }
   });
 
-  test(`CAS-03 ${collectionName} archive-first ordering rejects the later reference`, async () => {
+  test(`CAS-03 ${collectionName} archive-first ordering ${archiveFirstTitle}`, async () => {
     if (collectionName === "OperationResults") return emp05CustomerOrdering("archive-first");
     if (collectionName === "Billings") return emp05BillingOrdering("archive-first");
     const { archiveCustomer } = await loadRebuildApis();
@@ -7073,7 +7092,7 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
     }
   });
 
-  test(`CAS-03 ${collectionName} concurrent reference and archive keep the invariant`, async () => {
+  test(`CAS-03 ${collectionName} concurrent reference and archive ${concurrentTitle}`, async () => {
     if (collectionName === "OperationResults") return emp05CustomerOrdering("concurrent");
     if (collectionName === "Billings") return emp05BillingOrdering("concurrent");
     const { archiveCustomer } = await loadRebuildApis();
@@ -7160,7 +7179,7 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
   });
 }
 
-test("CAS-03 server Billing reference-first preserves active Customer and rejects archive", async () => {
+test("CAS-03 existing server Billing does not block Customer archive", async () => {
   const { archiveCustomer } = await loadRebuildApis();
   const { addOperationResultToBilling } = await loadBillingServerWriters();
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
@@ -7178,22 +7197,11 @@ test("CAS-03 server Billing reference-first preserves active Customer and reject
 
   try {
     await seedCustomerRulesDocument({ companyId, docId: customerId });
-    await seedSiteArchiveDocument({ companyId, siteId: operationResult.siteId });
     await addOperationResultToBilling({ companyId, doc: operationResult });
-
-    await assertCallableError(
-      archiveCustomer.run(
-        actorCallableRequest({
-          actor,
-          data: {
-            customerId,
-            operationId,
-            reason: "CAS-03 server Billing reference-first",
-          },
-        }),
-      ),
-      "failed-precondition",
-    );
+    await archiveCustomer.run(actorCallableRequest({
+      actor,
+      data: { customerId, operationId, reason: "CAS-03 server Billing reference-first" },
+    }));
 
     const state = await readCustomerArchiveState(companyId, customerId);
     const billing = await readCas03Document(
@@ -7201,8 +7209,8 @@ test("CAS-03 server Billing reference-first preserves active Customer and reject
       billingReference.collectionName,
       billingReference.docId,
     );
-    assert.ok(state.active);
-    assert.equal(state.archive, null);
+    assert.equal(state.active, null);
+    assert.ok(state.archive);
     assert.equal(billing?.customerId, customerId);
     assert.equal(
       billing?.operationResults?.some(
@@ -7219,7 +7227,7 @@ test("CAS-03 server Billing reference-first preserves active Customer and reject
   }
 });
 
-test("CAS-03 server Billing archive-first rejects later new Billing", async () => {
+test("CAS-03 server Billing archive-first cannot calculate new payment terms", async () => {
   const { archiveCustomer } = await loadRebuildApis();
   const { addOperationResultToBilling } = await loadBillingServerWriters();
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
@@ -7273,7 +7281,7 @@ test("CAS-03 server Billing archive-first rejects later new Billing", async () =
   }
 });
 
-test("CAS-03 server Billing move archive-first preserves source and rejects absent destination", async () => {
+test("CAS-03 server Billing move preserves source when archived Customer payment terms are unavailable", async () => {
   const { archiveCustomer } = await loadRebuildApis();
   const {
     addOperationResultToBilling,
@@ -7366,7 +7374,7 @@ test("CAS-03 server Billing move archive-first preserves source and rejects abse
   }
 });
 
-test("CAS-03 concurrent server Billing create and archive keep the reference barrier invariant", async () => {
+test("CAS-03 concurrent server Billing and archive always archive, while Billing depends on payment-term read order", async () => {
   const { archiveCustomer } = await loadRebuildApis();
   const { addOperationResultToBilling } = await loadBillingServerWriters();
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
@@ -7398,43 +7406,17 @@ test("CAS-03 concurrent server Billing create and archive keep the reference bar
         }),
       ),
     ]);
-    const results = splitSettled([billingResult, archiveResult]);
-    assert.equal(results.fulfilled.length, 1);
-    assert.equal(results.rejected.length, 1);
+    assert.equal(archiveResult.status, "fulfilled");
+    if (billingResult.status === "rejected") assert.equal(billingResult.reason?.code, "failed-precondition");
 
     const state = await readCustomerArchiveState(companyId, customerId);
     const billing = await readCas03Document(companyId, "Billings", billingId);
-    const activeWithBilling = Boolean(state.active)
-      && state.archive === null
-      && billing?.customerId === customerId
-      && billing.operationResults?.some(
-        ({ docId }) => docId === operationResult.docId,
-      );
-    const archiveWithoutBilling = state.active === null
-      && Boolean(state.archive)
-      && billing === null;
-    assert.equal(activeWithBilling || archiveWithoutBilling, true);
-    assert.equal(activeWithBilling && archiveWithoutBilling, false);
-    if (activeWithBilling) {
-      assert.equal(billingResult.status, "fulfilled");
-      assert.equal(archiveResult.status, "rejected");
-      assert.equal(archiveResult.reason?.code, "failed-precondition");
-      assert.equal(
-        archiveResult.reason?.message,
-        "参照されている取引先はアーカイブできません。",
-      );
-    } else {
-      assert.equal(archiveResult.status, "fulfilled");
-      assert.deepEqual(archiveResult.value, {
-        success: true,
-        archived: true,
-      });
-      assert.equal(billingResult.status, "rejected");
-      assert.equal(
-        billingResult.reason?.code,
-        "failed-precondition",
-      );
-    }
+    assert.equal(state.active, null);
+    assert.ok(state.archive);
+    if (billingResult.status === "fulfilled") {
+      assert.equal(billing?.customerId, customerId);
+      assert.equal(billing.operationResults?.some(({ docId }) => docId === operationResult.docId), true);
+    } else assert.equal(billing, null);
   } finally {
     await cleanupCustomerArchiveScenario({
       actorUid,

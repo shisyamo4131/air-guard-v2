@@ -1,6 +1,5 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { DailyAttendance, DailyOperationByEmployee } from "@shisyamo4131/air-guard-v2-schemas";
-import { aggregateEmployeeReferences } from "../../shared/operationReferences.js";
 import { assertBackgroundId, assertOperationRaw, calculationOperation, aggregateModel, inspectAggregate, aggregateCandidate, commitBackgroundPlans, failReference } from "./backgroundReferencePlan.js";
 
 const type = (attendance) => attendance ? DailyAttendance : DailyOperationByEmployee;
@@ -15,7 +14,7 @@ export async function fetchDailyTargets({ companyId, operationResult, transactio
   const remember = (ref, raw, initial) => {
     if (targets.has(ref.id)) return;
     if (raw) inspectAggregate(raw, { daily: true, docId: ref.id });
-    const data = raw || { ...initial, docId: ref.id, operationResults: [], operationResultIds: [], employeeIds: [initial.employeeId] };
+    const data = raw || { ...initial, docId: ref.id, operationResults: [], operationResultIds: [] };
     const entry = { instance: aggregateModel(Schema, data), exists: raw !== null, raw, ref, operationResults: raw?.operationResults || [] };
     contexts.set(entry, { transaction, companyId, attendance, initial: data });
     targets.set(ref.id, entry);

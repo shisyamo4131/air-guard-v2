@@ -37,8 +37,6 @@ export function operationEmployeeReferences(raw, { scheduleId } = {}) {
   const context = { siteId: raw.siteId, ...(scheduleId === undefined ? {} : { scheduleId }) };
   const employees = raw.employees.map((worker) => inspectWorker(worker, true, context));
   const outsourcers = raw.outsourcers.map((worker) => { inspectWorker(worker, false, context); return worker.id; });
-  const workerIds = [...raw.employees, ...raw.outsourcers].map((worker) => worker.workerId);
-  if (new Set(workerIds).size !== workerIds.length) invalid();
   if (!indexMatches(raw.employeeIds, employees) || !indexMatches(raw.outsourcerIds, outsourcers)) invalid();
   // `workers` is a persisted derived mirror in the installed schema. A hidden
   // additional identity there must not escape the canonical array indexes.
@@ -57,48 +55,4 @@ export function notificationEmployeeReferences(raw) {
   const employeeId = inspectWorker(raw, raw.isEmployee, { scheduleId: raw.siteOperationScheduleId });
   if (raw.docId !== `${raw.siteOperationScheduleId}_${raw.workerId}`) invalid();
   return new Set(employeeId === null ? [] : [employeeId]);
-}
-
-// Aggregates retain complete operation snapshots, including employees other
-// than the person named by a daily document's root employeeId.
-export function aggregateEmployeeIndex(raw, { daily = false } = {}) {
-  if (!plain(raw) || !Array.isArray(raw.operationResults)) invalid();
-  const ids = new Set();
-  if (daily) { if (!identifier(raw.employeeId)) invalid(); ids.add(raw.employeeId); }
-  const operations = new Set();
-  for (const result of raw.operationResults) {
-    if (!plain(result) || !identifier(result.docId) || operations.has(result.docId)) invalid();
-    operations.add(result.docId);
-    for (const id of operationEmployeeReferences(result)) ids.add(id);
-  }
-  if (daily && !indexMatches(raw.operationResultIds, [...operations])) invalid();
-  return [...ids];
-}
-
-export function aggregateEmployeeReferences(raw, options) {
-  const ids = aggregateEmployeeIndex(raw, options);
-  if (!indexMatches(raw.employeeIds, ids)) invalid();
-  return new Set(ids);
-}
-
-// The caller supplies the *destination's transaction snapshot*, never an event
-// before-image, a display Class, or a source being moved to this destination.
-export function addedEmployeeReferences(destinations) {
-  const added = new Set();
-  for (const { before, after, references = operationEmployeeReferences } of destinations) {
-    const previous = before === null ? new Set() : references(before);
-    const next = after === null ? new Set() : references(after);
-    for (const id of next) if (!previous.has(id)) added.add(id);
-  }
-  return added;
-}
-
-export async function readAddedEmployees(transaction, firestore, companyId, destinations) {
-  if (!identifier(companyId)) throw new OperationWriteError("permission-denied");
-  const ids = addedEmployeeReferences(destinations);
-  for (const id of ids) {
-    const snapshot = await transaction.get(firestore.doc(`Companies/${companyId}/Employees/${id}`));
-    if (!snapshot.exists) throw new OperationWriteError("failed-precondition", "選択した従業員が存在しません。最新情報を読み直してください。");
-  }
-  return ids;
 }

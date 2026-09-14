@@ -1,5 +1,7 @@
 # Siteマスター改修ロードマップ
 
+> 2026-09-14現行訂正: SITE-05で実装したトランザクション参照確認とlive Site存在barrierは[ADR 0074](../decisions/0074-transaction-parent-reference-independence.md)で撤去した。下記の工程得点は当時の完了履歴であり、現在仕様はFGAロードマップを正とする。
+
 - 状態: Completed（SITE-09の機能面Dev受入れ完了。見た目・操作感の追加改善は後続phase）
 - 目標: Site masterについて、同一tenantの閲覧・書込み権限、保存契約、Customer所属、終了・再有効化、archive、取極め、検索・表示を段階的に整合させる。
 - 現在の進捗: 100%

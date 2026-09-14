@@ -5,7 +5,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useOperationSubmission } from "./useOperationSubmission";
 import { rawForClass } from "@/composables/domain/shared/valueContract";
 import { expectedForOperation, notificationExpectation } from "@/composables/domain/operation/operationCommandContract";
-import { operationEmployeeReferences, notificationEmployeeReferences } from "@/composables/domain/operation/operationReferences";
+import { notificationEmployeeReferences } from "@/composables/domain/operation/operationReferences";
 
 export function useOperationGenerator(selectedSchedule) {
   const auth = useAuthStore(), { $firestore } = useNuxtApp();
@@ -22,14 +22,12 @@ export function useOperationGenerator(selectedSchedule) {
     try {
       let source = await submission.read("SiteOperationSchedules", id);
       if (ticket !== generation) return;
-      operationEmployeeReferences(source, { scheduleId: id });
       if ([...source.employees, ...source.outsourcers].some((worker) => !worker.hasNotification)) {
         const command = { kind: "schedule", documentId: id, action: "notify", changes: { shouldNotify: false } };
         command.expected = expectedForOperation(source, command);
         if (!await submission.submit([command])) throw new Error();
         source = await submission.read("SiteOperationSchedules", id);
         if (ticket !== generation) return;
-        operationEmployeeReferences(source, { scheduleId: id });
       }
       raw.value = source; selectedSchedule.value = new SiteOperationSchedule(rawForClass(source));
       const ids = new Set([...source.employees, ...source.outsourcers].map((worker) => `${id}_${worker.workerId}`));

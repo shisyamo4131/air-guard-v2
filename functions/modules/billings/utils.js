@@ -1,6 +1,4 @@
 import { Billing, Customer } from "@shisyamo4131/air-guard-v2-schemas";
-import { getFirestore } from "firebase-admin/firestore";
-import { assertLiveSiteReference } from "../sites/liveSiteReference.js";
 
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/u;
 
@@ -91,12 +89,6 @@ export async function initBillingDoc(
   if (!customerExists) {
     throw new Error(`Customer not found: ${customerId}`);
   }
-  await assertLiveSiteReference({
-    firestore: getFirestore(),
-    transaction,
-    companyId,
-    siteId,
-  });
   const paymentDueDateAt = customerInstance.getPaymentDueDateAt(
     billingDateAt.toDate(),
   );

@@ -10,19 +10,13 @@ import { demoEmployeeArchiveTenants } from "../../functions/codex-test/employeeA
 const root = "Companies/company", live = `${root}/Employees/employee`, archive = `${root}/Employees_archive/employee`;
 const identity = { uid: "actor", companyId: "company", isSuperUser: false };
 const actor = { docId: "actor", companyId: "company", isAdmin: false, disabled: false, isTemporary: false, roles: ["manager"] };
-// Independent acceptance catalog from employee-master.md, "従属document".
+// Only identity/lifecycle records block Employee archive. Historical transaction
+// documents may retain the archived employee ID.
 // Never generate these fixtures from the implementation's exports: removing a
 // production query must fail coverage instead of removing its refusal test.
 const REQUIRED_QUERIES = [
-  ["SiteOperationSchedules", "employeeIds", "array-contains"],
-  ["OperationResults", "employeeIds", "array-contains"],
-  ["ArrangementNotifications", "employeeId", "=="],
-  ["SiteEmployeeHistories", "employeeId", "=="],
   ["Users", "employeeId", "=="],
   ["LifecycleOperations", "employeeId", "=="],
-  ["Billings", "employeeIds", "array-contains"],
-  ["DailyAttendances", "employeeIds", "array-contains"],
-  ["DailyOperationsByEmployee", "employeeIds", "array-contains"],
 ];
 const REQUIRED_DOCUMENTS = ["EmployeeUserReservations", "EmployeeLifecycleLocks", "EmployeeLifecycleHeads"];
 function independentRaw(value) {
@@ -60,7 +54,7 @@ function setup(options = {}) {
   return { records, reads, writes, run, firestore, resolveIdentity };
 }
 
-test("archive implements the independent twelve-dependency acceptance catalog", () => {
+test("archive implements the identity and lifecycle dependency catalog", () => {
   assert.deepEqual(EMPLOYEE_ARCHIVE_QUERIES, REQUIRED_QUERIES);
   assert.deepEqual(EMPLOYEE_ARCHIVE_DOCUMENTS, REQUIRED_DOCUMENTS);
 });

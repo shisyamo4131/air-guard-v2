@@ -528,13 +528,14 @@ SPEC-DEEP-041追加根拠: developer duplicateのdomain APIは複数日と同日
 ## FUT-0030 OperationResult後続triggerの部分成功と再試行を検証する
 
 - 状態: Open
+- 2026-09-14 Dev追加確認: `onOperationResultChange`の直近1,000 log行という標本内で、9月8日から14日まで67件のerror eventを確認した。これは全失敗件数でも業務日別件数でもない。内訳は、既存Billingのarchive検索用`employeeIds`不一致53件、過去の作業員明細が追加の厳密検査に合わないもの14件だった。先頭のBilling同期失敗が後続のDailyAttendance同期を止めていた。9月7日の`c905e992`で追加したこれらの検査は[ADR 0074](../decisions/0074-transaction-parent-reference-independence.md)によりLocal codeから撤去し、4派生先は一つの失敗後も残りを順に試すよう分離中である。既存data補正、Dev反映、欠落実績の再計算は未実施で、正確な対象会社・日付・件数も未確認。[復旧計画](operation-result-projection-recovery.md)のdry-runで確定する。
 - 重大度: High
 - 発見セグメント: SPEC-SEG-009、SPEC-SEG-050、SPEC-DEEP-002、SPEC-DEEP-003、SPEC-DEEP-030
 - 対象ファイル・シンボル: `functions/triggers/operationResult.js` のonOperationResultChangeと4後続module入口
 - 確認済み実装事実: OperationResult commit後の`onOperationResultChange`でBilling、DailyAttendance、DailyOperationsByEmployee、SiteEmployeeHistoriesを直列awaitする。deleteでは別exportの`onOperationResultDeleted`も独立発火し、Storage削除後にlinked scheduleを物理deleteする。2 trigger間の順序・共通transaction・成功統合はなく、各内部の途中errorは後段を止めてthrowする。client successはtrigger完了を待たない。SPEC-DEEP-030では詳細画面の基本・worker・article保存が別々のResult全体updateで、それぞれ同じ後続trigger chainを起動することを確認した。
 - 想定影響と発生条件: delete後にprojectionだけstale、またはStorage/scheduleだけ残る部分状態が可能である。source削除後はbefore key/scheduleIdを保持するledgerがなく、後日repair対象を完全に再構成できない場合がある。
 - 未確認点・仮説: 各projectionのsync status schema、retry上限、業務影響warning条件、reconciliation scheduleは未確認。
-- 推奨する将来対応: 4 projectionとStorage/schedule cleanupを冪等化して自動retryし、OperationResult単位のprojection別sync statusとdelete前target metadataを保持する。retry exhaustedをmonitoringし、admin per-result reprocessとscheduled reconciliation/repairを提供する。primary success後のnormal Userを失敗扱いにせず、業務影響がある場合だけwarnする。repairはactor・reason・target・resultをauditする。
+- 推奨する将来対応: 直近は過剰な親存在・索引検査の撤去、4 projection間の失敗分離、bounded dry-run／repairに限定する。自動retry、永続的なprojection別status、delete前metadata、scheduled reconciliation、retry上限は未決の将来案として分離し、今回実装済みとは扱わない。
 - 必要なテスト: 4 projectionとStorage/schedule各段階のthrow、2 trigger順序組合せ、部分保存後retry、同一event二重実行、source消失後repair、client成功後の後続失敗。
 - ユーザー判断が必要な事項: retry上限、sync status値、業務影響warning条件、repair実行role、reconciliation頻度。
 
@@ -2537,7 +2538,8 @@ SPEC-DEEP-037では、SiteOperationSchedule SelectorがListItemへ渡そうと�
 
 ## FUT-0174 OperationBilling専用入力の結線と明細表示契約を修正する
 
-- 状態: Open
+- 状態: Resolved
+- 2026-09-14対応: 現行の`OperationBillingManager`は`customInput`を標準Managerへ渡し、詳細pageも取極め用・数量単価調整用inputを明示していることを再確認した。残っていた表示差を修正し、請求明細を作業員分小計、稼働外売上、消費税率、税抜合計に分けた。OperationBilling単体に請求書税額は保持されないため、誤差が出得る税額の独自計算は追加していない。
 - 重大度: High
 - 発見セグメント: SPEC-DEEP-029
 - 対象ファイル・シンボル: `components/OperationBilling/Manager/index.vue`、3 Activatorの`defineExpose({ customInput })`、Base/Agreement/Adjust CustomInput、BillingDetail
@@ -2550,7 +2552,8 @@ SPEC-DEEP-037では、SiteOperationSchedule SelectorがListItemへ渡そうと�
 
 ## FUT-0175 OperationResult・ScheduleのSite変更時securityTypeを最新選択へ収束させる
 
-- 状態: Open
+- 状態: Resolved
+- 2026-09-14対応: SiteOperationSchedule側に導入済みだった明示read・最新選択判定・手動編集保持をOperationResult側にも適用した。cache未取得、取得失敗、連続選択、tenant・actor・閲覧権限変更、手動上書きを対象testで確認した。
 - 重大度: Medium
 - 発見セグメント: SPEC-DEEP-030、SPEC-DEEP-036
 - 対象ファイル・シンボル: `components/{OperationResult,SiteOperationSchedule}/CustomInput/index.vue` のSite watcher、`useSetRegularTime`、`services/operation.initializeSecurityType`
@@ -2565,7 +2568,8 @@ SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをca
 
 ## FUT-0176 OperationSchedules Tableのrow actionを到達可能かつ操作可能にする
 
-- 状態: Open
+- 状態: Resolved
+- 2026-09-14対応: 通常の稼働予定管理画面で行追加eventを予定作成dialogへ接続した。行削除eventは既に保存処理へ接続済みであることを再確認した。追加・削除iconは名前付きbuttonへ変更し、pointerとkeyboardの両方で操作できる形にした。
 - 重大度: Medium
 - 発見セグメント: SPEC-DEEP-031
 - 対象ファイル・シンボル: `components/OperationSchedules/Manager/index.vue`、`Table/Body/index.vue`、`AddScheduleIcon.vue`、`RemoveSiteOrderIcon.vue`
@@ -2759,7 +2763,8 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 
 ## FUT-0190 現場稼働予定入力内の現場新規登録を復旧する
 
-- 状態: Open
+- 状態: Resolved
+- 2026-09-14対応: 追加buttonのDOM click eventを作成対象として渡さず、`toCreate()`を引数なしで呼ぶ既存Manager契約へ修正した。会社scopeの記憶、3段階作成、作成結果の選択処理は変更していない。
 - 実施先: FGA-06とは分離したSite入力回帰の小checkpointとして扱う。
 - 重大度: High
 - 発見セグメント: `FGA-06-SCHEDULE-NORMAL-AUTH-01` Dev受入れ
