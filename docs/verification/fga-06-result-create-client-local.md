@@ -2,7 +2,8 @@
 
 - Checkpoint: `FGA-06-RESULT-CREATE-CLIENT-08`
 - 実施日: 2026-09-14（Asia/Tokyo）
-- 状態: Local実装・必須検証完了、commit・専用UI build・Dev反映・受入れ未完了
+- 固定commit: `c171b593`
+- 状態: Local実装・必須検証・専用UI build・commit完了、Dev反映・受入れ未完了
 
 ## 変更境界
 
@@ -21,7 +22,7 @@
 | 対象Emulator（通常CRUD・偽装拒否・Site／Customer archive競合） | 6/6 pass | 0 |
 | `node --test test/domain/*.test.mjs` | 1,447/1,447 pass | 0 |
 | `npm run test:local` | 178/178 pass | 0 |
-| `npm run test:local:ui:build` | clean committed sourceを要求するためcommit後に実行 | - |
+| `npm run test:local:ui:build` | client／server build成功 | 0 |
 | project docs validator | 316 Markdown、72 ADR、12 roadmaps、8 TOML pass | 0 |
 | `git diff --check` | errorなし | 0 |
 

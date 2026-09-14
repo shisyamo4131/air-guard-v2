@@ -2,7 +2,7 @@
 
 - 確認日: 2026-09-14
 - checkpoint: FGA-06-RESULT-CREATE-CLIENT-08
-- 状態: 詳細UPDATE・作業員・物理削除の07以前はDev受入れ済み。一覧CREATEに残っていた過剰Callable接続をLocalで標準Manager／model保存へ修正中
+- 状態: 詳細UPDATE・作業員・物理削除の07以前はDev受入れ済み。一覧CREATEに残っていた過剰Callable接続を固定commit `c171b593`で標準Manager／model保存へLocal修正済み。Dev反映・受入れ待ち
 - 対象: 現場稼働予定、稼働実績、稼働請求の画面、Manager、`saveOperation` Callable、Firestore Rules
 - 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、進捗は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)
 
