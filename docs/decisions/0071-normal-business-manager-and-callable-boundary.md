@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-13
 - 状態: Accepted
+- 一部置換: transaction dataの物理削除に関する判断を[ADR 0072](0072-transaction-delete-client-trigger-boundary.md)で置換する
 - 対象: Firestore上の通常業務dataを扱うCRUD、Domain Manager、Callable、Firestore Rules。master dataとtransaction dataを含む
 - 関連仕様: [Pageとcomponentの構成](../specification.md#pageとcomponentの構成)、[テナントと認証](../specification.md#テナントと認証)、[Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
@@ -25,9 +26,9 @@ AirGuardV2では、通常のmaster CRUDへrole・permission検査、専用Callab
 ### CallableとRules
 
 - 通常の可逆なCRUDは、Domain ManagerからFireModel／ClientAdapterの標準client保存へ接続することを既定候補とする。既存Callableを利用している事実、transaction dataであること、server実装が既に存在することだけではCallable維持の根拠にしない。
-- Authentication、Company、User、role・permission・tenant所属、機微・機密情報、archive・復旧・物理削除、Stripe等の確認済み例外operationは、必要な専用UI、Callable、server認可、競合・監査境界を維持する。
+- Authentication、Company、User、role・permission・tenant所属、機微・機密情報、archive・復旧・物理削除、Stripe等を確認済み例外operationとした判断のうち、transaction dataの物理削除は[ADR 0072](0072-transaction-delete-client-trigger-boundary.md)でclient削除・Trigger連携へ置換する。マスタdataのarchive・復旧・物理削除と、その他の例外operationは必要な専用UI、Callable、server認可、競合・監査境界を維持する。
 - 複数documentのatomicity、server-only値、外部作用、冪等性、再開・reconcile、順序依存状態遷移等によりCallableを維持する場合は、operationごとに具体的な被害、client transaction／batch／triggerでは満たせない理由、最小のserver所有範囲、test、rollbackを示して利用者確認を得る。技術要件のない通常CRUDを同じCallableへ同居させない。
-- 通常業務Rulesは、確認済みのactor・tenant境界、actor UID偽装防止、client物理delete拒否等の最低限へ寄せる。Schema・型・長さ・業務状態の検査をFireModel/Class schemaと正規application保存境界へ集約する現在の受容riskはADR 0065を正とし、例外operationへ拡張しない。
+- 通常業務Rulesは、確認済みのactor・tenant境界、actor UID偽装防止、マスタdataのclient物理delete拒否等の最低限へ寄せる。transaction dataで提供する物理削除は[ADR 0072](0072-transaction-delete-client-trigger-boundary.md)のclient deleteとTrigger連携を優先する。Schema・型・長さ・業務状態の検査をFireModel/Class schemaと正規application保存境界へ集約する現在の受容riskはADR 0065を正とし、例外operationへ拡張しない。
 
 ### 未決仕様の扱い
 
@@ -41,7 +42,7 @@ MasterとtransactionでUI・保存基盤を分断せず、同じeditable state�
 ## 代替案
 
 - Transaction系を一律にCallableへ残す案: operationごとの必要性を確認せず通常CRUDも複雑な経路へ固定するため採用しない。
-- 全`saveOperation`操作を直ちにclient化する案: 通知、確定、物理削除、複数document整合等の例外・技術要件を未確認のまま失うため採用しない。
+- 全`saveOperation`操作を一括してclient化する案: 通知、確定、複数document整合等の例外・技術要件を未確認のまま失うため採用しない。transaction dataの物理削除は後続のADR 0072によりclient化を確定した。
 - Air Managerをmasterだけへ限定する案: transaction系に残る専用editorとCRUD dispatchの重複を解消できないため採用しない。
 
 ## 影響と互換性

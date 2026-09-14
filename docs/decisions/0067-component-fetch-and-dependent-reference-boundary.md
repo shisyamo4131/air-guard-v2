@@ -6,6 +6,7 @@
 - 関連仕様: [Pageとcomponentの構成](../specification.md#pageとcomponentの構成)、[表示dataと従属参照](../specification.md#表示dataと従属参照)
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
 - 既存判断との関係: ADR 0046・0051・0060が採用したCustomer／Site等の参照作成barrierは、今回の原則より厳格な既存例外として直ちに撤去しない。維持または簡素化は各機能checkpointで明示する。
+- 後続の一部置換: [ADR 0072](0072-transaction-delete-client-trigger-boundary.md)が、transaction dataの物理削除前に従属dataを同期検査する境界を置き換え、原本削除後の関連data連携をFirestore Triggerへ委ねる。
 
 ## 背景
 
@@ -32,7 +33,7 @@
 ### 従属先存在確認と物理削除
 
 - 従属documentのcreate・read・updateでは、従属先documentの存在確認を既定にしない。候補UIのfilterは保証境界ではない。
-- 従属先documentの物理削除では、操作時点に既知の従属documentを確認し、存在、検査失敗、対象不整合では削除を中断する。
+- マスタdata等、個別仕様で削除前の従属検査を定めた従属先documentの物理削除では、操作時点に既知の従属documentを確認し、存在、検査失敗、対象不整合では削除を中断する。transaction dataの物理削除にはこの同期検査を要求せず、ADR 0072に従って関連data連携をFirestore Triggerへ委ねる。
 - 従属側CRUとのlock、tombstone、transactional barrierは既定にしない。検査直前または同時の従属作成による参照不整合は保証対象外とし、強い参照整合性を保証したとは表示しない。
 - 金銭確定、identity、archive・復旧、順序依存状態等に確認済みのより厳格な不変条件がある場合は、個別仕様を例外として維持できる。既存のCustomer／Site参照barrierを本ADRだけで一括撤去しない。
 
@@ -40,7 +41,7 @@
 
 pageを薄い接続層にし、画面単位の`useFetch` instanceを共有すれば、同じ従属先の重複取得とcomponent間のcache不一致を抑えられる。主対象だけをlistener正本とし、補完情報はcacheを優先することで、同時利用への追随と読取・listenerコストを分離できる。
 
-従属側CRUで毎回存在確認を行わない方式は、強い参照整合性より実装・保守コストと応答性能を優先する明示的なtrade-offである。物理削除時の確認と欠落時UIにより通常運用の被害を限定するが、競合による孤立参照を完全には防止しない。
+従属側CRUで毎回存在確認を行わない方式は、強い参照整合性より実装・保守コストと応答性能を優先する明示的なtrade-offである。マスタdata等の削除前確認、transaction data削除後のTrigger、欠落時UIにより通常運用の被害を限定するが、競合による孤立参照やTrigger完了までの一時的不整合を完全には防止しない。
 
 ## 影響と現行実装差
 
@@ -63,7 +64,7 @@ Customer、Site、Employee、Outsourcer、その他transaction系の各checkpoin
 - pageごとにroot componentが一つあり、画面機能が子componentへ分割されていることを確認する。
 - pageのorigin instanceと子のinjected instanceが同一で、画面間またはtenant間でcacheを共有しないことを確認する。
 - 主対象listener更新、従属cache hit・miss・not-found・permission/network error、scope変更、画面全体が継続表示される欠落fallbackを確認する。
-- 物理削除は従属あり・検査失敗でwrite 0、従属なしで許可されることを確認する。競合raceは保証対象外であることをtest名・説明で偽らない。
+- 削除前の従属検査を定めたマスタdata等は、従属あり・検査失敗でwrite 0、従属なしで許可されることを確認する。transaction dataは原本のclient deleteとTriggerによる関連data連携を分けて確認する。競合raceとTrigger完了までの即時整合は保証対象外であることをtest名・説明で偽らない。
 - 既存の厳格な参照barrierを変更するcheckpointでは、該当するsource contract、Rules／Functions、Emulator、rollback、Dev受入れを変更classに応じて追加する。
 
 ## 再検討条件

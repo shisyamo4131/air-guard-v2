@@ -6,6 +6,7 @@
 - 関連仕様: [Pageとcomponentの構成](../specification.md#pageとcomponentの構成)、[Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
 - 既存判断との関係: [ADR 0068](0068-domain-manager-wrapper-and-editor-dialog-convention.md)全体を置き換える。editable state所有と選択dispatchの判断を訂正し、480px既定、例外operation、listener・cache、認可境界は本ADRへ引き継ぐ。[ADR 0071](0071-normal-business-manager-and-callable-boundary.md)が適用範囲をmaster dataからtransactionを含む通常業務dataへ拡張する
+- 後続の一部置換: [ADR 0072](0072-transaction-delete-client-trigger-boundary.md)が、物理削除を一律にgeneric delete禁止・Callable委譲とした部分を置き換え、マスタdataはCallableを維持し、transaction dataはDomain Managerからclient deleteへ接続する。
 
 ## 背景
 
@@ -53,7 +54,7 @@ ADR 0068は、単一documentの詳細・編集を単数Manager、collection・�
 ### 維持する境界
 
 - 通常data編集dialogは`max-width: 480px`を既定とし、可読性、複数列・表・複数step、responsive・accessibility上の確認済み理由がある場合だけ広げる。確認専用dialog、viewer、selectorは対象外とし、archive等の例外operationは操作固有に幅を決める。
-- archive・復旧・物理削除、Authentication・Company・User、機微・機密情報、Stripe・請求確定、順序依存状態遷移は通常CRUDの例外である。generic deleteを開放せず、専用UI・Callable、actor、従属検査、transaction・precondition、idempotency、監査を維持する。
+- マスタdataのarchive・復旧・物理削除、Authentication・Company・User、機微・機密情報、Stripe・請求確定、順序依存状態遷移は通常CRUDの例外である。generic deleteを開放せず、専用UI・Callable、actor、従属検査、transaction・precondition、idempotency、監査を維持する。transaction dataにはarchiveを設けず、製品が提供する物理削除はADR 0072に従ってDomain Manager／FireModel／ClientAdapterのclient deleteへ接続し、関連data連携をFirestore Triggerへ委ねる。
 - ManagerはUIとoperation orchestrationの責務であり、認証・認可・tenant、Firestore Rules、server validationの境界にしない。document形状、Rules、Functions、schema、data、Company・Userのwriterは本ADRでは変更しない。
 
 ## 理由

@@ -19,6 +19,7 @@
 ## 通常業務のtenant信頼境界と例外
 
 - 通常業務のactor・tenant境界、Rulesと保存時validationの責務、例外operation、client／Callableの選択は[現行仕様のテナントと認証](../specification.md#テナントと認証)を詳細の正本とする。実装・review前に対象operationを通常業務か例外かへ分類する。
+- マスタdataのarchive・復旧・物理削除は、通常CRUDから分離したCallableとserver認可を維持する。transaction dataにはarchive処理を設けず、製品が提供するtransaction documentの物理削除はCallableを使用せず、Domain Manager／FireModel／ClientAdapterのclient削除へ接続する。削除後に必要な関連document・Storage・集計・履歴等との連携はFirestore Triggerが所有し、clientの削除成功をTrigger完了の保証へ読み替えない。既存Callableとclient delete拒否Rulesは、対象transaction checkpointでcaller・Trigger・失敗時運用・rollback・testを確認して段階的に撤去する。
 - 既存のrole制限、Callable、Rulesをこのruleの採用だけで一括撤去しない。[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)に従い、Customer、Site、Employee、Outsourcer、その他transaction系の順で、対象operation、例外該当性、reader/writer、data、Rules、rollback、test、Dev受入れを小checkpointごとに確定して段階移行する。
 
 ## Component階層、表示data、従属参照

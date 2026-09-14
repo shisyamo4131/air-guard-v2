@@ -4,7 +4,11 @@
 
 ## Unreleased
 
-- FGA-06-RESULT-MANAGER-CLIENT-04として、lockされていない既存稼働実績の基本情報と従業員・外注先明細を`AirItemManager`／`AirArrayManager`と`OperationResult.update()`の標準client保存へ移した。Rulesは同一tenantの有効な本登録Userによる既存updateだけを許可し、create、物理delete、lock、稼働外売上、請求調整、lifecycle IDを保護する。カード枠、toolbar、ボタン文言、入力、760px dialog、lock表示、稼働外売上、物理削除の現行UI・経路を維持し、旧`saveOperation`の実績編集分岐はrollback用に残した。固定製品commit `40316475`で全domain 1454件、Local Emulator 180件、専用UI buildが成功した。Dev・Prod・remote・実data、schema、Functionsは変更しておらず、ブラウザ実操作と見た目受入れは未実施。[Local検証記録](docs/verification/fga-06-result-manager-client-local.md)を参照。
+- マスタdataのarchive・復旧・物理削除はCallableを維持し、transaction dataにはarchiveを設けず、製品が提供する物理削除をDomain Manager／FireModel／ClientAdapterのclient経路へ移し、削除後の関連data連携をTriggerへ委譲するガバナンスへ更新した。現行`saveOperation`の予定・実績deleteとclient delete拒否Rulesは後続FGA-06 checkpointで移行する既知実装差であり、今回の文書変更では製品code、Rules、Functions、data、Dev・Prodを変更していない。[ADR 0072](docs/decisions/0072-transaction-delete-client-trigger-boundary.md)を参照。
+
+- FGA-06-RESULT-MANAGER-CLIENT-04をrelease commit `138b3a29`でHostingへDev反映し、会社管理者・統括sessionで基本情報と従業員／外注先明細の追加・編集・削除・再読込、および既存画面の見た目を受け入れた。削除確認buttonの無効化不具合を補正し、合成OperationResultを削除、合成Siteを終了、合成Outsourcerを契約終了へ整理した。勤務者行が残る実績の物理削除で汎用errorとなり、行を空にした後は成功する未特定差を後続transaction delete checkpointの再現対象とした。[Dev受入れ記録](docs/verification/fga-06-result-manager-client-dev.md)を参照。
+
+- FGA-06-RESULT-MANAGER-CLIENT-04のLocal実装段階として、lockされていない既存稼働実績の基本情報と従業員・外注先明細を`AirItemManager`／`AirArrayManager`と`OperationResult.update()`の標準client保存へ移した。Rulesは同一tenantの有効な本登録Userによる既存updateだけを許可し、create、物理delete、lock、稼働外売上、請求調整、lifecycle IDを保護した。カード枠、toolbar、ボタン文言、入力、760px dialog、lock表示、稼働外売上、物理削除の現行UI・経路を維持し、旧`saveOperation`の実績編集分岐はrollback用に残した。固定製品commit `40316475`で全domain 1454件、Local Emulator 180件、専用UI buildが成功した。この時点ではブラウザ実操作と見た目受入れが未実施で、後続releaseとDev受入れ結果は上記のDev記録を正とする。[Local検証記録](docs/verification/fga-06-result-manager-client-local.md)を参照。
 
 - FGA-06の目的を、transaction系の通常CRUDへDomain Manager、`AirItemManager`／`AirArrayManager`、FireModel／ClientAdapterの標準client保存を適用し、重複Rulesを簡素化してCallableを確認済み例外・具体的技術要件の最小範囲へ限定することとして明確化した。現行`saveOperation`を操作別に棚卸しし、完了済み2 checkpointは認可緩和の証拠として維持する一方、CRUD簡素化の完了とは扱わない。稼働実績詳細の稼働外売上は操作可能な現行画面を維持し、操作権限は未決とした。製品code、Functions、Rules、data、Dev・Prodは変更していない。[ADR 0071](docs/decisions/0071-normal-business-manager-and-callable-boundary.md)と[現行棚卸し](docs/implementation/operation-crud-simplification-inventory.md)を参照。
 

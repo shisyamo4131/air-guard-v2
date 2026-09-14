@@ -6,6 +6,7 @@
 - 関連仕様: [テナントと認証](../specification.md#テナントと認証)
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
 - 一部置換: ADR 0003の稼働実績通常編集actor、ADR 0053・0056・0058・0059、および現行仕様にある通常業務のrole・permission別server認可。稼働実績の作成・複製・削除・請求操作、Company、Auth/User管理、機微・機密情報、archive・復旧・master物理削除、Stripe操作のactor境界は置換しない。
+- 後続の一部置換: [ADR 0072](0072-transaction-delete-client-trigger-boundary.md)が、transaction dataの物理削除をclient経路とし、関連data連携をFirestore Triggerへ委ねる境界を定める。
 
 ## 背景
 
@@ -20,7 +21,7 @@
 - 同一tenantに所属する有効な認証済み本登録Userは、tenant内の通常業務dataについて同じserver権限でreadし、提供済みのcreate・updateその他の通常操作を行えるものとして信頼する。
 - 通常業務のRules・Callableでrole名、role preset、permission文字列、会社管理者、super-user等をallow条件にしない。roleによるmenu、route、button、初期表示、説明等の差はUXとして設けられる。
 - 通常業務の認可は、受理された`request.auth` token、確認済みemail、User documentの存在とUID一致、本登録、非disabled、正常なtenant claim、User所属tenantとpath tenantの一致を必須とする。tenant不一致、仮登録、User documentの無効化、claim欠損・型不正はfail closedとする。通常アクセスの即時停止はUser documentの`disabled`を正本とする。RulesはFirebase Auth directoryの現在のdisabled・deleted状態を直接再取得できないため、その現在値まで必要な例外operationはCallableで再確認する。
-- 通常業務documentのstrict field allowlist、型・長さ・必須、状態等のschema・業務validationはFireModel/Class schemaと正規application保存境界の責務とし、Rulesへ重複させない。Rulesにはactor UIDの偽装防止、tenant境界、client物理delete拒否等、対象operationで明示した最低限の破壊防止条件だけを残す。例外operationの厳格な認可・validationは維持する。
+- 通常業務documentのstrict field allowlist、型・長さ・必須、状態等のschema・業務validationはFireModel/Class schemaと正規application保存境界の責務とし、Rulesへ重複させない。Rulesにはactor UIDの偽装防止、tenant境界、マスタdataのclient物理delete拒否、transaction dataの物理delete条件等、対象operationで明示した最低限の破壊防止条件だけを残す。例外operationの厳格な認可・validationは維持する。
 
 ### 例外
 
@@ -37,6 +38,7 @@
 
 - Rulesで有効なactorとtenant境界、および明示した最低限の破壊防止条件を強制できる単純な通常操作はclientへ実装できる。
 - 複数documentのatomicity、server timestamp・秘密値、信頼できる派生値、外部作用、冪等性、再開・reconcile等の技術要件があれば通常業務にもCallableを使える。ただし、その技術要件だけからrole制限を戻さない。
+- transaction dataの物理削除はADR 0072に従ってclientから実行し、関連dataとの連携はFirestore Triggerへ委ねる。transaction dataにarchive処理は設けない。
 - 例外operationのclientは、button・route等のUX表示判定とAPI認可を分離する。API実行直前にrole・permissionを再検査してCallableを遮断せず、Callableを認可の正本として拒否errorを標準UI経路へ返す。操作中のtenant・actor・targetや入力の取り違え防止、single-flight、idempotency等の非認可検査は維持できる。
 - 既存CallableとRulesを一括撤去しない。各operationのreader/writer、例外該当性、旧client、data、query、failure pathを確認し、維持、簡素化、client化のいずれかを選ぶ。
 
@@ -72,7 +74,7 @@
 
 - governance、仕様、ADR、roadmap、再開案内、CHANGELOGのrouteと置換範囲をcomprehensive governance gateで確認する。
 - 各製品checkpointで、同一tenantの複数role・roleなし・super-userを含む有効本登録Userの通常操作許可と、未認証、未確認email、仮登録、disabled、User不在、claim不正、他tenantの拒否を確認する。
-- 通常業務Rulesがschema・型・長さ・状態を重複検査しないことを明示的な許可testで固定し、同時にactor UID偽装、tenant越境、client物理deleteと4例外のrole/actor認可迂回を拒否する。Schemas packageと正規application writer側ではdocument全体のvalidationと派生field整合を別に確認する。
+- 通常業務Rulesがschema・型・長さ・状態を重複検査しないことを明示的な許可testで固定し、同時にactor UID偽装、tenant越境、マスタdataのclient物理delete、4例外のrole/actor認可迂回を拒否する。transaction dataの物理deleteは、定めたactor・tenant・対象ID・編集可能状態だけで許可されることを別に確認する。Schemas packageと正規application writer側ではdocument全体のvalidationと派生field整合を別に確認する。
 - Rules、Functions、client、Emulator、必要なUI、固定commitのDev受入れを対象checkpointの変更classとriskに応じて選ぶ。
 
 ## 再検討条件
