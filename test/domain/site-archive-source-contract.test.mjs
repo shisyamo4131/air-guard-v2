@@ -64,10 +64,7 @@ test("Rules open guarded OperationResult updates/deletes while retaining backgro
     rules,
     /function isValidSiteReferenceCreate\(companyId\)[\s\S]*?keys\(\)\.hasAll\(\['siteId'\]\)[\s\S]*?liveSiteExistsAfter/u,
   );
-  assert.match(
-    rules,
-    /function isValidSiteReferenceUpdate\(companyId\)[\s\S]*?affectedKeys\(\)\.hasAny\(\['siteId'\]\)[\s\S]*?isValidSiteReferenceCreate/u,
-  );
+  assert.doesNotMatch(rules, /function isValidSiteReferenceUpdate/u);
   for (const collectionName of [
     "OperationResults", "ArrangementNotifications", "Billings", "SiteEmployeeHistories",
   ]) {
@@ -77,7 +74,7 @@ test("Rules open guarded OperationResult updates/deletes while retaining backgro
     assert.ok(block, `${collectionName} Rules block`);
     if (collectionName === "OperationResults") {
       assert.match(block, /allow create: if false;/u);
-      assert.match(block, /isValidOperationResultClientUpdate\(companyId, docId\)/u);
+      assert.match(block, /isValidOperationResultClientUpdate\(docId\)/u);
       assert.match(block, /isValidOperationResultClientDelete\(docId\)/u);
     }
     else if (collectionName === "ArrangementNotifications") {

@@ -100,7 +100,7 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
             />
           </v-col>
           <v-col cols="12">
-            <OperationResultWorkersManager
+            <WorkersManager
               :model-value="doc.workers"
               disabled
               :table-props="{ hideAction: true }"

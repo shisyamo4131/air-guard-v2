@@ -76,11 +76,6 @@ service cloud.firestore {
       return hasExistingCustomerReference(companyId, request.resource.data);
     }
 
-    function isValidCustomerReferenceUpdate(companyId) {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['customerId'])
-        || hasExistingCustomerReference(companyId, request.resource.data);
-    }
-
     function isValidOptionalCustomerReferenceUpdate(companyId) {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['customerId'])
         || (hasUnsetCustomerReference(resource.data)
@@ -98,12 +93,7 @@ service cloud.firestore {
         && liveSiteExistsAfter(companyId, request.resource.data.siteId);
     }
 
-    function isValidSiteReferenceUpdate(companyId) {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['siteId'])
-        || isValidSiteReferenceCreate(companyId);
-    }
-
-    function isValidOperationResultClientUpdate(companyId, docId) {
+    function isValidOperationResultClientUpdate(docId) {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       return resource.data.docId is string
         && resource.data.docId == docId
@@ -119,9 +109,7 @@ service cloud.firestore {
           'adjustedOvertimeUnitPriceBase', 'adjustedUnitPriceQualified',
           'adjustedOvertimeUnitPriceQualified', 'billingCalculationVersion'
         ])
-        && request.resource.data.uid == request.auth.uid
-        && isValidSiteReferenceUpdate(companyId)
-        && isValidCustomerReferenceUpdate(companyId);
+        && request.resource.data.uid == request.auth.uid;
     }
 
     function isValidOperationResultClientDelete(docId) {
@@ -586,13 +574,13 @@ service cloud.firestore {
     }
 
     // --- Rules for 'OperationResults' subcollection under 'Companies' ---
-    // 同一tenant・稼働結果ID・lock境界を維持し、updateでは参照先のSite/Customerを検証する。
+    // 同一tenant・稼働結果ID・lock境界と、専用operationが所有するfieldを保護する。
     match /Companies/{companyId}/OperationResults/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if false;
       allow update: if isAuthenticated()
                     && userCompanyId() == companyId
-                    && isValidOperationResultClientUpdate(companyId, docId);
+          && isValidOperationResultClientUpdate(docId);
       allow delete: if isAuthenticated()
                     && userCompanyId() == companyId
                     && isValidOperationResultClientDelete(docId);

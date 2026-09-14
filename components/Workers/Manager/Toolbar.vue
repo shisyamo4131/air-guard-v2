@@ -1,26 +1,17 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/OperationResult/Workers/Manager/Toolbar.vue
- * @description A toolbar component for `OperationResultWorkersManager`.
- *
- * @property {Boolean} disabled
- * - A flag to disable the toolbar buttons, typically used when the parent component is in a locked state.
- * @property {Function} toCreate
- * - A function passed from `OperationResultWorkersManager` to handle the creation of new worker entries.
+ * @file ./components/Workers/Manager/Toolbar.vue
+ * @description WorkersManagerの既定ツールバー
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-// COMPONENTS
 import BtnAddEmployee from "./BtnAddEmployee.vue";
 import BtnAddOutsourcer from "./BtnAddOutsourcer.vue";
 
-/*****************************************************************************
- * DEFINE PROPS & EMITS
- *****************************************************************************/
 const _props = defineProps({
   disabled: { type: Boolean, default: false },
   toCreate: { type: Function, required: true },
 });
-const props = useDefaults(_props, "OperationResultWorkersManagerToolbar");
+const props = useDefaults(_props, "WorkersManagerToolbar");
 </script>
 
 <template>
