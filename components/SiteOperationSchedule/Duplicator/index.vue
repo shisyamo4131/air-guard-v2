@@ -1,19 +1,30 @@
 <script setup>
 defineOptions({ inheritAttrs: false });
-defineProps({ modelValue: Boolean, selectedDates: { type: Array, default: () => [] }, allowedDates: { type: Function, default: () => true }, disabled: Boolean, loading: Boolean, blocked: Boolean, error: { type: String, default: "" } });
-const emit = defineEmits(["update:modelValue", "update:selected-dates", "submit", "cancel"]);
+
+defineProps({
+  allowedDates: { type: Function, default: () => true },
+  selectedDates: { type: Array, default: () => [] },
+});
+const emit = defineEmits(["update:selected-dates"]);
+const manager = useTemplateRef("manager");
+
+defineExpose({
+  toCreate: (...args) => manager.value?.toCreate(...args),
+  toUpdate: (...args) => manager.value?.toUpdate(...args),
+  toDelete: (...args) => manager.value?.toDelete(...args),
+});
 </script>
+
 <template>
-  <v-dialog :model-value="modelValue" persistent scrollable width="376">
-    <v-card title="予定複製">
-      <v-card-text class="pa-0">
-        <v-alert v-if="error" type="warning">{{ error }}</v-alert>
-        <v-date-picker :model-value="selectedDates" :allowed-dates="allowedDates" :disabled="loading || blocked" hide-header multiple @update:model-value="emit('update:selected-dates', $event)" />
-      </v-card-text>
-      <v-card-actions>
-        <v-btn :disabled="loading" @click="emit('cancel')">取消</v-btn>
-        <v-btn :disabled="disabled" :loading="loading" color="primary" @click="emit('submit')">複製</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <air-item-manager ref="manager" v-bind="$attrs">
+    <template #input>
+      <v-date-picker
+        :model-value="selectedDates"
+        :allowed-dates="allowedDates"
+        hide-header
+        multiple
+        @update:model-value="emit('update:selected-dates', $event)"
+      />
+    </template>
+  </air-item-manager>
 </template>

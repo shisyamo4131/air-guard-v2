@@ -1,5 +1,20 @@
-// Schedule persistence is owned by the dedicated operation editor/commands.
-const unsupported = async () => { throw new Error("予定の保存は専用編集画面から実行してください。"); };
-export const handleCreate = unsupported;
-export const handleUpdate = unsupported;
-export const handleDelete = unsupported;
+/*****************************************************************************
+ * @file ./handlers/siteOperationScheduleHandlers.js
+ * @description SiteOperationSchedule を扱う AirArrayManager / AirItemManager
+ *              の標準保存ハンドラ
+ *****************************************************************************/
+import { onBeforeCreate, onBeforeUpdate } from "@/services/operation.js";
+
+export async function handleCreate(item) {
+  await onBeforeCreate(item);
+  await item.create();
+}
+
+export async function handleUpdate(item) {
+  await onBeforeUpdate(item);
+  await item.update();
+}
+
+export async function handleDelete(item) {
+  await item.delete();
+}

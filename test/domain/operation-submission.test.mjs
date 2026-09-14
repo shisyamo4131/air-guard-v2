@@ -270,126 +270,54 @@ for (const error of ["permission-denied", "unavailable"]) test(`personal ${error
   state.personal.close(); assert.equal(state.editor.draft.value, null); state.effect.stop();
 });
 
-test("schedule actions publish the current local model before waiting for Callable completion", async () => {
-  const events = []; let finish;
-  const submission = { allowed: Vue.ref(true), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref(""), submit: async () => { events.push("call"); return new Promise((resolve) => { finish = resolve; }); } };
+async function scheduleActionsHarness({ developer = false } = {}) {
+  const loadingEvents = [], errors = [], transaction = { id: "transaction" };
+  const Schedule = {
+    runTransaction: async (callback) => callback(transaction),
+  };
   const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
-    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
-    scheduleCommands: (model) => [{ kind: "schedule", action: "overview", documentId: model.docId, changes: { remarks: model.remarks }, expected: {} }], operationRawFor: (model) => model, expectedForOperation: () => ({}),
+    dayjs: { tz: (date) => ({ startOf: () => ({ toDate: () => new Date(`${date}T00:00:00.000Z`) }) }) },
+    SiteOperationSchedule: Schedule,
+    useAuthStore: () => ({ isDeveloper: developer }),
+    useLoadingsStore: () => ({ add: (label) => { loadingEvents.push(["add", label]); return "key"; }, remove: (key) => loadingEvents.push(["remove", key]) }),
+    useErrorsStore: () => ({}),
+    useLogger: () => ({ error: (value) => errors.push(value) }),
   });
-  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishSchedule: (model) => { events.push(`publish:${model.docId}`); return true; }, refreshSchedule: async () => { events.push("refresh"); return true; } }); });
-  const saving = actions.updateSchedule({ docId: "schedule", remarks: "now" }); await flush();
-  assert.deepEqual(events, ["publish:schedule", "call"]);
-  finish({ success: true, updated: true }); assert.equal(await saving, true);
-  assert.deepEqual(events, ["publish:schedule", "call"]); effect.stop();
+  return { actions: make(), errors, loadingEvents, transaction };
+}
+
+test("schedule actions call the model directly for update and notify", async () => {
+  const events = [];
+  const { actions, errors, loadingEvents } = await scheduleActionsHarness();
+  const model = {
+    update: async () => events.push("update"),
+    notify: async () => events.push("notify"),
+  };
+  await actions.updateSchedule(model);
+  await actions.notify(model);
+  assert.deepEqual(events, ["update", "notify"]);
+  assert.deepEqual(loadingEvents, [["add", "Creating notifications"], ["remove", "key"]]);
+  assert.deepEqual(errors, []);
 });
 
-test("schedule actions submit rapid ordinary edits independently without locking the UI", async () => {
-  const calls = [], finishes = [], published = [];
-  const submission = { allowed: Vue.ref(true), busy: Vue.ref(false), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref(""), submit: async (commands) => { calls.push(commands); return new Promise((resolve) => finishes.push(resolve)); } };
-  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
-    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
-    scheduleCommands: (model) => [{ kind: "schedule", action: "overview", documentId: model.docId, changes: { remarks: model.remarks }, expected: {} }], operationRawFor: (model) => model, expectedForOperation: () => ({}),
+test("multi-schedule actions normalize the models and save them in one model transaction", async () => {
+  const calls = [];
+  const { actions, transaction } = await scheduleActionsHarness();
+  const models = [0, 1].map((index) => ({
+    docId: `schedule-${index}`,
+    update: async (options) => calls.push([index, options]),
+  }));
+  await actions.updateSchedules(models, {
+    date: "2026-09-01",
+    siteId: "site",
+    shiftType: "DAY",
   });
-  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishSchedule: (model) => { published.push(model.remarks); return true; } }); });
-  const first = actions.updateSchedule({ docId: "schedule", remarks: "first" });
-  const second = actions.updateSchedule({ docId: "schedule", remarks: "second" });
-  assert.equal(calls.length, 2); assert.deepEqual(published, ["first", "second"]);
-  finishes[1]({ success: true, updated: true }); assert.equal(await second, true);
-  finishes[0]({ success: true, updated: true }); assert.equal(await first, true);
-  effect.stop();
-});
-
-test("one schedule refusal refreshes only its document while another local edit remains displayed", async () => {
-  const finishes = new Map(), displayed = new Map();
-  const submission = { allowed: Vue.ref(true), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref("refused"), submit: async ([command]) => new Promise((resolve) => finishes.set(command.documentId, resolve)) };
-  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
-    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
-    scheduleCommands: (model) => [{ kind: "schedule", action: "overview", documentId: model.docId, changes: { remarks: model.remarks }, expected: {} }], operationRawFor: (model) => ({ ...model, remarks: `server-${model.docId}` }), expectedForOperation: () => ({}),
-  });
-  const effect = Vue.effectScope(); let actions;
-  effect.run(() => { actions = make({
-    publishSchedule: (model) => { displayed.set(model.docId, model.remarks); return true; },
-    refreshSchedule: async (id) => { displayed.set(id, `server-${id}`); return true; },
-  }); });
-  const first = actions.updateSchedule({ docId: "a", remarks: "local-a" });
-  const second = actions.updateSchedule({ docId: "b", remarks: "local-b" });
-  finishes.get("a")(false); assert.equal(await first, false);
-  assert.deepEqual(Object.fromEntries(displayed), { a: "server-a", b: "local-b" });
-  finishes.get("b")({ success: true, updated: true }); assert.equal(await second, true);
-  assert.deepEqual(Object.fromEntries(displayed), { a: "server-a", b: "local-b" });
-  effect.stop();
-});
-
-test("schedule notify publishes local notification state immediately and the displayed state prevents a duplicate", async () => {
-  const events = []; let finish;
-  const submission = { allowed: Vue.ref(true), busy: Vue.ref(false), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref(""), submit: async () => { events.push("call"); return new Promise((resolve) => { finish = resolve; }); } };
-  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
-    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
-    scheduleCommands: () => [], operationRawFor: (model) => model, expectedForOperation: () => ({}),
-  });
-  const model = new SiteOperationSchedule(schedule());
-  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishNotificationState: (value) => {
-    events.push(`publish-notify:${value.docId}`);
-    for (const array of ["employees", "outsourcers"]) for (const worker of value[array]) worker.hasNotification = true;
-    return true;
-  } }); });
-  const saving = actions.notify(model); await flush();
-  assert.deepEqual(events, [`publish-notify:${model.docId}`, "call"]);
-  assert.equal(model.workers.every((worker) => worker.hasNotification), true);
-  assert.equal(await actions.notify(model), false);
-  assert.deepEqual(events, [`publish-notify:${model.docId}`, "call"]);
-  finish({ success: true, updated: true }); assert.equal(await saving, true);
-  effect.stop();
-});
-
-test("definite notify refusal resets provisional notifications and refreshes the schedule", async () => {
-  const events = [], messages = [];
-  const submission = { allowed: Vue.ref(true), busy: Vue.ref(false), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref("refused"), submit: async () => false };
-  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
-    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add: (value) => messages.push(value) }),
-    scheduleCommands: () => [], operationRawFor: (model) => model, expectedForOperation: () => ({}),
-  });
-  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishNotificationState: () => { events.push("publish-notify"); return true; }, resetNotifications: (ids) => events.push(`reset-notifications:${ids.join(",")}`), refreshSchedule: async (id) => { events.push(`refresh:${id}`); return true; } }); });
-  assert.equal(await actions.notify({ docId: "schedule", workers: [{ workerId: "worker", hasNotification: false }] }), false);
-  assert.deepEqual(events, ["publish-notify", "reset-notifications:schedule", "refresh:schedule"]);
-  assert.equal(messages.length, 1); effect.stop();
-});
-
-test("multi-schedule refusal continues point refresh after one document read throws", async () => {
-  const refreshed = [];
-  const submission = { allowed: Vue.ref(true), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref("refused"), submit: async () => false };
-  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
-    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
-    scheduleCommands: (model) => [{ kind: "schedule", action: "overview", documentId: model.docId, changes: {}, expected: {} }], operationRawFor: (model) => model, expectedForOperation: () => ({}),
-  });
-  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({
-    publishSchedule: () => true,
-    refreshSchedule: async (id) => { refreshed.push(id); if (id === "a") throw new Error("read failed"); return true; },
-  }); });
-  assert.equal(await actions.updateSchedules([{ docId: "a" }, { docId: "b" }], { date: "2026-09-01", siteId: "site", shiftType: "DAY" }), false);
-  assert.deepEqual(refreshed, ["a", "b"]);
-  effect.stop();
-});
-
-for (const outcome of ["success", "refusal", "dispose", "same-scope-refusal", "noop", "authority-success", "authority-refusal", "authority-return-success", "authority-return-refusal"]) test(`schedule ${outcome} keeps one multi-schedule change atomic and suppresses stale messages`, async () => {
-  const scope = Vue.ref("company/actor"), calls = [], messages = [], published = [], refreshed = []; let finish;
-  const submission = { allowed: Vue.ref(true), scope: () => scope.value, uncertain: Vue.ref(false), message: Vue.ref("refused"), submit: async (commands) => { calls.push(commands); return new Promise((resolve) => { finish = resolve; }); } };
-  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
-    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add: (value) => messages.push(value) }),
-    scheduleCommands: (model) => [{ documentId: model.docId }], operationRawFor: (model) => model, expectedForOperation: () => ({}),
-  });
-  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishSchedule: (model) => { published.push(model.docId); return true; }, refreshSchedule: async (id) => { refreshed.push(id); return true; } }); });
-  const models = [{ docId: "source" }, { docId: "target" }];
-  const first = actions.updateSchedules(models, { date: "2026-09-01", siteId: "site", shiftType: "DAY" }); await flush();
-  assert.equal(calls.length, 1); assert.deepEqual(calls[0].map((item) => item.documentId), ["source", "target"]);
-  if (["success", "refusal"].includes(outcome)) { scope.value = "other/actor"; scope.value = "company/actor"; }
-  if (outcome === "dispose") effect.stop();
-  if (outcome.startsWith("authority")) { submission.allowed.value = false; if (outcome.includes("return")) submission.allowed.value = true; }
-  finish(outcome.includes("refusal") ? false : { success: true, updated: outcome !== "noop" }); await first;
-  assert.deepEqual(published, ["source", "target"]);
-  assert.deepEqual(refreshed, outcome === "same-scope-refusal" ? ["source", "target"] : []);
-  assert.equal(messages.length, outcome === "same-scope-refusal" ? 1 : 0); effect.stop();
+  assert.deepEqual(calls, [[0, { transaction }], [1, { transaction }]]);
+  assert.deepEqual(models.map(({ siteId, shiftType, displayOrder }) => ({ siteId, shiftType, displayOrder })), [
+    { siteId: "site", shiftType: "DAY", displayOrder: 0 },
+    { siteId: "site", shiftType: "DAY", displayOrder: 1 },
+  ]);
+  assert.equal(models.every((model) => model.dateAt instanceof Date), true);
 });
 
 for (const kind of ["schedule", "result"]) for (const code of ["permission-denied", "unavailable"]) test(`${kind} duplicate holds the whole flight and ends known success after ${code} read failure`, async () => {

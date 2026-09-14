@@ -54,7 +54,7 @@ test("archive use-case fixes the exact five direct reference queries and exclude
   assert.doesNotMatch(source, /transaction\.(?:set|update)\(archiveRef|\.restore\s*\(/u);
 });
 
-test("Rules open guarded OperationResult create/update/delete while retaining background write boundaries", async () => {
+test("Rules keep guarded results and open normal schedule and notification writes to the same tenant", async () => {
   const rules = await read("firestore.rules");
   assert.match(
     rules,
@@ -78,8 +78,7 @@ test("Rules open guarded OperationResult create/update/delete while retaining ba
       assert.match(block, /isValidOperationResultClientDelete\(docId\)/u);
     }
     else if (collectionName === "ArrangementNotifications") {
-      assert.match(block, /allow create, delete: if false;/u);
-      assert.match(block, /isNotificationStateOnlyUpdate\(\)/u);
+      assert.match(block, /allow read, write: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
     } else {
       assert.match(block, /allow write: if false;/u);
     }
@@ -88,20 +87,28 @@ test("Rules open guarded OperationResult create/update/delete while retaining ba
     /match \/Companies\/\{companyId\}\/SiteOperationSchedules\/\{docId\} \{([\s\S]*?)\n    \}/u,
   )?.[1];
   assert.ok(scheduleBlock);
-  assert.match(scheduleBlock, /allow write: if false;/u);
+  assert.match(scheduleBlock, /allow read, write: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
 });
 
-test("Schedule application connects to the server transaction and legacy Class writer stays closed", async () => {
-  const legacy = await read("utils/siteOperationSchedule/siteScheduleGuard.js");
-  assert.match(legacy, /dedicated-operation-required/u);
-  assert.doesNotMatch(legacy, /schedule\.(?:create|update)\(/u);
-  const source = await read("functions/modules/operations/saveOperation.js");
-  assert.match(source, /firestore\.runTransaction\(async \(transaction\)/u);
-  assert.match(source, /transaction\.get\(firestore\.doc\(path\)\)/u);
-  assert.match(source, /requireSite[\s\S]*?guardScheduleSite/u);
-  assert.match(await read("composables/application/operation/useOperationSubmission.js"), /httpsCallable\(\$functions, "saveOperation"\)\(\{ operations \}\)/u);
-  // Actual all-read-before-write, Site revision and reference race behavior is
-  // exercised by operation-write.test.mjs and the local Callable harness.
+test("Schedule application uses Air managers and the existing model instead of the dedicated server writer", async () => {
+  const [single, plural, handlers, actions, duplicator] = await Promise.all([
+    read("components/SiteOperationSchedule/Manager/index.vue"),
+    read("components/SiteOperationSchedules/Manager/index.vue"),
+    read("handlers/siteOperationScheduleHandlers.js"),
+    read("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js"),
+    read("composables/useSiteOperationScheduleDuplicator.js"),
+  ]);
+  assert.match(single, /<air-item-manager/u);
+  assert.match(plural, /<air-array-manager/u);
+  assert.match(handlers, /item\.create\(\)/u);
+  assert.match(handlers, /item\.update\(\)/u);
+  assert.match(handlers, /item\.delete\(\)/u);
+  assert.match(actions, /schedule\.update\(\)/u);
+  assert.match(actions, /schedule\.notify\(\)/u);
+  assert.match(duplicator, /instance\.duplicate\(selectedDates\.value\)/u);
+  for (const client of [single, plural, handlers, actions, duplicator]) {
+    assert.doesNotMatch(client, /useOperationSubmission|saveOperation|createSiteOperationScheduleWriter/u);
+  }
 });
 
 test("Admin SDK Billing and SiteEmployeeHistory writers share their live Site read with the final write transaction", async () => {

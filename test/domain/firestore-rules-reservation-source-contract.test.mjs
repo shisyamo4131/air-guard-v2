@@ -81,8 +81,7 @@ test("Site-reference collections use explicit guards and cannot fall through ten
     )?.[1];
     assert.ok(body, `${collectionName} must have an explicit document match`);
     if (collectionName === "ArrangementNotifications") {
-      assert.match(body, /allow create, delete: if false;/u);
-      assert.match(body, /isNotificationStateOnlyUpdate\(\)/u);
+      assert.match(body, /allow read, write: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
     } else {
       assert.match(body, /allow write: if false;/u);
     }
@@ -162,14 +161,14 @@ test("Customer reference collections use explicit guarded matches outside the fa
     /function hasValidSiteCustomerUpdate\(companyId\)[\s\S]*?customerExists\(companyId, request\.resource\.data\.customerId\)/u,
   );
   const siteCustomerHelpers = source.match(
-    /function hasValidSiteCustomerCreate\(companyId, data\)[\s\S]*?function siteScheduleRevision/u,
+    /function hasValidSiteCustomerCreate\(companyId, data\)[\s\S]*?function isValidSiteCreate/u,
   )?.[0];
   assert.ok(siteCustomerHelpers);
   assert.doesNotMatch(siteCustomerHelpers, /hasCurrentSiteCustomerSnapshot/u);
   assert.doesNotMatch(siteCustomerHelpers, /keys\(\)\.hasOnly/u);
   assert.doesNotMatch(siteCustomerHelpers, /request\.time/u);
   assert.match(
-    siteCustomerHelpers,
+    source,
     /!changed\.hasAny\(\['status'\]\)/u,
   );
   assert.doesNotMatch(siteCustomerHelpers, /!changed\.hasAny\([^)]*agreementsV2/u);

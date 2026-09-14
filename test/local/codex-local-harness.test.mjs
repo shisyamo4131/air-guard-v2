@@ -477,12 +477,19 @@ test("EMP05-B HTTP operation writers preserve references, notification confirmat
   for (const collectionName of ["SiteOperationSchedules", "OperationResults", "ArrangementNotifications"]) {
     const target = doc(userFirestore, "Companies", companyId, collectionName, collectionName === "ArrangementNotifications" ? noticeId : id);
     await assertSucceeds(getDoc(target));
-    await assertFails(setDoc(target, { employeeIds: [] }));
-    await (collectionName === "OperationResults" ? assertSucceeds : assertFails)(deleteDoc(target));
-    await assertFails(setDoc(doc(userFirestore, "Companies", companyId, collectionName, "new-direct"), { docId: "new-direct" }));
+    const direct = doc(userFirestore, "Companies", companyId, collectionName, "new-direct");
+    if (collectionName === "OperationResults") {
+      await assertFails(setDoc(target, { employeeIds: [] }));
+      await assertSucceeds(deleteDoc(target));
+      await assertFails(setDoc(direct, { docId: "new-direct" }));
+    } else {
+      await assertSucceeds(updateDoc(target, { emp05DirectWrite: true }));
+      await assertSucceeds(setDoc(direct, { docId: "new-direct" }));
+      await assertSucceeds(deleteDoc(direct));
+    }
     await assertFails(setDoc(doc(userFirestore, "Companies", companyId, collectionName, "nested", "children", "child"), { value: true }));
   }
-  await assertFails(updateDoc(noticeRef, { id: employees[1], employeeId: employees[1], uid: actor.uid, updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(noticeRef, { emp05SameCompanyUpdate: true }));
   } finally {
     const remaining = await admin.collection(`${root}/ArrangementNotifications`).where("siteOperationScheduleId", "==", id).get();
     cleanup.push(...remaining.docs.map((snapshot) => ["ArrangementNotifications", snapshot.id]));
@@ -4109,43 +4116,22 @@ test("Site Rules allow a linked Customer create with geocoded location within th
   ));
 });
 
-test("SITE-04 Schedule dedicated writer requires atomic Site revisions and preserves processed results", async () => {
+test("SITE-04 Schedule Rules allow normal same-company client CRUD without Site revisions", async () => {
   const actor = await seedSiteArchiveActor({ uid: "site-lifecycle-schedule-admin", isAdmin: true, roles: [] });
-  const companyId = actor.companyId, admin = getAdminFirestore(), root = `Companies/${companyId}`;
-  const firstId = "site-lifecycle-schedule-first", secondId = "site-lifecycle-schedule-second", id = "site-lifecycle-schedule", customerId = "site-lifecycle-schedule-customer";
-  await admin.doc("System/system").set({ isMaintenance: false });
-  await admin.doc(`${root}/Customers/${customerId}`).set({ docId: customerId });
-  const first = admin.doc(`${root}/Sites/${firstId}`), second = admin.doc(`${root}/Sites/${secondId}`), schedule = admin.doc(`${root}/SiteOperationSchedules/${id}`);
-  await first.set(emp05SiteData({ docId: firstId, uid: actor.uid, customerId, customer: {}, isTemporary: false, agreementsV2: [] }));
-  await second.set(emp05SiteData({ docId: secondId, uid: actor.uid, customerId, customer: {}, isTemporary: false, status: "TERMINATED", scheduleRevision: 4, agreementsV2: [] }));
-  const create = emp05Command(null, "create", emp05Overview(firstId), { documentId: id, siteStatuses: { [firstId]: "ACTIVE" } });
-  await assertCallableError(emp05SaveAs(actor, [{ ...create, siteStatuses: {} }]), "aborted");
-  assert.equal((await schedule.get()).exists, false);
-  await emp05SaveAs(actor, [create]); assert.equal((await first.get()).data().scheduleRevision, 1);
-  let raw = (await schedule.get()).data();
-  const move = emp05Command(raw, "overview", { siteId: secondId, dateAt: "2028-06-01" }, { siteStatuses: { [firstId]: "ACTIVE", [secondId]: "ACTIVE" } });
-  await assertCallableError(emp05SaveAs(actor, [move]), "aborted");
-  assert.equal((await first.get()).data().scheduleRevision, 1); assert.equal((await second.get()).data().scheduleRevision, 4);
-  move.siteStatuses[secondId] = "TERMINATED"; await emp05SaveAs(actor, [move]);
-  assert.equal((await first.get()).data().scheduleRevision, 2); assert.equal((await second.get()).data().scheduleRevision, 5);
-  raw = (await schedule.get()).data();
-  await emp05SaveAs(actor, [emp05Command(raw, "convert", {}, { notifications: {} })]);
-  raw = (await schedule.get()).data(); assert.equal(raw.operationResultId, id);
-  assert.equal((await admin.doc(`${root}/OperationResults/${id}`).get()).data().siteOperationScheduleId, id);
-  await assertCallableError(emp05SaveAs(actor, [emp05Command(raw, "overview", { remarks: "processed" })]), "failed-precondition");
-  await assertCallableError(emp05SaveAs(actor, [emp05Command(raw, "delete")]), "failed-precondition");
-  const firestore = authenticatedFirestore(actor.uid, { isSuperUser: false }), direct = doc(firestore, "Companies", companyId, "SiteOperationSchedules", id);
-  await assertFails(updateDoc(direct, { operationResultId: null }));
-  await assertFails(updateDoc(direct, { operationResultId: "forged" }));
-  await assertFails(runTransaction(firestore, async (transaction) => {
-    transaction.update(doc(firestore, "Companies", companyId, "Sites", secondId), { scheduleRevision: 6, uid: actor.uid, updatedAt: serverTimestamp() });
-    transaction.update(direct, { dateAt: new Date("2028-07-01"), date: "2028-07-01" });
+  const companyId = actor.companyId;
+  const id = "site-lifecycle-schedule";
+  const firestore = authenticatedFirestore(actor.uid, { isSuperUser: false });
+  const schedule = doc(firestore, "Companies", companyId, "SiteOperationSchedules", id);
+  await assertSucceeds(setDoc(schedule, {
+    docId: id,
+    siteId: "site-lifecycle-schedule-site",
+    date: "2028-05-01",
+    operationResultId: null,
   }));
-  assert.equal((await second.get()).data().scheduleRevision, 5);
-  const deletable = "site-lifecycle-schedule-deletable";
-  await emp05SaveAs(actor, [emp05Command(null, "create", emp05Overview(firstId), { documentId: deletable, siteStatuses: { [firstId]: "ACTIVE" } })]);
-  const deleteRef = admin.doc(`${root}/SiteOperationSchedules/${deletable}`);
-  await emp05SaveAs(actor, [emp05Command((await deleteRef.get()).data(), "delete")]); assert.equal((await deleteRef.get()).exists, false);
+  await assertSucceeds(updateDoc(schedule, { remarks: "model-owned update" }));
+  assert.equal((await assertSucceeds(getDoc(schedule))).data().remarks, "model-owned update");
+  await assertSucceeds(deleteDoc(schedule));
+  assert.equal((await assertSucceeds(getDoc(schedule))).exists(), false);
 });
 
 test("FGA-06 active role-less users can create, update, duplicate and delete schedules but cannot mix in restricted operations", async () => {
@@ -4187,7 +4173,7 @@ test("FGA-06 active role-less users can create, update, duplicate and delete sch
   }
 });
 
-test("SITE-04 maintenance state fails closed for client Site revision and schedule writes", async () => {
+test("SITE-04 Schedule CRUD is no longer coupled to maintenance state or Site revisions", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-lifecycle-maintenance-admin";
   const siteId = "site-lifecycle-maintenance-site";
@@ -4217,20 +4203,13 @@ test("SITE-04 maintenance state fails closed for client Site revision and schedu
       await assertFails(updateDoc(site, {
         scheduleRevision: 1, uid, updatedAt: serverTimestamp(),
       }));
-      await assertFails(updateDoc(schedule, { remarks: "blocked" }));
-      await assertFails(deleteDoc(schedule));
-      await assertFails(runTransaction(firestore, async (transaction) => {
-        transaction.update(site, {
-          scheduleRevision: 1, uid, updatedAt: serverTimestamp(),
-        });
-        transaction.set(
-          doc(firestore, "Companies", companyId, "SiteOperationSchedules", `${scheduleId}-new`),
-          {
-            docId: `${scheduleId}-new`, siteId, date: "2028-05-02",
-            operationResultId: null,
-          },
-        );
+      await assertSucceeds(updateDoc(schedule, { remarks: "model-owned" }));
+      const created = doc(firestore, "Companies", companyId, "SiteOperationSchedules", `${scheduleId}-new`);
+      await assertSucceeds(setDoc(created, {
+        docId: `${scheduleId}-new`, siteId, date: "2028-05-02",
+        operationResultId: null,
       }));
+      await assertSucceeds(deleteDoc(created));
     }
   } finally {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
@@ -4238,10 +4217,10 @@ test("SITE-04 maintenance state fails closed for client Site revision and schedu
     });
   }
   assert.equal((await getDoc(site)).data().scheduleRevision, 0);
-  assert.equal((await getDoc(schedule)).exists(), true);
+  assert.equal((await getDoc(schedule)).data().remarks, "model-owned");
 });
 
-test("OperationResult normal create/update/delete are tenant-wide while Schedule linkage stays closed", async () => {
+test("OperationResult writes retain their checks while Schedule updates follow the tenant boundary", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const customerId = "site-lifecycle-result-policy-customer";
   const cases = [
@@ -4322,7 +4301,7 @@ test("OperationResult normal create/update/delete are tenant-wide while Schedule
       });
       transaction.update(schedule, { operationResultId: scheduleId });
     }), `${label} create-link`);
-    await assertFails(runTransaction(firestore, async (transaction) => {
+    await (normalWriter ? assertSucceeds : assertFails)(runTransaction(firestore, async (transaction) => {
       transaction.update(
         doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId),
         { uid, updatedAt: serverTimestamp() },
@@ -5496,7 +5475,7 @@ test("Site archive Callable blocks each exact direct reference without mutating 
   }
 });
 
-test("Firestore Rules bind live Site references while preserving unrelated update, read, and delete compatibility", async () => {
+test("Firestore Rules preserve guarded references while Notifications use normal tenant CRUD", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site05-reference-rules-admin";
   const customerId = "site05-reference-rules-customer";
@@ -5528,6 +5507,23 @@ test("Firestore Rules bind live Site references while preserving unrelated updat
       entries.push({ companyId, collectionName, docId: compatibleId });
       const compatible = doc(firestore, "Companies", companyId, collectionName, compatibleId);
       const liveData = { siteId: liveSiteId, customerId, marker: "created-live" };
+      if (collectionName === "ArrangementNotifications") {
+        await assertSucceeds(setDoc(compatible, liveData));
+        assert.deepEqual((await assertSucceeds(getDoc(compatible))).data(), liveData);
+        await assertSucceeds(updateDoc(compatible, {
+          siteId: missingSiteId,
+          marker: "model-owned-update",
+        }));
+        const nested = doc(
+          firestore, "Companies", companyId, collectionName, compatibleId,
+          "Nested", "site05-bypass",
+        );
+        await assertFails(getDoc(nested));
+        await assertFails(setDoc(nested, { synthetic: true }));
+        await assertFails(deleteDoc(nested));
+        await assertSucceeds(deleteDoc(compatible));
+        continue;
+      }
       if (["OperationResults", "ArrangementNotifications", "Billings", "SiteEmployeeHistories"].includes(collectionName)) {
         await assertFails(setDoc(compatible, liveData));
         await testEnvironment.withSecurityRulesDisabled(async (context) => { await setDoc(doc(context.firestore(), "Companies", companyId, collectionName, compatibleId), liveData); });
@@ -7492,14 +7488,6 @@ for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {
       collectionName,
       "rules-probe",
     );
-
-    if (collectionName === "ArrangementNotifications") {
-      await assertFails(setDoc(sameTenant, { siteId: primarySiteId, revision: 1 }));
-      await testEnvironment.withSecurityRulesDisabled(async (context) => { await setDoc(doc(context.firestore(), "Companies", CODEX_LOCAL_COMPANIES.primary.id, collectionName, "rules-probe"), { siteId: primarySiteId, revision: 1 }); });
-      await assertSucceeds(getDoc(sameTenant)); await assertFails(updateDoc(sameTenant, { revision: 2 })); await assertFails(deleteDoc(sameTenant));
-      await assertFails(getDoc(otherTenant)); await assertFails(setDoc(otherTenant, { revision: 2 })); await assertFails(deleteDoc(otherTenant));
-      return;
-    }
 
     await assertSucceeds(setDoc(sameTenant, {
       revision: 1,

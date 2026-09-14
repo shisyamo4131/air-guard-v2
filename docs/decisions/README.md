@@ -78,6 +78,7 @@
 | [0070](0070-employee-insurance-normal-business-boundary.md) | Employee保険情報の通常業務分類と状態遷移境界 |
 | [0071](0071-normal-business-manager-and-callable-boundary.md) | 通常業務CRUDのDomain ManagerとCallable境界 |
 | [0072](0072-transaction-delete-client-trigger-boundary.md) | マスタとtransactionのarchive・物理削除境界 |
+| [0073](0073-schedule-manager-and-rules-restoration.md) | 現場稼働予定を標準Managerと単純なRulesへ戻す |
 
 ## 新しい ADR の形式
 

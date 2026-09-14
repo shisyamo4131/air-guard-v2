@@ -30,10 +30,6 @@ import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/
 export function useArrangementsActions({
   schedules,
   siteShiftTypeOrder,
-  publishSchedule,
-  publishNotificationState,
-  resetNotifications,
-  refreshSchedule,
 } = {}) {
   /*****************************************************************************
    * SETUP COMPOSABLES
@@ -44,12 +40,7 @@ export function useArrangementsActions({
     siteShiftTypeOrder,
   });
   const { notify, updateSchedule, updateSchedules } =
-    useSiteOperationScheduleActions({
-      publishSchedule,
-      publishNotificationState,
-      resetNotifications,
-      refreshSchedule,
-    });
+    useSiteOperationScheduleActions();
   const { update: updateSiteShiftTypeOrder, remove: removeSiteShiftTypeOrder } =
     useSiteShiftTypeOrderActions({
       type: ORDER_TYPE.ARRANGEMENT,

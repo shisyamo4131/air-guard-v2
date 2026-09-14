@@ -306,7 +306,7 @@ test("editor uses independent draft and raw expectations; cancel never mutates d
   state.effect.stop();
 });
 
-test("schedule wrapper opts UPDATE into delete while other editor modes remain unchanged", async () => {
+test("dedicated operation editor keeps its opt-in UPDATE delete behavior", async () => {
   const events = [];
   const optimistic = {
     publish: ({ command }) => { events.push(["publish", command.action]); return true; },
@@ -351,7 +351,6 @@ test("schedule wrapper opts UPDATE into delete while other editor modes remain u
     isolated.effect.stop();
   }
 
-  assert.match(await source("components/SiteOperationSchedule/Manager/index.vue"), /allow-delete-from-update/u);
   assert.doesNotMatch(await source("components/Operation/Manager.vue"), /allowDeleteFromUpdate:\s*\{[^}]*default:\s*true/u);
   assert.match(await source("components/Operation/Editor.vue"), /label="このデータを削除する"/u);
 });
@@ -701,23 +700,30 @@ test("CREATE still reports an invalid preset setter failure and arrangement mana
   assert.equal(await state.editor.open("CREATE", { startTime: 12 }), false); assert.match(state.editor.message.value, /編集を開始できません/u);
   state.editor.close(); assert.equal(state.calls.length, 0); state.effect.stop();
   const code = await source("components/Arrangements/Manager/index.vue");
-  assert.match(code, /<SiteOperationScheduleManager ref="scheduleManager" :optimistic="optimistic">\s*<template #activator \/>\s*<\/SiteOperationScheduleManager>/u);
+  assert.match(code, /<SiteOperationScheduleManager ref="scheduleManager">\s*<template #activator \/>\s*<\/SiteOperationScheduleManager>/u);
   assert.match(code, /<SpeedDial v-bind="uiSpeedDial.attrs" \/>/u);
   const { descriptor } = parse(code), compiled = compileScript(descriptor, { id: "arrangements-manager" });
   const template = compileTemplate({ source: descriptor.template.content, filename: "components/Arrangements/Manager/index.vue", id: "arrangements-manager", compilerOptions: { bindingMetadata: compiled.bindings } });
   assert.deepEqual(template.errors, []);
 });
 
-test("actual OperationManager template renders absent/empty/custom activators through the schedule wrapper", async () => {
-  const { compile } = await import("@vue/compiler-dom"), { renderToString } = await import("@vue/server-renderer");
-  const render = async (path) => new Function("Vue", compile(parse(await source(path)).descriptor.template.content, { mode: "function", prefixIdentifiers: true }).code)(Vue);
-  const button = { setup: (_, { slots }) => () => Vue.h("button", slots.default?.()) };
-  const manager = { inheritAttrs: false, render: await render("components/Operation/Manager.vue"), components: { VBtn: button, OperationEditor: { render: () => null } }, setup: () => ({ activator: { disabled: false }, doc: null, label: "operation", resolvedLabel: "operation", customInput: null, editor: {}, toCreate() {}, toUpdate() {} }) };
-  const wrapper = { inheritAttrs: false, components: { OperationManager: manager }, render: await render("components/SiteOperationSchedule/Manager/index.vue"), setup: () => ({ props: { doc: null, customInput: null } }) };
-  for (const mode of ["absent", "empty", "custom"]) {
-    const slots = mode === "absent" ? {} : { activator: () => mode === "empty" ? [] : [Vue.h("button", "custom")] };
-    const html = await renderToString(Vue.createSSRApp({ render: () => Vue.h(wrapper, null, slots) }));
-    assert.equal((html.match(/<button/g) || []).length, mode === "empty" ? 0 : 1);
-    assert.equal(html.includes("新規登録"), mode === "absent"); assert.equal(html.includes("custom"), mode === "custom");
-  }
+test("schedule managers use the standard Air manager and model handlers", async () => {
+  const single = await source("components/SiteOperationSchedule/Manager/index.vue");
+  const plural = await source("components/SiteOperationSchedules/Manager/index.vue");
+  const workers = await source("components/SiteOperationSchedule/WorkerDetailManager/index.vue");
+  const handlers = await source("handlers/siteOperationScheduleHandlers.js");
+  const actions = await source("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js");
+  assert.match(single, /<air-item-manager/u);
+  assert.doesNotMatch(single, /OperationManager|useOperationEditor/u);
+  assert.match(plural, /<air-array-manager/u);
+  assert.match(plural, /:schema="SiteOperationSchedule"/u);
+  assert.doesNotMatch(plural, /OperationArrayManager|useOperationEditor/u);
+  assert.match(handlers, /await item\.create\(\)/u);
+  assert.match(handlers, /await item\.update\(\)/u);
+  assert.match(handlers, /await item\.delete\(\)/u);
+  assert.match(workers, /internalSchedule\.value\.update\(\)/u);
+  assert.match(actions, /schedule\.update\(\)/u);
+  assert.match(actions, /schedule\.notify\(\)/u);
+  assert.match(actions, /SiteOperationSchedule\.runTransaction/u);
+  assert.doesNotMatch(actions, /useOperationSubmission|scheduleCommands/u);
 });

@@ -126,12 +126,6 @@ export function useIndex(
   const {
     schedules,
     notifications,
-    publishSchedule,
-    publishOperation,
-    publishNotificationState,
-    resetNotifications,
-    refreshSchedule,
-    getSchedule,
     getNotification,
     getConsecutiveWorkWarnings,
     isEmployeeArranged,
@@ -149,10 +143,6 @@ export function useIndex(
   const arrangementsActions = useArrangementsActions({
     schedules,
     siteShiftTypeOrder,
-    publishSchedule,
-    publishNotificationState,
-    resetNotifications,
-    refreshSchedule,
   });
   const siteOrderActions = useSiteShiftTypeOrderActions({
     type: ORDER_TYPE.ARRANGEMENT,
@@ -250,13 +240,6 @@ export function useIndex(
    * RETURN
    *****************************************************************************/
   return {
-    optimistic: {
-      publish: publishOperation,
-      currentSchedule: getSchedule,
-      refresh: async (documentIds = []) => {
-        for (const id of new Set(documentIds)) await refreshSchedule(id);
-      },
-    },
     /** UI controller */
     uiTable: Vue.computed(() => {
       return {

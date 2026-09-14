@@ -14,11 +14,13 @@ test("legacy Schedule SDK writer rejects all four entry points without invoking 
   assert.equal(calls, 0);
 });
 
-test("legacy Schedule handlers refuse create/update/delete without invoking model persistence", async () => {
-  const handlers = await import("../../handlers/siteOperationScheduleHandlers.js"); let calls = 0;
-  const model = { create() { calls++; }, update() { calls++; }, delete() { calls++; } };
-  for (const method of ["handleCreate", "handleUpdate", "handleDelete"]) await assert.rejects(handlers[method](model), /専用/u);
-  assert.equal(calls, 0);
+test("Schedule handlers invoke standard model persistence", async () => {
+  const source = await import("node:fs/promises").then(({ readFile }) =>
+    readFile(new URL("../../handlers/siteOperationScheduleHandlers.js", import.meta.url), "utf8"),
+  );
+  assert.match(source, /await onBeforeCreate\(item\);[\s\S]*?await item\.create\(\);/u);
+  assert.match(source, /await onBeforeUpdate\(item\);[\s\S]*?await item\.update\(\);/u);
+  assert.match(source, /await item\.delete\(\);/u);
 });
 
 test("Site selection confirmation remains local to a tenant/operation, is not serialized, and clears explicitly", () => {

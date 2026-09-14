@@ -70,7 +70,7 @@ test("Site actions keep lifecycle calls inside the shared single-flight permissi
   assert.match(source, /async function reactivate\([\s\S]*executeSiteWrite\(SITE_WRITE_OPERATION\.TERMINATE[\s\S]*assertWritePermission\(\)[\s\S]*siteFunctions\.reactivateSite/u);
 });
 
-test("Schedule editor owns confirmation lifecycle and preset paths inject the same explicit prompt", async () => {
+test("Schedule input keeps confirmation metadata while normal saves use Air managers and the model", async () => {
   const input = await read("components/SiteOperationSchedule/CustomInput/index.vue");
   assert.match(input, /@site-selection-confirmed="onSiteSelectionConfirmed"/u);
   assert.match(input, /clearSiteScheduleConfirmation\(props\.item\)/u);
@@ -81,9 +81,9 @@ test("Schedule editor owns confirmation lifecycle and preset paths inject the sa
   const submission = await read("composables/application/operation/useOperationSubmission.js");
   assert.match(editor, /await confirmTerminatedScheduleSite/u);
   assert.match(submission, /await confirmTerminatedScheduleSite/u);
-  assert.match(await read("components/SiteOperationSchedule/Manager/index.vue"), /OperationManager/u);
-  assert.match(await read("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js"), /useOperationSubmission\(\s*\{\s*concurrent:\s*true\s*\}\s*\)/u);
-  assert.match(await read("composables/useSiteOperationScheduleDuplicator.js"), /useOperationDuplicator\("schedule"\)/u);
+  assert.match(await read("components/SiteOperationSchedule/Manager/index.vue"), /<air-item-manager/u);
+  assert.match(await read("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js"), /await schedule\.update\(\)/u);
+  assert.match(await read("composables/useSiteOperationScheduleDuplicator.js"), /instance\.duplicate\(selectedDates\.value\)/u);
   assert.match(await read("composables/application/operation/useOperationDuplicator.js"), /submission\.submit\(operations\)/u);
 
   const detail = await read("pages/sites/[id].vue");

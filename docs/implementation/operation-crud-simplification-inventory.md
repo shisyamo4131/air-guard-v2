@@ -1,20 +1,20 @@
 # Operation CRUD簡素化の現行棚卸し
 
 - 確認日: 2026-09-14
-- checkpoint: FGA-06-RESULT-CREATE-CLIENT-08
-- 状態: 詳細UPDATE・作業員・物理削除の07以前はDev受入れ済み。一覧CREATEに残っていた過剰Callable接続を固定commit `c171b593`で標準Manager／model保存へLocal修正済み。Dev反映・受入れ待ち
+- checkpoint: FGA-06-SCHEDULE-MANAGER-RESTORE-09
+- 状態: 稼働実績の08以前はDev受入れ済み。現場稼働予定のAir Manager／model保存と単純なtenant RulesへのLocal復元・自動検証済み。固定commitのUI build、Dev反映・画面受入れ、配置管理・上下番確定エラーの調査待ち
 - 対象: 現場稼働予定、稼働実績、稼働請求の画面、Manager、`saveOperation` Callable、Firestore Rules
 - 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、進捗は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)
 
 ## 確認済み実装事実
 
-1. `components/Operation/Manager.vue`と`components/Operation/ArrayManager.vue`は、`useOperationEditor`を介して予定・請求の作成、編集、削除を`saveOperation` Callableへ送る専用Managerである。実績詳細は04・06・07、一覧の通常作成は08でこの経路から外した。
-2. `components/Operation/RowsManager.vue`は、予定・実績・請求の作業員または稼働外売上の行追加・編集・削除・並替えを同じCallableへ送る。実績詳細の作業員は通常client保存へ移行済みだが、稼働外売上は表示・操作・Callable経路を変更していない。
+1. 現場稼働予定の単数・複数Managerは09で`AirItemManager`／`AirArrayManager`へ戻し、`SiteOperationSchedule` modelの作成・更新・削除を使う。請求には`OperationManager`／`OperationArrayManager`と`saveOperation`が残る。
+2. 予定の配置作業員は09で親`SiteOperationSchedule` modelの追加・変更・削除と`update()`へ戻した。実績詳細の作業員は07で通常client保存へ移行済みだが、稼働外売上は表示・操作・Callable経路を変更していない。
 3. 過去実装では作業員配列を`WorkersManager`／`AirArrayManager`の`v-model`で編集し、submit完了時に親`OperationResult.update()`を実行していた。直近実装で追加された`useOperationResultWriter`とEmployee存在確認transactionはこの復元経路に不要であり、FGA-06-RESULT-CALLABLE-RESTORE-07で撤去した。
 4. `functions/shared/operationWriteContract.js`が`create`、`duplicate`、`overview`、`workers`、`articles`、`order`、`delete`、`notify`、`convert`、`agreement`、`adjusted`、`lock`を一つのcommand契約へ集約する。
-5. `functions/modules/operations/saveOperation.js`は全commandを一つのFirestore transactionで処理し、Auth identityとUser、現場、従業員参照、期待値を検査する。予定ではSite `scheduleRevision`と配置通知、実績化では予定・通知・実績、請求では取極め・調整・lockを同じ入口で扱う。
-6. Firestore Rulesは`SiteOperationSchedules`のclient writeを全面拒否したまま、`OperationResults`では同一tenantの有効な本登録Userによる通常create、既存・非lock実績のupdateとdeleteを許可する。create時はlive Site／Customer、actor UID、document ID、空の作業員・稼働外売上・調整値、非lock、非予定紐付けを要求し、lock変更、稼働外売上、請求調整、billing version、lifecycle IDのclient変更は拒否する。
-7. `saveOperation`の実績`create`・`overview`・`workers`・`delete`は正規画面から到達しない旧互換経路であり、入力契約で拒否する。実績複製、稼働外売上、請求は変更せず、従来経路を維持する。
+5. `functions/modules/operations/saveOperation.js`には予定commandとSite `scheduleRevision`処理が互換用に残るが、09の正規予定画面からは到達しない。予定から実績への確定と請求の取極め・調整・lockは引き続きserver入口を使う。
+6. Firestore Rulesは`SiteOperationSchedules`と`ArrangementNotifications`を同一tenantの有効な本登録Userによる通常read/writeへ開き、Site revision、maintenance、live Site、通常field形状を重複検査しない。未認証、User不在、仮登録、無効User、claim不正、他tenantは拒否する。`OperationResults`の個別境界は08までの実装を維持する。
+7. `saveOperation`の実績`create`・`overview`・`workers`・`delete`は正規画面から到達しない旧互換経路であり、入力契約で拒否する。予定の旧分岐は正規画面から外れた互換codeとして残す。実績複製、稼働外売上、請求、予定から実績への確定は変更せず、従来経路を維持する。
 
 ## 操作別の予備分類
 
@@ -22,10 +22,10 @@
 
 | 対象 | 現行action | 現行の主な処理 | 予備分類 | 後続で確認する点 |
 |---|---|---|---|---|
-| 予定 | `create`・`duplicate` | 予定作成、現場参照、表示順、Site revision | 通常CRUD／Air Manager・client化候補 | 表示順競合、Site revisionの必要性、終了現場確認、Rules |
-| 予定 | `overview`・`workers`・`order` | 予定document更新、派生値、配置通知取消し、Site revision | 通常CRUDと関連作用の分離候補 | 通常保存をManagerへ戻し、通知取消し等の最小server処理だけを分離できるか |
-| 予定 | `delete` | 予定documentと関連通知の物理削除 | client物理削除・Trigger連携 | 予定原本をclient削除へ移し、実績化済み拒否をRules、関連通知の削除をTriggerへ接続する |
-| 予定 | `notify` | 配置通知document作成と予定側状態更新 | 技術要件を持つ独立operation候補 | 外部通知との関係、冪等性、再送、複数document atomicity |
+| 予定 | `create`・`duplicate` | 予定作成、現場参照、表示順 | 09でAir Manager／model保存へLocal復元 | Dev画面受入れ、配置管理エラーの再現 |
+| 予定 | `overview`・`workers`・`order` | 予定document更新、配置通知取消し | 09でAir Manager／model保存へLocal復元 | listener収束、配置管理エラーの再現 |
+| 予定 | `delete` | 予定documentと関連通知の物理削除 | 09でmodelのclient削除へLocal復元 | 関連通知削除とDev画面受入れ |
+| 予定 | `notify` | 配置通知document作成と予定側状態更新 | 09でmodelの既存`notify()`へLocal復元 | 外部通知、再送、配置管理エラーの再現 |
 | 予定 | `convert` | 通知値を反映した実績作成、予定を実績化済みに更新 | 技術要件を持つ順序依存operation候補 | atomicity、再実行、通知snapshot、結果不明時の復旧 |
 | 実績 | `create` | 実績作成、Site取極めsnapshot | 標準client保存へLocal移行済み | Dev反映、一覧作成・詳細遷移・Triggerの受入れ |
 | 実績 | `duplicate` | 既存実績の複製 | 現状維持・後続判定 | 複製元snapshot、作業員参照、lock条件 |
@@ -40,7 +40,7 @@
 
 - FGA-06の初期checkpointはrole依存を緩和したが、専用Operation Manager、Callable、期待値競合、client write全面拒否を維持した。認可緩和の完了記録は有効だが、CRUD簡素化の完了とは扱わない。通常CRUDから過剰Callable接続と連動Rulesを戻すことを後続checkpointより優先する。
 - ADR 0069と仕様は当初Air Managerを通常masterへ限定していた。ADR 0071と仕様訂正により通常業務data全般へ適用範囲を広げるが、製品codeは未移行である。
-- `saveOperation`は通常CRUD、transaction物理削除、通知、実績化、請求状態遷移を同じAPIへ集約している。稼働実績deleteは固定製品commit `07511fb3`でclient／Rules／Trigger境界へ移行した。現場稼働予定deleteはCallableとclient delete拒否Rulesへ残る既知実装差であり、後続で別checkpointとして移行する。
+- `saveOperation`は互換用の予定分岐、実績化、請求状態遷移を同じAPIへ残している。09で正規予定callerをmodelへ戻したが、旧予定分岐と専用補助codeの削除は後続整理であり、実績化は現在の上下番確定エラーを再現してから扱う。
 
 ## FGA-06-RESULT-MANAGER-CLIENT-04 実装・Dev受入れ結果
 
@@ -85,6 +85,14 @@ checkpointは後続07と同じDev release・受入れで完了した。schema変
 - `saveOperation`の実績create入力を拒否し、通常createを同一tenantの有効な本登録Userへrole非依存で開いた。作成時のlive Site／Customer、actor UID、document ID、空の作業員・稼働外売上・調整値、非lock、非予定紐付けをRulesで守る。
 - Site archiveとの前後・同時実行をEmulatorで検証し、archive済みSiteに新規実績参照を残さない。
 - 実績複製、稼働外売上、請求、lock、予定、通知、実績化、schema、migration、既存data一括変更、Dev・Prodは変更しない。[Local検証記録](../verification/fga-06-result-create-client-local.md)を参照する。
+
+## FGA-06-SCHEDULE-MANAGER-RESTORE-09 Local実装結果
+
+- 単数・複数の予定Managerを`AirItemManager`／`AirArrayManager`へ戻し、予定の作成・更新・削除・並べ替えを`SiteOperationSchedule` modelへ接続した。
+- 配置作業員の追加・変更・削除、予定の複製、配置画面からの通常保存と通知をmodelの既存処理へ戻した。正規callerから専用operation editor、optimistic publish、`saveOperation`への接続を外した。
+- Rulesは予定と配置通知をtenant共通の通常read/writeへ簡素化し、Site revision、maintenance、live Site、field形状、実績化済み状態の重複検査を撤去した。identityとtenant境界、nested pathの既定拒否は維持する。
+- 予定から実績への確定、請求、実績複製、稼働外売上、schema package、data shape、migration、Dev・Prodは変更しない。
+- 利用者報告の配置管理と上下番確定エラーは、復元後の正規画面で別々に再現して修正する。現時点で解消済みとは扱わない。
 
 ## 未確認事項
 
