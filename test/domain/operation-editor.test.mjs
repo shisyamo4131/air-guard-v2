@@ -525,6 +525,16 @@ test("result detail adopts Air managers without changing its visible operation c
   assert.match(page, /group="articles"[\s\S]*label="稼働外売上"/u);
   assert.match(page, /<OperationResultManager[\s\S]*label="稼働実績"[\s\S]*削除処理/u);
   assert.match(page, /<WorkersManager[\s\S]*v-model="doc\.workers"/u);
+  for (const binding of [
+    ':default-date-at="doc.dateAt"',
+    ':default-site-id="doc.siteId"',
+    ':default-shift-type="doc.shiftType"',
+    ':default-start-time="doc.startTime"',
+    ':default-end-time="doc.endTime"',
+    ':default-is-start-next-day="doc.isStartNextDay"',
+    ':default-regulation-work-minutes="doc.regulationWorkMinutes"',
+    ':default-break-minutes="doc.breakMinutes"',
+  ]) assert.ok(page.includes(binding), binding);
   assert.match(page, /@submit:complete="async \(\) => await doc\.update\(\)"/u);
   assert.doesNotMatch(page, /OperationResultWorkersManager/u);
 });
