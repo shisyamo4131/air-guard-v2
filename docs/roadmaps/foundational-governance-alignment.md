@@ -5,7 +5,7 @@
 - 現在の進捗: 80%
 - 目的: 利用者が提示するプロジェクト固有の根本ルールを正本へ反映し、通常業務CRUDに重なったrole・permission制御、専用Callable、重複Rulesを可能な限り緩和・簡素化する。通常CRUDとtransaction dataの物理削除はDomain Manager、`AirItemManager`／`AirArrayManager`、FireModel／ClientAdapterの標準client経路を有効活用し、標準archive・restoreと業務状態変更・請求・実績化を含む保存方式は現行仕様へ揃え、認証account操作と後続Trigger・外部作用の必要部分を分離する。transaction dataにはarchiveを設けず、削除後の関連data連携はTriggerへ委譲する。
 - FGA-06最優先基準: 新しい専用層を追加することではなく、過去実装と現行の標準Manager／model保存を照合し、後から過剰に追加されたCallable接続、専用writer、client transaction、競合検査と、それらを前提に増えたRulesを通常CRUDから除去する。server維持にはoperation固有の確認済み理由を必要とし、server検査をclientへ移植しただけの変更は簡素化完了としない。
-- 実装順: Customer管理 → Site管理 → Employee管理 → Outsourcer管理 → その他transaction系機能。
+- 実装順: 2026-09-15の利用者訂正により、棚卸し解消は固定の機能順を適用せず、各項目の現状・依存・変更範囲を確認して影響の小さいものから選ぶ。現在の選定結果は[標準CRUD整合ロードマップ](standard-crud-alignment.md)を正とする。
 - 進捗方式: milestone weightは工程完了の比率であり工数見積りではない。合計100。各機能milestoneは、着手時に利用者と合意した小checkpointへweightを配分し、各checkpointの実装、必須検証、必要なmigration、固定commitのDev反映・受入れが完了した場合だけ部分加点できる。ルール整理だけ、local実装だけ、未承認Dev待ちは製品milestoneへ加点しない。
 
 ## 2026-09-15の仕様回答に対応する残作業
@@ -15,7 +15,7 @@
 ## フェーズ原則
 
 - 新しいルールごとに、project governanceとしての妥当性、正本、既存仕様・ADR・実装との矛盾、互換性、migration、rollback、testを確認してから反映する。利用者は2026-09-09にルール提示完了を明示し、FGA-01を完了した。後続の新規ルール追加は別の仕様変更として同じ確認を行う。
-- 製品改修は機能順を守りつつ、対象operation、変更規模、data・外部作用・破壊性に応じて利用者と小checkpointを決める。一つのcheckpointで安全にreview・rollback・Dev受入れできない場合はさらに分割する。
+- 製品改修は対象operation、変更規模、依存関係、data・外部作用・破壊性を確認して影響の小さい独立範囲から選び、利用者と小checkpointを決める。一つのcheckpointで安全にreview・rollback・Dev受入れできない場合はさらに分割する。
 - 各checkpointは `現行挙動と全reader/writer確認 → 変更契約・例外分類・data互換・rollback・test合意 → 実装 → 影響別自動検証 → 必要な環境検証 → 固定commitのDev反映・受入れ → 文書・証拠・Git closeout` の順で閉じる。
 - 破壊的変更、data migration、Dev/Prod、remote read/write、外部作用、pushは既存runbookに従い個別承認する。このphase、branch、前checkpointの承認を後続操作へ拡張しない。
 - branchはphaseの作業境界であり、未完了checkpointをまとめてDevへ出す根拠にしない。Dev反映方法とmain統合単位は各checkpointの開始時に決める。
@@ -106,6 +106,6 @@
 ## 完了条件
 
 - 提示された全ルールが一つのcurrent specificationとproject ruleへ矛盾なく反映され、置換された判断と未決事項が区別されている。
-- Customer、Site、Employee、Outsourcer、その他transaction系の順で、承認済み全checkpointが実装・検証・必要なDev受入れまで完了している。
+- 現行計画に従い、承認済み全checkpointが実装・検証・必要なDev受入れまで完了している。
 - 現行仕様と実装の既知不整合が0件、または利用者が明示承認した別phaseへ根拠・risk・開始条件付きで移されている。
 - 最終差分のchange class union、必須gate、review、verification receipt、Git状態、未検証・残存risk、rollbackがcloseoutされている。

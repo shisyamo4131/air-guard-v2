@@ -13,7 +13,7 @@
 - Manager構成、入力component、activator・保存経路、dialog幅と例外は[現行仕様のPageとcomponentの構成](../specification.md#pageとcomponentの構成)、document単位の同時更新・保存時検証・listener・例外・Prod公開後の未確定案は[Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)を詳細の正本とし、実装・review前に対象節を読む。本規則へ詳細仕様を複写しない。
 - 未移行の既存Managerは各機能checkpointで仕様の入力契約へ揃え、一括改修しない。仕様が認める例外を使用する場合は、確認済み理由、影響、検証条件を当該checkpointへ示す。
 - document構成・機微情報の必須分割と個別分割条件は[現行仕様](../specification.md#firestoreドキュメントの構成)を読む。既存documentに同居する情報を移す場合は、対象data、全reader/writer、互換性、migration、rollback、Rules cutover、Dev受入れを別checkpointで承認・検証する。規則採用だけで自動移行しない。
-- 既存のfield限定writer、専用editor、競合拒否、Manager除去をこのruleの採用だけで一括変更しない。[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)の機能順に、通常更新か例外か、document全体のserialization、server管理・派生field、Rules、listener、旧client、rollback、testを確認して段階移行する。
+- 既存のfield限定writer、専用editor、競合拒否、Manager除去をこのruleの採用だけで一括変更しない。[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)で定める現行計画に従い、通常更新か例外か、document全体のserialization、server管理・派生field、Rules、listener、旧client、rollback、testを確認して段階移行する。
 - Rulesを狭める変更は[development workflow](../runbooks/development-workflow.md#firestore-rulesを狭める改修順序)で対象とcutover方式を確定する。
 
 ## 通常業務のtenant信頼境界と例外
@@ -22,7 +22,7 @@
 
 - 通常業務のactor・tenant境界、Rulesと保存時validationの責務、例外operation、client／Callableの選択は[現行仕様のテナントと認証](../specification.md#テナントと認証)を詳細の正本とする。実装・review前に対象operationを通常業務か例外かへ分類する。
 - マスタdataのarchive・restore方式は[現行仕様の共通節](../specification.md#ドキュメントのアーカイブと物理削除)を正とし、旧専用Callableの存在を維持理由にしない。transaction dataにはarchive処理を設けず、製品が提供するtransaction documentの物理削除はCallableを使用せず、Domain Manager／FireModel／ClientAdapterのclient削除へ接続する。削除後に必要な関連document・Storage・集計・履歴等との連携はFirestore Triggerが所有し、clientの削除成功をTrigger完了の保証へ読み替えない。既存Callableとclient delete拒否Rulesは、対象transaction checkpointでcaller・Trigger・失敗時運用・rollback・testを確認して段階的に撤去する。
-- 既存のrole制限、Callable、Rulesをこのruleの採用だけで一括撤去しない。[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)に従い、Customer、Site、Employee、Outsourcer、その他transaction系の順で、対象operation、例外該当性、reader/writer、data、Rules、rollback、test、Dev受入れを小checkpointごとに確定して段階移行する。
+- 既存のrole制限、Callable、Rulesをこのruleの採用だけで一括撤去しない。[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)で定める現行計画に従い、対象operation、例外該当性、reader/writer、data、Rules、rollback、test、Dev受入れを小checkpointごとに確定して段階移行する。
 
 ## Component階層、表示data、従属参照
 

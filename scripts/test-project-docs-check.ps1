@@ -42,10 +42,31 @@ try {
         Copy-Item -LiteralPath (Join-Path $sourceRoot $relativeFile) -Destination $destination
     }
 
+    # Copy actual source-link targets once, before fixture mutations.
+    # Missing targets are not synthesized: the checker must still reject them.
+    $sourcePrefix = $sourceRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    $fixturePrefix = [IO.Path]::GetFullPath($fixtureRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    foreach ($document in Get-ChildItem -LiteralPath (Join-Path $sourceRoot 'docs') -Recurse -File -Filter '*.md') {
+        $documentText = Get-Content -LiteralPath $document.FullName -Raw -Encoding UTF8
+        foreach ($link in [regex]::Matches($documentText, '\]\((?<target>\.{1,2}/[^\s)]+\.(?:js|vue|rules))(?:#[^\s)]*)?\)')) {
+            $sourceFile = [IO.Path]::GetFullPath((Join-Path $document.DirectoryName $link.Groups['target'].Value))
+            if (-not $sourceFile.StartsWith($sourcePrefix, [StringComparison]::OrdinalIgnoreCase)) { continue }
+            if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) { continue }
+            $relativePath = [IO.Path]::GetRelativePath($sourceRoot, $sourceFile)
+            $destination = [IO.Path]::GetFullPath((Join-Path $fixtureRoot $relativePath))
+            if (-not $destination.StartsWith($fixturePrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'Source fixture path escaped its root.' }
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+            Copy-Item -LiteralPath $sourceFile -Destination $destination
+        }
+    }
+
     Invoke-Checker $true 'valid baseline'
 
     $documentationMapPath = Join-Path $fixtureRoot 'docs/README.md'
     $validDocumentationMap = Get-Content -LiteralPath $documentationMapPath -Raw -Encoding UTF8
+    Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value ($validDocumentationMap + "`n[Missing source target](../components/missing-governance-fixture.vue)`n")
+    Invoke-Checker $false 'missing source link is rejected'
+    Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value $validDocumentationMap
     $capacityAliasPrefix = '`容量チェック` / '
     Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value ($validDocumentationMap.Replace($capacityAliasPrefix, ''))
     Invoke-Checker $false 'capacity routing alias is required'

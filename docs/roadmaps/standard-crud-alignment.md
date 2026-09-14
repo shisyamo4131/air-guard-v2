@@ -17,7 +17,7 @@
 
 既存の `FGA-06-SCHEDULE-MANAGER-RESTORE-09` の画面再受入れと `FGA-06-TRANSACTION-PARENT-INDEPENDENCE-10` のprojection・Dev復旧は、FGAの未完項目として保持する。本書のSCR-06〜08で共有するcode・Rules・画面・Triggerの証拠は相互参照し、同じ修正や受入れを二重に計上しない。実data repairを通常CRUD改修へ混ぜない。
 
-## 解消順とマイルストーン
+## 対象項目とマイルストーン
 
 重みは各checkpointの完了を数えるための均等配点で、工数・riskの見積りではない。合計100、checkpoint内の部分加点なし。製品の実装・必要な検証・対象範囲のDev受入れが揃うまで0点とし、計画作成だけでは加点しない。
 
@@ -34,7 +34,45 @@
 | SCR-09 Billings入金予定日 | 10 | 0 | Planned | 提供済み編集をManager／Classへ接続し、Rulesと旧比較testを整合。保存・再表示・失敗、tenant境界を検証する |
 | SCR-10 請求確定・確定後CRUD | 10 | 0 | Planned | 未提供UI・issuer snapshot等の確認残を具体化し、合意した提供操作を標準CRUDで実装。確定後の直接編集・請求document削除と、元実績の非削除を検証する |
 
-この表の順に1件ずつ閉じる。Siteの状態変更とarchive、Employeeの状態変更とarchiveはそれぞれ別checkpointにし、先行分の完了証拠を後続へ渡す。SCR-06と07は同じOperationResults Rulesを扱うため並列編集せず、後続着手時に先行変更との整合を確認する。
+SCR番号は対象の識別子であり、実行順ではない。2026-09-15の利用者訂正により、固定のCustomer→Site→Employee順を取り下げ、下記の影響確認から次の1件を選ぶ。SCR-06と07など共有Rulesを扱う変更は並列編集せず、前工程との依存を確認する。既存の大項目も、独立して受入れ可能なら操作単位へ分け、配点は親項目の合計を維持する。
+
+## 影響確認から次の1件を選ぶ
+
+最初に全順序を固定せず、候補ごとに次を確認して比較する。小さな変更で独立して完了できる操作から着手し、1件を閉じた時点で残件を再評価する。未確認を「影響なし」と扱わない。
+
+1. 実際の画面入口がAir Managerへ接続しているか。名前がManagerでも独自dialog・controllerなら置換対象として数える。
+2. 標準クラスの保存へつなぐだけか。入力条件・serialization・listener・error処理の調整、Manager置換、共有callerの変更も必要か。
+3. Rules、保存形式、他document、後続Trigger、User/Authへの影響があるか。file数だけで影響の大小を決めない。
+4. 最小変更範囲、維持する動作、必要な検証、未確認事項を提示し、独立して完了できるかを判断する。影響が広がれば候補を分割するか後へ回し、別の小さい候補を選ぶ。
+
+### 初回比較（2026-09-15・静的確認）
+
+下表は実装順の確定ではなく、詳細確認の優先候補である。実装・runtime検証は未実施。「標準CRUDへの接続だけで完了」と確定できた項目は今回の比較ではない。
+
+| 対象 | 必要な変更の種類 | 次を選ぶ際の判断 |
+|---|---|---|
+| SCR-09 入金予定日 | 独自editorのManager接続、標準保存、Billings Rules | 最初の詳細確認候補。提供入力と保存先が狭い。全体serialization、背景writerとの併存、日付検証を先に照合する |
+| SCR-08 通知状態・編集 | 単数／本人向け独自dialogのManager接続、標準状態更新 | Rulesは既にtenant共通で変更不要候補。ただし通知生成・FCMへ波及するため、送信条件と共有editorへの影響を確認して順位を決める |
+| SCR-02 Site終了・再開 | 独自dialogのManager接続、状態保存、Rules | 終了・再開条件のClass一致が未確認。自動終了との共有範囲も確認し、SCR-08との前後を決める |
+| SCR-07 実績化 | 既存Managerを再利用できる候補、Generator内の標準通知作成・実績化接続、Rules | Manager全体の置換を前提にしない。予定・通知・実績とprojectionに及ぶため、接続先メソッドがあっても小変更とは判定しない |
+| SCR-06 稼働請求・lock・稼働外売上 | 専用Managerの置換、複数操作の標準保存、共有Rules | 画面別lockのクラス基盤を再利用。OperationResults共有画面への影響を確認し、独立して検証できる操作へ分割する |
+| SCR-01・03 Customer／Site archive | Manager接続、標準移動復旧、Rules、旧保存形式の互換性 | データ形式の違いがあるため後段候補。既存形式への影響と復旧範囲を確認してから対象ごとに着手する |
+| SCR-10 請求確定後CRUD | 未提供UIの具体化、既存Managerの保存handler、Rules | 既存Managerは利用可能だが未提供操作がある。単純な置換として扱わず、必要なUIとsnapshot条件を先に具体化する |
+| SCR-04・05 Employee | 業務状態・archiveの標準保存と、Class／User／Authの責務分離 | 軽微なCRUD群と分けた後段工程。下記の設計・検証を終えるまで標準退職メソッドへ単純接続しない |
+
+比較根拠は[入金予定日editor](../../components/CustomerBilling/PaymentDateEditor.vue)、[通知Manager](../../components/ArrangementNotification/Manager/index.vue)、[本人向けManager](../../components/ArrangementNotifications/Manager/index.vue)、[Site終了入口](../../components/Site/Editor/Terminate.vue)、[実績Generator](../../components/OperationResult/Generator/index.vue)、[稼働請求Manager](../../components/OperationBilling/Manager/index.vue)と[棚卸しの一次根拠](../implementation/operation-crud-simplification-inventory.md#主な一次根拠)。
+
+### Employeeの独立した設計・検証
+
+確認した既存経路は、Employeeの標準toTerminated内のUser削除 → [User削除Trigger](../../functions/triggers/user.js) → [Authentication削除](../../functions/modules/auth/deleteUser.js) → [Auth削除Trigger](../../functions/triggers/auth.js)のFcmTokens整理である。業務documentの更新だけで完結しない。現在の認証専用経路と標準メソッド経由の保護条件が同等とは確認できていない。
+
+SCR-04では接続変更の前に、業務状態だけを変更する範囲とUser/Authを変更する専用範囲、Class変更の要否を設計し、独立security reviewを行う。Employee単体、仮登録User、本登録User、管理者に紐付く場合を分け、次を検証する。
+
+- 業務状態の更新・誤退職訂正だけでUser、Auth、claims、認証処理の予約・lockを意図せず変更しない。訂正で削除済みaccountを自動復元しない。
+- 認証専用処理の対象identity・tenant照合を維持し、途中失敗、結果不明・再実行、予約解放、後続cleanupを確認する。document保存成功とAuth・cleanup完了を区別する。
+- Employee側のRules整合からUserのclient write開放を導かない。SCR-05のarchiveもUser/Auth・従属documentを連鎖削除しないことを別に確認する。
+
+既存の退職、認証gateway、lifecycle再照合testを利用し、実際に変更する経路と接続部分へ検証を追加する。必要な認証条件を削って通常CRUDへ寄せることを完了条件にしない。これらの成立と対象範囲のDev受入れが確認できるまでEmployee項目は未完了とする。
 
 ## 各工程で先に解消する確認残
 
@@ -65,4 +103,4 @@ code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-
 
 ## 次の作業
 
-SCR-01 Customerを対象に、既存archiveの入口、Classの削除hook／標準restore、Rules、旧envelopeとの互換性、必要なtestを照合し、最初の実装checkpointを具体化する。今回の終了条件は、このロードマップと関連案内の作成・review・文書検証までとする。
+まずSCR-09 入金予定日を詳細確認する候補とする。最初の実装対象としての確定は、標準Billing全体保存と背景writer・日付検証・Rulesの整合を確認してから行う。候補を1件ずつ現物で確認し、保存接続だけで済むか、Manager置換・共有Rules・保存形式・認証側の変更が必要かを整理する。確認した変更範囲が最小の独立操作について実装checkpointを具体化する。今回の終了条件は、順序の決め方と影響分類の訂正・review・文書検証までとする。
