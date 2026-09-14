@@ -62,6 +62,18 @@
 一次根拠は[旧日付contract](../../composables/domain/customerBilling/billingPaymentContract.js)、[背景Billing同期](../../functions/modules/billings/billingReferencePlan.js)、[背景保存](../../functions/modules/employees/backgroundReferencePlan.js)、installed Billing classとclient-adapterのupdate。現行仕様と食い違うCONF-0036の旧発行後制限は現行標準CRUDへ整合し、再導入しない。remote・実dataは未確認、製品testは未実施。調査・記録はproject-guidance-metadataとしてproject-docsとdiff-checkで検証し、製品suite・環境検証は製品変更がないため対象外とする。要件自体・schema・操作手順は変えないため、仕様version・ADR・manual・運用runbookは更新しない。
 記録差分の独立reviewでは、01の証拠限界と02の部品scopeが妥当と確認された。入金model未決の参照先をCONF-0035へ訂正した。02はbeforeEditとhandlerでCREATE/DELETEを拒否し、schema由来componentAttrsを使用する。親SCR-01の製品完了とは区別する。
 
+## SCR-01-02 単数Managerと入力部品（2026-09-15）
+
+基準は `fda620d2dd13ec953bd40f1c2c0c65a1e05c3aa6`。01-01の契約に従い、[CustomerBillingManager](../../components/CustomerBilling/Manager/index.vue)、[CustomInput](../../components/CustomerBilling/CustomInput.vue)、[日付検証](../../composables/domain/customerBilling/paymentDueDateValidation.js)と `test/domain/customer-billing-manager.test.mjs` を追加した。詳細pageには未接続で、既存製品経路は変更していない。
+
+- Billing instanceのmodelValue、UPDATEだけを許すbeforeEditとhandler、activator透過、480px、既定editor・error/loadingを使用する。customInputはschema由来属性で入金予定日を編集し、updatePropertiesでnullへ解除する。
+- 日付の共有検証はnullまたは請求日以降を許し、通過後にdraft.updateへ委譲する。expected比較・独自dialog・再取得は追加していない。
+- `node --test test/domain/customer-billing-manager.test.mjs`: 12/12、exit 0。実handlerのCREATE/DELETE拒否、UPDATE委譲、日付検証拒否・保存reject伝播を検証。installed useItemManagerとのメモリ内接続でdraft変更・null解除・取消再開・失敗時編集維持とloading解除を確認し、Timestamp互換・JST境界を含めた。
+- `node --test test/domain/*.test.mjs`: coordinatorが最終source/testで1,477/1,477、exit 0を確認。以後の変更は記録文書のみであり、この製品test証拠を再利用する。
+- 独立review: 初回の文字列testだけでは動作証拠が不足するP2を、handler/base接続test追加で解消。labelとUTF-8 BOMなしCRLFを修正し、最終reviewにblocking指摘なし。disabledは両入力のtemplateと標準部品契約の静的照合であり、ブラウザ実操作の証明ではない。
+- 証拠限界: Vue画面のmount、Errors Storeへの実登録、date picker実操作は未検証。base周辺のmode/errors/loading/cloneはtest stubを用いる。Firestore実保存・全値serialization・listener・背景writer・Dev受入れは03以降で検証する。02を単独releaseしない。
+- 変更classはui-css-layout、application-logic、文書整合はproject-guidance-metadata。completion gateはproject-docs、domain-full、diff-check。Rules・保存形式・依存package・環境・governance変更がないため、Emulator、UI build、release-only、governance専用gateは省略する。仕様version・ADR・manualは提供画面の変更がないため更新しない。
+- rollbackは未接続の4file追加差分を戻す。関連文書の旧方針はbilling-lifecycle-uiをHistoricalと明示し、FUT-0051を現行LWWへ置換した。これは製品移行の得点とはしない。
 ## 2026-09-15仕様回答の反映と残作業
 
 保存方式と画面別lock条件は[現行仕様](../specification.md#標準crudと後続処理)・[画面別操作表](../specification.md#稼働実績ロックと画面別操作)で確定した。今回の文書変更で製品code・Rules・dataは切り替えていない。以下の確認日付き実装記録を移行済みと読み替えない。

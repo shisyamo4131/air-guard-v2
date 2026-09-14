@@ -811,17 +811,13 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 
 ## FUT-0051 Billing client編集とaggregation更新の競合を防ぐ
 
-- 状態: Hypothesis
-- 重大度: High
+- 状態: Superseded（2026-09-15の標準CRUD・document単位LWWへ置換）
 - 発見セグメント: SPEC-SEG-018
 - 対象ファイル・シンボル: Billing詳細paymentDueDateAt update、Billing aggregation Functions、server/client adapter update
-- 確認済み実装事実: Billing詳細はpaymentDueDateAtをclient updateする。aggregation Functionsも同じBilling documentのoperationResultsを非transaction updateするbranchがある。画面側にversion checkはない。
-- 想定影響と発生条件: paymentDueDateAt編集とOperationResult同期が同時に同じBillingをread-modify-writeすると、adapterがfull modelを保存する場合に後勝ちで相手のfieldを古い値へ戻し、支払期日または集計明細を失う可能性がある。
-- 未確認点・仮説: client/server adapterのupdate field mask、Emulator再現、競合頻度、subscription後の表示、将来invoice-issued trigger実装は未確認。
-- 推奨する将来対応: adapterのwrite payloadを確認し、field ownershipを分離する。invoice-issued前は請求担当者によるfield-level update＋versionを許し、発行後はbefore/after/reason/actor/time履歴付きprocess、paid/cancelledは拒否する。Customer条件変更は既存Billingへ自動反映しない。aggregationはtransaction化する。
-- 必要なテスト: paymentDueDateAtとresult add/update/remove同時実行、発行前、発行後reason/history、paid/cancelled拒否、Customer default変更、権限、two-tab期日編集、version conflict、subscription収束、retry。
-- ユーザー判断が必要な事項: なし。write契約確認後の整合性実装事項である。
-
+- 置換理由: 通常更新は[document単位LWW](../specification.md#firestoreドキュメントの同時更新)を採用し、異なるfieldの同時変更も自動mergeしない。旧field ownership/version・競合拒否、発行後reason/history必須、paid/cancelled拒否案は適用しない。
+- 現行対応: [SCR-01](../roadmaps/standard-crud-alignment.md#scr-01-入金予定日編集の内訳)でManager・標準保存・Rules・背景writerとの接続を整合する。実装事実とserializationの確認範囲は[SCR-01-01調査](operation-crud-simplification-inventory.md#scr-01-01-保存契約の調査結果2026-09-15)を参照する。旧案の置換を製品移行完了とは数えない。
+- 検証: 通常の日付変更・解除・listener収束、全体保存内容、背景集計後の日付保持をSCRで確認する。同時変更の完全保持やversion conflict拒否を完了条件に戻さない。
+- 未決: 入金処理はCONF-0035、Prod公開後のfield単位LWW案は現行仕様の未確定事項として分離する。Customer条件変更を既存Billingへ自動反映しない扱いを維持する。
 ## FUT-0052 請求書PDFの発行必須項目とstatus別発行を仕様化する
 
 - 状態: Open

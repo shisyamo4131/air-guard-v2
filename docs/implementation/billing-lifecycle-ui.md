@@ -1,9 +1,11 @@
 # Billing請求書の画面操作・状態遷移・ロック契約の実装調査
 
-- 状態: 実装調査
+- 状態: Historical（2026-08の実装調査）
 - 対象セグメント: SPEC-SEG-018、SPEC-DEEP-022、SPEC-DEEP-039a、SPEC-DEEP-042
 - 最終確認日: 2026-08-12
 - 根拠ファイル: `utils/pageSettings.js`、`pages/billings/customers/`、`components/CustomerBillings/`、Billing data layer/manager/handler、OperationBilling詳細page・manager・lock button/composable、schemas `Billing.js`・`OperationBilling.js`、Billings/OperationResults Rules
+
+本書は2026-08時点の調査記録であり、本文の「現在」「将来要対応」を現行の実装・要件として適用しない。現在の保存経路・差分は[SCR棚卸し](operation-crud-simplification-inventory.md)、要件は[標準CRUD](../specification.md#標準crudと後続処理)と[document単位LWW](../specification.md#firestoreドキュメントの同時更新)を正とする。CONF-0036の旧発行後履歴必須・paid/cancelled変更禁止、FUT-0051のversion競合拒否案は置換済みであり、SCR改修へ再導入しない。
 
 ## 入口・権限
 
