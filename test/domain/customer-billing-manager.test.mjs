@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { parse, compileScript, compileTemplate } from "@vue/compiler-sfc";
 import * as Vue from "vue";
+import Billing from "../../node_modules/@shisyamo4131/air-guard-v2-schemas/src/Billing.js";
 import { assertPaymentDueDate } from "../../composables/domain/customerBilling/paymentDueDateValidation.js";
 import { dateInput, parseDate } from "../../composables/domain/shared/valueContract.js";
 
@@ -64,8 +65,7 @@ async function loadCustomInputHarness({
   );
   const updates = [];
   globalThis.__customerBillingInputHarness = {
-    computed: (getter) => ({ get value() { return getter(); } }),
-    dateInput,
+    useDefaults: (props) => props,
     defineProps: () => ({
       componentAttrs: {},
       disabled,
@@ -75,9 +75,9 @@ async function loadCustomInputHarness({
     }),
   };
   const moduleSource = `
-    const { computed, dateInput, defineProps } = globalThis.__customerBillingInputHarness;
+    const { useDefaults, defineProps } = globalThis.__customerBillingInputHarness;
     ${setupSource}
-    export { billingDate, clearPaymentDueDate };
+    export { props, clearPaymentDueDate };
   `;
   const module = await import(
     `data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}#${Date.now()}-${Math.random()}`,
@@ -241,7 +241,6 @@ test("CustomerBillingManager delegates valid updates and propagates validation o
 test("CustomerBillingCustomInput clears the date with the base updateProperties contract", async () => {
   const mounted = await loadCustomInputHarness();
   try {
-    assert.equal(mounted.module.billingDate.value, "2026-09-30");
     mounted.module.clearPaymentDueDate();
     assert.deepEqual(mounted.updates, [{ paymentDueDateAt: null }]);
   } finally {
@@ -378,7 +377,65 @@ test("CustomerBillingManager keeps the base editor contract and exposes UPDATE o
   assert.match(input, /componentAttrs.*item.*updateProperties.*disabled.*editMode/su);
   assert.match(input, /componentAttrs\.paymentDueDateAt/u);
   assert.match(input, /label="入金予定日"/u);
-  assert.match(input, /:min="billingDate"/u);
+  assert.match(input, /:min="props\.item\.billingDate"/u);
+  assert.match(manager, /:custom-input="props\.customInput \|\| CustomInput"/u);
+  assert.match(manager, /v-bind="\{ \.\.\.\$attrs, \.\.\.attrs \}"/u);
+  assert.doesNotMatch(manager, /defineEmits\s*\(/u);
   assert.match(input, /:disabled="props\.disabled \|\| props\.editMode !== 'UPDATE'"/u);
   assert.match(input, /paymentDueDateAt: null/u);
+});
+
+// Evaluate the compiled input template in memory; Vuetify defaults and widgets
+// remain stubs, so this does not claim a mounted picker or browser acceptance.
+async function renderInputDateProps(props) {
+  const source = await readFile(
+    new URL("../../components/CustomerBilling/CustomInput.vue", import.meta.url),
+    "utf8",
+  );
+  const { descriptor } = parse(source);
+  const script = compileScript(descriptor, { id: "billing-date-min" });
+  const template = compileTemplate({
+    source: descriptor.template.content,
+    filename: "CustomerBillingCustomInput",
+    id: "billing-date-min",
+    compilerOptions: { bindingMetadata: script.bindings },
+  });
+  assert.deepEqual(template.errors, []);
+  const code = template.code
+    .replace(/import \{([^}]+)\} from "vue"/gu, (_, bindings) =>
+      "const {" + bindings.replace(/ as /gu, ": ") + "} = Vue;")
+    .replace("export function render", "return function render");
+  const render = new Function("Vue", code)({
+    ...Vue,
+    resolveComponent: (name) => name,
+  });
+  const root = render({}, [], {}, { props, clearPaymentDueDate: () => {} });
+  function findDate(vnode) {
+    if (vnode.type === "air-date-input") return vnode.props;
+    const children = Array.isArray(vnode.children)
+      ? vnode.children
+      : vnode.children?.default?.() ?? [];
+    return children.map(findDate).find(Boolean);
+  }
+  return findDate(root);
+}
+
+test("input minimum follows the Billing getter when the reactive date or item changes", async () => {
+  const item = Vue.reactive(new Billing());
+  item.billingDateAt = new Date("2026-09-29T15:00:00.000Z");
+  const props = Vue.reactive({
+    item,
+    componentAttrs: {},
+    disabled: false,
+    editMode: "UPDATE",
+  });
+  assert.equal((await renderInputDateProps(props)).min, "2026-09-30");
+  item.billingDateAt = new Date("2026-09-30T15:00:00.000Z");
+  assert.equal((await renderInputDateProps(props)).min, "2026-10-01");
+  const replacement = new Billing();
+  replacement.billingDateAt = new Date("2026-10-31T15:00:00.000Z");
+  props.item = replacement;
+  assert.equal((await renderInputDateProps(props)).min, "2026-11-01");
+  props.disabled = true;
+  assert.equal((await renderInputDateProps(props)).disabled, true);
 });

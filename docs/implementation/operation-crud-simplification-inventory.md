@@ -68,12 +68,22 @@
 
 - Billing instanceのmodelValue、UPDATEだけを許すbeforeEditとhandler、activator透過、480px、既定editor・error/loadingを使用する。customInputはschema由来属性で入金予定日を編集し、updatePropertiesでnullへ解除する。
 - 日付の共有検証はnullまたは請求日以降を許し、通過後にdraft.updateへ委譲する。expected比較・独自dialog・再取得は追加していない。
-- `node --test test/domain/customer-billing-manager.test.mjs`: 12/12、exit 0。実handlerのCREATE/DELETE拒否、UPDATE委譲、日付検証拒否・保存reject伝播を検証。installed useItemManagerとのメモリ内接続でdraft変更・null解除・取消再開・失敗時編集維持とloading解除を確認し、Timestamp互換・JST境界を含めた。
-- `node --test test/domain/*.test.mjs`: coordinatorが最終source/testで1,477/1,477、exit 0を確認。以後の変更は記録文書のみであり、この製品test証拠を再利用する。
+- 初回実装時の証拠: `node --test test/domain/customer-billing-manager.test.mjs`: 12/12、exit 0。実handlerのCREATE/DELETE拒否、UPDATE委譲、日付検証拒否・保存reject伝播を検証。installed useItemManagerとのメモリ内接続でdraft変更・null解除・取消再開・失敗時編集維持とloading解除を確認し、Timestamp互換・JST境界を含めた。
+- 初回実装時の証拠: `node --test test/domain/*.test.mjs`: 1,477/1,477、exit 0。下記の利用者改修でsource/testが変わったため、最終状態の証拠は再検証結果を使用する。
 - 独立review: 初回の文字列testだけでは動作証拠が不足するP2を、handler/base接続test追加で解消。labelとUTF-8 BOMなしCRLFを修正し、最終reviewにblocking指摘なし。disabledは両入力のtemplateと標準部品契約の静的照合であり、ブラウザ実操作の証明ではない。
 - 証拠限界: Vue画面のmount、Errors Storeへの実登録、date picker実操作は未検証。base周辺のmode/errors/loading/cloneはtest stubを用いる。Firestore実保存・全値serialization・listener・背景writer・Dev受入れは03以降で検証する。02を単独releaseしない。
 - 変更classはui-css-layout、application-logic、文書整合はproject-guidance-metadata。completion gateはproject-docs、domain-full、diff-check。Rules・保存形式・依存package・環境・governance変更がないため、Emulator、UI build、release-only、governance専用gateは省略する。仕様version・ADR・manualは提供画面の変更がないため更新しない。
 - rollbackは未接続の4file追加差分を戻す。関連文書の旧方針はbilling-lifecycle-uiをHistoricalと明示し、FUT-0051を現行LWWへ置換した。これは製品移行の得点とはしない。
+
+### 利用者改修の再review・closeout（2026-09-15）
+
+- review基準: local branch codex/standard-crud-alignment、HEAD 5aa1a3d8a2ef3cf98019937848876d1658ae08ecと利用者編集のCustomerBilling 2file。01-02の未接続部品工程を対象とする。
+- Managerは基底のupdate eventを同名でattrs転送し、customInputの型判定・関数呼出しを基底へ委譲する。CustomInputはuseDefaultsを使用し、minへBilling.billingDateを直接渡す。利用者の製品codeへ追加修正は行っていない。
+- 既存testは削除済みcomputedに依存し初回9成功・3失敗（exit 1）。test/domain/customer-billing-manager.test.mjsのharnessと期待値を更新し、実Billingとコンパイル済みtemplateで日付変更・instance差替えのminとdisabledを検証した。更新後の直接testは13/13、exit 0。
+- 最終source/testに対するcoordinator実行: node --test test/domain/*.test.mjs は1,478/1,478、exit 0。初回実装時の旧証拠を最終判定へ再利用しない。
+- 独立reviewにblocking指摘なし。attrsの同名event転送、基底のresolver解決、明示props優先のuseDefaults、同constructorによるcloneとBilling getter保持を静的確認した。実Vuetify defaults injection・event伝播のmount、browser/date picker、実保存・listener・Devは未検証。直接testのuseDefaultsはstubであり、そのruntime保証とはしない。
+- 01-02を部品・Localとして閉じる。親SCR-01は0点、次は01-03。FUT-0191〜0193はCustomerBillingでの対応を反映し、他箇所の調査・改修を残す。仕様・ADR・manual・CHANGELOG・運用・data contractは提供画面・要件・保存形式を変更しないため更新しない。検証class・省略gate・rollbackは上記の部品工程条件を維持する。
+
 ## 2026-09-15仕様回答の反映と残作業
 
 保存方式と画面別lock条件は[現行仕様](../specification.md#標準crudと後続処理)・[画面別操作表](../specification.md#稼働実績ロックと画面別操作)で確定した。今回の文書変更で製品code・Rules・dataは切り替えていない。以下の確認日付き実装記録を移行済みと読み替えない。

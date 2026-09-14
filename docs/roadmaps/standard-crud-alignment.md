@@ -47,7 +47,7 @@ SCR番号は2026-09-15時点の改修優先順位に合わせて付番し直し�
 | 枝番 | 作業 | 具体的な改修・確認内容 | 完了の判断 | 状態 |
 |---|---|---|---|---|
 | SCR-01-01 | 保存契約と影響範囲の確定 | Billingの標準update、日付の型・null・派生年月、請求日との前後条件、document全体の保存内容、請求集計等の背景writerを照合する。既存日付検証とクラスに差があれば、その扱いと必要な修正範囲を確定する | 対象file、維持条件、互換性、rollback、test範囲を確定。package変更やdata変換の要否を根拠付きで判断できる | Completed（調査・設計） |
-| SCR-01-02 | 単数Managerと入力部品 | Billing instanceを受ける単数domain ManagerでAirItemManagerをラップする。入金予定日用customInputを設け、日付変更・未設定操作を構成する。既定editor・validation・submit・loading・errorを利用する | 独自dialogの責務をbase Managerへ移し、単一instance入力、UPDATE入口、入力・取消が仕様どおりに動く | Completed（部品・Local） |
+| SCR-01-02 | 単数Managerと入力部品 | Billing instanceを受ける単数domain ManagerでAirItemManagerをラップする。入金予定日用customInputを設け、日付変更・未設定操作を構成する。既定editor・validation・submit・loading・errorを利用する | 独自dialogの責務をbase Managerへ移し、単一instance入力、UPDATE入口、入力・取消が仕様どおりに動く | Completed（部品・Local、利用者改修review済み） |
 | SCR-01-03 | 標準保存と画面の接続 | 詳細画面が購読するBilling instanceをManagerへ渡し、保存handlerから標準updateへ委譲する。専用getDocFromServer、expected比較、保存後の強制再取得を通常経路から外し、listenerを表示正本とする | 日付変更・未設定が保存／再表示される。保存失敗が標準error経路へ伝わり、別の請求fieldを意図せず欠落させない | Planned |
 | SCR-01-04 | Billings Rulesの整合 | client write全面拒否を見直し、今回の標準保存を認証・同一tenantの境界で成立させる。通常schema・日付業務条件をRulesへ複製しない。既存reader／背景writerとの境界を確認する | 同一tenantの正規保存が成功し、未認証・他tenantは拒否される。未提供の請求CRUD画面は追加されない | Planned |
 | SCR-01-05 | 旧専用経路の撤去 | PaymentDateEditorの旧実装、専用composable、updateBillingPaymentDateのAPI/export・本体、期待値比較等を参照確認して整理する。共有helperは利用元が残るものを削除しない | 正規画面から旧Callableへの到達がなく、不要な専用保存・競合stateと参照が残らない。公開済みFunctionの撤去対象も特定する | Planned |

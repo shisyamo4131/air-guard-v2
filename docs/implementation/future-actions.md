@@ -2776,7 +2776,7 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 状態: Open
 - 発見日・工程: 2026-09-15、SCR-01-02の利用者code review。
 - 確認した意図: AirItemManager／AirArrayManagerのwrapperは、特別な理由がない限り基底componentのeventを同名・同payload・同タイミングで伝える。基底のcreate/update/deleteをcreated/updated/deletedへ改名する共通component改修は今回行わない。
-- 確認済み事実: OutsourcerManagerはcreate/updateをcreated/updatedへ転送する。SCR-01-02のCustomerBillingManagerもupdateをupdatedへ転送していた。これ以外の対象と利用側の購読箇所は未棚卸しであり、全wrapperが同じとは断定しない。
+- 確認済み事実: OutsourcerManagerはcreate/updateをcreated/updatedへ転送する。SCR-01-02のCustomerBillingManagerもupdateをupdatedへ転送していたが、利用者改修で同名attrs転送へ変更し、01-02の再reviewで確認した。これ以外の対象と利用側の購読箇所は未棚卸しであり、全wrapperが同じとは断定しない。
 - 対象: 単数・複数domain Managerとevent購読側。将来改修の着手時に改名・payload変換・二重通知と、例外が必要な具体的理由を調査する。
 - 実施方針: 後発の独立改修としてまとめ、既存SCR全体の完了条件へ追加しない。新規roadmapは作らない。利用者がCustomerBillingManagerを再改修するため、Codexは今回そのcodeを変更しない。
 - 完了条件・test: 対象wrapperと購読側を同じ変更で整合し、成功時の同名event・payload・通知回数、失敗時の非通知、利用側処理の継続を確認する。基底event名とCRUD・保存挙動を変えず、例外は理由を記録する。
@@ -2788,7 +2788,7 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 
 - 状態: Open
 - 発見日・工程: 2026-09-15、SCR-01-02の利用者code review。イベント転送の[FUT-0191](#fut-0191-domain-managerのイベント名を基底componentと揃える)と関連するが、入力選択の整理として区別する。
-- 確認済み事実: 2026-09-15の拡張静的調査では、Outsourcer／Outsourcers、Employee／Employees、Site／Sitesの各Managerにprops.customInputの型判定・関数呼出しが残存する（6箇所）。当初の7箇所に含めたCustomerBillingは、利用者編集中のworktreeでprops.customInput || CustomInputの単純転送へ変更済み。着手時に再照合する。
+- 確認済み事実: 2026-09-15の拡張静的調査では、Outsourcer／Outsourcers、Employee／Employees、Site／Sitesの各Managerにprops.customInputの型判定・関数呼出しが残存する（6箇所）。当初の7箇所に含めたCustomerBillingは、利用者改修でprops.customInput || CustomInputの単純転送へ変更し、01-02の再reviewで確認した。残存箇所は着手時に再照合する。
 - 調査範囲・方法: components全域でcustomInput／custom-inputの宣言・転送・描画・activator exposeを追跡し、関数名に依存せずtypeof、isFunction、call／apply、別名・inline・computed経路を確認した。components外の追跡対象Vue／JS／TSも検索し、該当する3ページはcomponentの直接指定だった。追加の同種重複は確認していない。
 - 基底の確認: localのair-vuetify-v3/src/AirItemManager.vueとAirArrayManager.vueは、ともにFunctionへeditModeを渡して解決する。AirItemManagerの実装はactivator指定→prop→nullの優先順（付近の旧commentと相違）、AirArrayManagerはpropを解決する。
 - 区別する実装: 単純転送、importしたcomponentの直接指定、activatorでのexposeは重複解決に数えない。Operation/Editor.vueとOperation/AirEditor.vueの:isによる直接描画も同種ではない。OperationResult(s)／Workersには基底Managerと独自Editorへの転送が併存するが、resolverの二重呼出しとは確認できない。独自Editorと基底でFunction指定の意味が一致するかは未検証であり、今回の重複整理へ改修範囲を追加しない。
@@ -2802,7 +2802,7 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 
 - 状態: Open
 - 発見日・工程: 2026-09-15、SCR-01-02の利用者code review。
-- 確認済み事実: components/CustomerBilling/CustomInput.vueはdateInput(props.item.billingDateAt)をcomputed内で呼び、入金予定日のminへ渡していた。記録中に利用者のworktreeではprops.item.billingDateへの直接参照へ変更された（未検証・未コミット）。BillingクラスはbillingDate getterで日本時間のYYYY-MM-DDを提供しており、この用途ではクラスの機能を重複実装している。
+- 確認済み事実: components/CustomerBilling/CustomInput.vueはdateInput(props.item.billingDateAt)をcomputed内で呼び、入金予定日のminへ渡していた。利用者改修でprops.item.billingDateへの直接参照へ変更し、01-02の再reviewと実Billing・コンパイル済みtemplateのメモリ内testで確認した。画面mount・実picker操作は未検証。BillingクラスはbillingDate getterで日本時間のYYYY-MM-DDを提供しており、この用途ではクラスの機能を重複実装していた。
 - 後発改修の方針: Billingインスタンスを扱う入力部品ではprops.item.billingDateを使い、不要になるdateInputのimport・computed・try/catchを整理する。クラスが提供する同等の日付プロパティを利用せず再変換する別名・inlineの実装も着手時に調査する。
 - 対象と未確認: 確認済み対象はCustomerBilling/CustomInput.vue。他箇所は未棚卸し。生データ・Callable用変換など、クラスのgetterを利用できない経路まで一律に置換せず、共通dateInput自体の削除は全利用先の確認なしに行わない。
 - 完了条件・test: Managerから渡るitemのクラスとgetter保持を確認し、請求日変更時のmin追従、日本時間の日付境界、未設定時の扱い、入金予定日の入力・解除を維持する。従来のcatchとgetterで不正値の扱いは同一と未確認のため、クラス契約と照合する。

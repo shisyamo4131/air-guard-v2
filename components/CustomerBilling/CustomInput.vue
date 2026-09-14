@@ -3,25 +3,26 @@
  * @file components/CustomerBilling/CustomInput.vue
  * @description 顧客請求の入金予定日を通常更新するための入力部品
  ******************************************************************************/
-import { computed } from "vue";
-import { dateInput } from "@/composables/domain/shared/valueContract.js";
+import { useDefaults } from "vuetify";
 
-const props = defineProps({
+/*****************************************************************************
+ * DEFINE PROPS
+ *****************************************************************************/
+const _props = defineProps({
   componentAttrs: { type: Object, default: () => ({}) },
   item: { type: Object, required: true },
   updateProperties: { type: Function, required: true },
   disabled: { type: Boolean, default: false },
   editMode: { type: String, default: "UPDATE" },
 });
+const props = useDefaults(_props, "CustomerBillingCustomInput");
 
-const billingDate = computed(() => {
-  try {
-    return dateInput(props.item.billingDateAt);
-  } catch {
-    return undefined;
-  }
-});
-
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+/**
+ * props.updateProperties を使って入金予定日を未設定にする
+ */
 function clearPaymentDueDate() {
   props.updateProperties({ paymentDueDateAt: null });
 }
@@ -33,7 +34,7 @@ function clearPaymentDueDate() {
       <air-date-input
         v-bind="props.componentAttrs.paymentDueDateAt"
         label="入金予定日"
-        :min="billingDate"
+        :min="props.item.billingDate"
         :disabled="props.disabled || props.editMode !== 'UPDATE'"
       />
     </v-col>
