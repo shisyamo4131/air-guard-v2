@@ -3,6 +3,7 @@
 ## 対象
 
 - checkpoint: `FGA-06-SCHEDULE-MANAGER-RESTORE-09`
+- 固定製品commit: `c3439f2de115a82ca29fb23da63275342530ac37`
 - branch: `main`
 - 検証日: 2026-09-14
 - change class: `ui-css-layout`、`application-logic`、`data-contract-schema-migration`
@@ -24,11 +25,13 @@
 | `npm run test:local` | 178/178 pass。Codex専用demo project、loopback、合成data。利用者保存data不変 | 0 |
 | `pwsh -NoProfile -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` | 319 Markdown、73 ADR、12 roadmaps、8 TOML pass | 0 |
 | `git diff --check` | errorなし | 0 |
-| `npm run test:local:ui:build` | clean commitを必要とするため、製品commit作成後に実行する | 未実施 |
+| `npm run test:local:ui:build` | 固定製品commit `c3439f2d`のclient／server build成功 | 0 |
 
 初回の全domain実行は、旧Callable、Site revision、専用handler拒否を正しいものとしていた20件が失敗した。標準model保存と新しいtenant境界を検証する内容へ置換し、最終実行1434件を終了コード0で確認した。
 
 初回の全Emulator実行は、旧Schedule／ArrangementNotification Rulesを前提にした2件が失敗した。通常tenant CRUDへ期待値を直した後、最終実行178件を終了コード0で確認した。
+
+最初の専用UI buildはsandbox内のWindows `readlink`拒否でserver buildが停止した。同じ固定製品commitを権限昇格して再実行し、client／server buildを終了コード0で確認した。Browserslist data経過、chunk size、sourcemap、Node export mappingの警告は既存build警告であり、build失敗ではない。
 
 ## Security Rules監査
 
@@ -51,7 +54,7 @@
 
 ## 未実施・残存risk
 
-- clean固定commitの専用UI build、Dev反映、Dev／Localの正規画面操作、見た目確認、remote Trigger log確認は未実施。
+- Dev反映、Dev／Localの正規画面操作、見た目確認、remote Trigger log確認は未実施。
 - 利用者報告の配置管理エラーと上下番確定エラーは未再現・未修正であり、今回の復元で直ったとは扱わない。
 - 同じtenant内の直接書込みはmodelの入力確認を迂回できる。意図的に受容した簡素化riskであり、tenant分離まで緩和したものではない。
 - 旧`saveOperation`の予定分岐と専用補助codeは到達不能な互換codeとして残る。削除は別checkpointとする。
