@@ -520,9 +520,11 @@ test("result detail adopts Air managers without changing its visible operation c
   assert.match(page, />従業員を追加<\/v-btn>/u);
   assert.match(page, />外注先を追加<\/v-btn>/u);
   assert.match(page, /group="articles"[\s\S]*label="稼働外売上"/u);
-  assert.match(page, /<OperationManager[\s\S]*kind="result"[\s\S]*削除処理/u);
+  assert.match(page, /<OperationResultManager[\s\S]*label="稼働実績"[\s\S]*削除処理/u);
   assert.doesNotMatch(writer, /httpsCallable|saveOperation/u);
+  assert.match(writer, /draft\.delete\(\)/u);
   assert.match(writer, /next\.update\(\{ transaction \}\)/u);
+  assert.match(single, /:handle-delete="deleteResult"/u);
 });
 
 test("actual article input connection blocks save while lookup is pending, commits ID/price together, and preserves explicit price", async () => {

@@ -15,13 +15,14 @@ const props = defineProps({
 const emit = defineEmits(["submit:complete"]);
 const result = computed(() => props.doc);
 const { attrs } = useBaseManager("OperationResultManager");
-const { updateOverview } = useOperationResultWriter(result);
+const { deleteResult, updateOverview } = useOperationResultWriter(result);
 const manager = useTemplateRef("manager");
 const toUpdate = (...args) => manager.value?.toUpdate(...args);
+const toDelete = (...args) => manager.value?.toDelete(...args);
 function reload(item) {
   item?.initialize?.(props.doc.toObject());
 }
-defineExpose({ toUpdate });
+defineExpose({ toDelete, toUpdate });
 </script>
 <template>
   <air-item-manager
@@ -31,8 +32,9 @@ defineExpose({ toUpdate });
     :custom-input="props.customInput"
     :dialog-props="{ maxWidth: 760, persistent: true, scrollable: true }"
     :disable-update="!props.doc.docId || props.doc.isLocked"
-    disable-delete
+    :disable-delete="!props.doc.docId || props.doc.isLocked"
     hide-delete-btn
+    :handle-delete="deleteResult"
     :handle-update="updateOverview"
     @submit:complete="emit('submit:complete', $event.item)"
   >

@@ -124,6 +124,13 @@ service cloud.firestore {
         && isValidCustomerReferenceUpdate(companyId);
     }
 
+    function isValidOperationResultClientDelete(docId) {
+      return resource.data.docId is string
+        && resource.data.docId == docId
+        && resource.data.isLocked is bool
+        && resource.data.isLocked == false;
+    }
+
     function isValidFcmTokenCreate(token) {
       return hasActiveRegisteredUser()
         && request.resource.data.keys().hasOnly([
@@ -579,13 +586,16 @@ service cloud.firestore {
     }
 
     // --- Rules for 'OperationResults' subcollection under 'Companies' ---
-    // 同一tenant・稼働結果ID・lock境界を維持し、参照先のSite/Customerを検証する。
+    // 同一tenant・稼働結果ID・lock境界を維持し、updateでは参照先のSite/Customerを検証する。
     match /Companies/{companyId}/OperationResults/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create, delete: if false;
+      allow create: if false;
       allow update: if isAuthenticated()
                     && userCompanyId() == companyId
                     && isValidOperationResultClientUpdate(companyId, docId);
+      allow delete: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidOperationResultClientDelete(docId);
     }
 
     // --- Rules for 'SecurityReportIndexes' subcollection under 'Companies' ---

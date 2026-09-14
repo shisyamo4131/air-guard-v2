@@ -334,7 +334,9 @@ async function emp05ResultCustomerMatrix() {
   await emp05SaveAs(actor, [emp05Command(before, "overview", { remarks: "unrelated legacy reference" }, { kind: "result" })]);
   const after = (await existing.get()).data(); assert.equal(after.customerId, before.customerId); assert.equal(after.remarks, "unrelated legacy reference");
   await assertCallableError(emp05SaveAs(actor, [emp05Command(after, "overview", { siteId: "missing-site" }, { kind: "result" })]), "failed-precondition");
-  await emp05SaveAs(actor, [emp05Command(after, "delete", {}, { kind: "result" })]); assert.equal((await existing.get()).exists, false);
+  const client = authenticatedFirestore(actor.uid, { isSuperUser: false });
+  await assertSucceeds(deleteDoc(doc(client, "Companies", actor.companyId, "OperationResults", `${resultId}-active`)));
+  assert.equal((await existing.get()).exists, false);
 }
 
 async function emp05CustomerOrdering(order) {
@@ -513,7 +515,9 @@ test("EMP05-B HTTP operation writers preserve references, notification confirmat
   assert.equal(duplicate.adjustedQuantityBase, 3); assert.equal(duplicate.articles[0].price, 200); assert.deepEqual(duplicate.employeeIds, employees);
   for (const collectionName of ["SiteOperationSchedules", "OperationResults", "ArrangementNotifications"]) {
     const target = doc(userFirestore, "Companies", companyId, collectionName, collectionName === "ArrangementNotifications" ? noticeId : id);
-    await assertSucceeds(getDoc(target)); await assertFails(setDoc(target, { employeeIds: [] })); await assertFails(deleteDoc(target));
+    await assertSucceeds(getDoc(target));
+    await assertFails(setDoc(target, { employeeIds: [] }));
+    await (collectionName === "OperationResults" ? assertSucceeds : assertFails)(deleteDoc(target));
     await assertFails(setDoc(doc(userFirestore, "Companies", companyId, collectionName, "new-direct"), { docId: "new-direct" }));
     await assertFails(setDoc(doc(userFirestore, "Companies", companyId, collectionName, "nested", "children", "child"), { value: true }));
   }
@@ -4262,7 +4266,7 @@ test("SITE-04 maintenance state fails closed for client Site revision and schedu
   assert.equal((await getDoc(schedule)).exists(), true);
 });
 
-test("OperationResult normal update is tenant-wide while create, delete, and Schedule linkage stay closed", async () => {
+test("OperationResult normal update/delete are tenant-wide while create and Schedule linkage stay closed", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const customerId = "site-lifecycle-result-policy-customer";
   const cases = [
@@ -4370,7 +4374,10 @@ test("OperationResult normal update is tenant-wide while create, delete, and Sch
       ),
       `${label} standalone update`,
     );
-    await assertFails(deleteDoc(doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId)), `${label} standalone delete`);
+    await (normalWriter ? assertSucceeds : assertFails)(
+      deleteDoc(doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId)),
+      `${label} standalone delete`,
+    );
   }
 });
 
@@ -4420,6 +4427,7 @@ test("OperationResult client update preserves lock, article, billing, and lifecy
     await updateDoc(doc(context.firestore(), "Companies", companyId, "OperationResults", resultId), { isLocked: true });
   });
   await assertFails(updateDoc(result, { remarks: "locked", uid, updatedAt: serverTimestamp() }));
+  await assertFails(deleteDoc(result));
 });
 
 test("EMP05-C Billing reference arrays cannot bypass the background writer even for accountants", async () => {

@@ -105,7 +105,11 @@ test("Customer/Site existence is required for new references but unrelated resul
   state.records.delete(`${root}/Sites/site`); state.records.delete(`${root}/Customers/customer`);
   await state.save(command(raw, "overview", { remarks: "legacy correction" }, { kind: "result" }));
   const saved = state.records.get(path("result")); assert.equal(saved.customerId, raw.customerId); assert.equal(saved.siteId, raw.siteId);
-  await state.save(command(saved, "delete", {}, { kind: "result" })); assert.equal(state.records.has(path("result")), false);
+  await assert.rejects(
+    state.save(command(saved, "delete", {}, { kind: "result" })),
+    { code: "invalid-argument" },
+  );
+  assert.equal(state.records.has(path("result")), true);
 });
 
 const root = "Companies/company";
@@ -279,7 +283,6 @@ test("tenant-wide result editing still rejects lifecycle, article, billing, inva
   const restricted = [
     command(null, "create", { siteId: "site", dateAt: "2026-09-01", startTime: "08:00", endTime: "17:00", requiredPersonnel: 1 }, { kind: "result" }),
     command(raw, "duplicate", { dateAt: "2026-09-02" }, { kind: "result", documentId: "copy", sourceId: "operation" }),
-    command(raw, "delete", {}, { kind: "result" }),
     command(raw, "articles", { articleId: "article", price: 100, quantity: 1 }, { kind: "result", rowAction: "add", array: "articles", position: 0 }),
     command(raw, "adjusted", { useAdjusted: true }, { kind: "billing" }),
     command(raw, "lock", { desiredLocked: true }, { kind: "billing" }),
@@ -287,6 +290,15 @@ test("tenant-wide result editing still rejects lifecycle, article, billing, inva
   for (const operationCommand of restricted) {
     const state = harness(operationCommand.action === "create" ? null : raw, { kind: "result", actor: { roles: [] } });
     await assert.rejects(state.save(operationCommand), { code: "permission-denied" });
+    assert.equal(state.writes.length, 0);
+  }
+
+  for (const actor of [{ roles: ["controller"] }, { isAdmin: true }]) {
+    const state = harness(raw, { kind: "result", actor });
+    await assert.rejects(
+      state.save(command(raw, "delete", {}, { kind: "result" })),
+      { code: "invalid-argument" },
+    );
     assert.equal(state.writes.length, 0);
   }
 
@@ -342,16 +354,16 @@ test("tenant-wide result editing rejects stale expected state and a lock added a
 
 test("allowed result edits mixed with restricted result or billing commands reject the whole batch", async () => {
   const raw = operation("result");
-  for (const restricted of [
-    command(raw, "delete", {}, { kind: "result" }),
-    command(raw, "adjusted", { useAdjusted: true }, { kind: "billing" }),
+  for (const [restricted, expectedCode] of [
+    [command(raw, "delete", {}, { kind: "result" }), "invalid-argument"],
+    [command(raw, "adjusted", { useAdjusted: true }, { kind: "billing" }), "permission-denied"],
   ]) {
     const state = harness(raw, { kind: "result", actor: { roles: [] } });
     await assert.rejects(state.save(
       command(raw, "overview", { remarks: "must not commit" }, { kind: "result" }),
       command(raw, "workers", { startTime: "09:00" }, { kind: "result", rowAction: "update", array: "employees", position: 0 }),
       restricted,
-    ), { code: "permission-denied" });
+    ), { code: expectedCode });
     assert.equal(state.writes.length, 0);
     assert.strictEqual(state.records.get(path("result")), raw);
   }

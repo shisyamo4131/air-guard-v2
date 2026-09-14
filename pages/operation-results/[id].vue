@@ -135,9 +135,9 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
 
       <!-- 削除処理ボタン -->
       <v-col cols="12">
-        <OperationManager
+        <OperationResultManager
           :doc="doc"
-          kind="result"
+          label="稼働実績"
           hide-delete-btn
           @submit:complete="() => router.replace('/operation-results')"
         >
@@ -168,7 +168,7 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
               </template>
             </v-card>
           </template>
-        </OperationManager>
+        </OperationResultManager>
       </v-col>
     </v-row>
   </v-container>

@@ -29,6 +29,9 @@ export function parseOperationCommand(input) {
   exactKeys(input, ["kind", "action", "documentId", "changes", "expected", "sourceId", "rowAction", "array", "position", "destination", "notifications", "siteStatuses"]);
   if (!["schedule", "result", "billing"].includes(input.kind) || !ACTIONS.has(input.action) || !identifier(input.documentId) || !plain(input.changes) || !plain(input.expected)) rejectInput();
   const { kind, action } = input;
+  // Transaction document deletion is a client/Rules/Trigger operation.
+  // Keep schedule deletion here until its own migration checkpoint.
+  if (kind === "result" && action === "delete") rejectInput();
   if (action === "duplicate" ? !identifier(input.sourceId) || input.sourceId === input.documentId || !Object.hasOwn(input.changes, "dateAt") : Object.hasOwn(input, "sourceId")) rejectInput();
   if ((kind !== "schedule" && ["notify", "convert", "order"].includes(action)) || (kind !== "billing" && ["agreement", "adjusted", "lock"].includes(action))
     || (kind === "billing" && !["overview", "articles", "agreement", "adjusted", "lock"].includes(action)) || (kind === "schedule" && action === "articles")) rejectInput();

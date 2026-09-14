@@ -33,6 +33,11 @@ export function useOperationResultWriter(result) {
     return await draft.update();
   }
 
+  async function deleteResult(draft) {
+    requireResult(draft);
+    return await draft.delete();
+  }
+
   async function persistWorkerCandidate(next) {
     const beforeEmployeeIds = new Set(result.value.employeeIds || []);
     const addedEmployeeIds = (next.employeeIds || []).filter(
@@ -80,5 +85,11 @@ export function useOperationResultWriter(result) {
     return await persistWorkerCandidate(next);
   }
 
-  return { createWorker, deleteWorker, updateOverview, updateWorker };
+  return {
+    createWorker,
+    deleteResult,
+    deleteWorker,
+    updateOverview,
+    updateWorker,
+  };
 }
