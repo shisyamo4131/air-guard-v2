@@ -50,7 +50,11 @@ const message = computed(() => {
       <v-btn
         color="primary"
         :loading="props.editor.isLoading"
-        :disabled="props.editor.disabled || props.editor.disableSubmit || props.editor.isLoading"
+        :disabled="
+          (!props.editor.isDelete && props.editor.disabled) ||
+          props.editor.disableSubmit ||
+          props.editor.isLoading
+        "
         @click="props.editor.actions['onClick:submit']"
       >
         {{ props.editor.isDelete ? "削除" : "保存" }}

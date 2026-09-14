@@ -515,6 +515,7 @@ test("result detail adopts Air managers without changing its visible operation c
   assert.match(editor, /最新値を読み直す/u);
   assert.match(editor, /キャンセル/u);
   assert.match(editor, /\? "削除" : "保存"/u);
+  assert.match(editor, /!props\.editor\.isDelete\s*&&\s*props\.editor\.disabled/u);
   assert.match(page, /title="作業員"/u);
   assert.match(page, />従業員を追加<\/v-btn>/u);
   assert.match(page, />外注先を追加<\/v-btn>/u);
