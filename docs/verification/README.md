@@ -41,6 +41,7 @@
 | FGA-06 稼働実績Manager・client保存 Local検証 | [FGA-06 稼働実績Manager・client保存 Local検証記録](fga-06-result-manager-client-local.md) |
 | FGA-06 稼働実績Manager・client保存 Dev反映・受入れ | [FGA-06 稼働実績Manager・client保存 Dev反映・受入れ記録](fga-06-result-manager-client-dev.md) |
 | FGA-06 稼働実績client物理削除 Local検証 | [FGA-06 稼働実績client物理削除 Local検証記録](fga-06-result-delete-client-local.md) |
+| FGA-06 稼働実績Callable復元 Local検証 | [FGA-06 稼働実績Callable復元 Local検証記録](fga-06-result-callable-restore-local.md) |
 | Customer archive safety CAS-04 local実装・画面受入れ | [Customer archive safety local acceptance verification receipt](customer-archive-local-acceptance.md) |
 | Site SITE-05/06 archive・取極め local実装 | [SITE-05/06 Codex専用local検証記録](site-05-06-local.md) |
 | Site SITE-07 一覧・検索・UI整合 local実装 | [SITE-07 Codex専用local検証記録](site-07-local.md) |

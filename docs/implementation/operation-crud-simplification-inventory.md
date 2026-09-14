@@ -2,7 +2,7 @@
 
 - 確認日: 2026-09-14
 - checkpoint: FGA-06-RESULT-CALLABLE-RESTORE-07
-- 状態: 過去実装を基準とした稼働実績の過剰Callable接続・専用writer・Rules検査をLocalで撤去・検証済み。固定commit・Dev反映・受入れ前
+- 状態: 固定製品commit `5dac8d49`で、過去実装を基準とした稼働実績の過剰Callable接続・専用writer・Rules検査をLocal撤去・検証済み。Dev反映・受入れ前
 - 対象: 現場稼働予定、稼働実績、稼働請求の画面、Manager、`saveOperation` Callable、Firestore Rules
 - 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、進捗は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)
 
@@ -76,4 +76,4 @@ checkpointはLocal完了・Dev反映前である。schema変更、data migration
 ## 未確認事項
 
 - Dev、Prod、migration、既存data全件、remote Trigger logと派生document全件は確認していない。Dev受入れでは勤務者行を持つ合成実績の削除と、必要な関連dataの収束を確認する。
-- 最終Local検証は全domain 1446/1446件、Local Emulator 179/179件を終了コード0で確認した。専用UI buildはcleanな固定commitを要求するため未実施であり、固定commit後に実行する。UI source contractとVue compileは全domain検証に含めた。
+- 最終Local検証は全domain 1446/1446件、Local Emulator 179/179件、固定製品commitの専用UI buildを終了コード0で確認した。[Local検証記録](../verification/fga-06-result-callable-restore-local.md)を参照する。
