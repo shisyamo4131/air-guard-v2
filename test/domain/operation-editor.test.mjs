@@ -539,6 +539,25 @@ test("result detail adopts Air managers without changing its visible operation c
   assert.doesNotMatch(page, /OperationResultWorkersManager/u);
 });
 
+test("result collection create uses its plural Air manager and model persistence without changing the editor controls", async () => {
+  const manager = await source("components/OperationResults/Manager/index.vue");
+  const handlers = await source("handlers/operationResultHandlers.js");
+  const page = await source("pages/operation-results/index.vue");
+
+  assert.match(manager, /<air-array-manager/u);
+  assert.match(manager, /:schema="OperationResult"/u);
+  assert.match(manager, /:handle-create="props\.handleCreate"/u);
+  assert.match(manager, /OperationAirEditor/u);
+  assert.match(manager, /maxWidth:\s*760/u);
+  assert.doesNotMatch(manager, /OperationArrayManager|useOperationEditor/u);
+  assert.match(handlers, /onBeforeCreate/u);
+  assert.match(handlers, /await item\.create\(\)/u);
+  assert.match(handlers, /await item\.update\(\)/u);
+  assert.match(handlers, /await item\.delete\(\)/u);
+  assert.match(page, /@create="handleCreated"/u);
+  assert.match(page, /tableProps\.toCreate\(\)/u);
+});
+
 test("actual article input connection blocks save while lookup is pending, commits ID/price together, and preserves explicit price", async () => {
   const state = await editorHarness({ editor: { defaultAction: "articles" } });
   state.raw.articles = [{ articleId: "old", price: 50, quantity: 1 }];

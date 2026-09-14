@@ -63,6 +63,12 @@ service cloud.firestore {
         && customerExists(companyId, data.customerId);
     }
 
+    function hasExistingCustomerReferenceAfter(companyId, data) {
+      return data.keys().hasAll(['customerId'])
+        && isSafeCustomerId(data.customerId)
+        && existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(data.customerId));
+    }
+
     function hasUnsetCustomerReference(data) {
       return !data.keys().hasAny(['customerId']) || data.customerId == null;
     }
@@ -91,6 +97,42 @@ service cloud.firestore {
     function isValidSiteReferenceCreate(companyId) {
       return request.resource.data.keys().hasAll(['siteId'])
         && liveSiteExistsAfter(companyId, request.resource.data.siteId);
+    }
+
+    function isValidOperationResultClientCreate(companyId, docId) {
+      return isValidSiteReferenceCreate(companyId)
+        && hasExistingCustomerReferenceAfter(companyId, request.resource.data)
+        && request.resource.data.docId is string
+        && request.resource.data.docId == docId
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.isLocked is bool
+        && request.resource.data.isLocked == false
+        && request.resource.data.siteOperationScheduleId == null
+        && request.resource.data.articles is list
+        && request.resource.data.articles.size() == 0
+        && request.resource.data.employees is list
+        && request.resource.data.employees.size() == 0
+        && request.resource.data.outsourcers is list
+        && request.resource.data.outsourcers.size() == 0
+        && request.resource.data.employeeIds is list
+        && request.resource.data.employeeIds.size() == 0
+        && request.resource.data.outsourcerIds is list
+        && request.resource.data.outsourcerIds.size() == 0
+        && request.resource.data.workers is list
+        && request.resource.data.workers.size() == 0
+        && request.resource.data.useAdjusted is bool
+        && request.resource.data.useAdjusted == false
+        && request.resource.data.adjustedQuantityBase == 0
+        && request.resource.data.adjustedOvertimeMinutesBase == 0
+        && request.resource.data.adjustedQuantityQualified == 0
+        && request.resource.data.adjustedOvertimeMinutesQualified == 0
+        && request.resource.data.adjustedUnitPriceBase == 0
+        && request.resource.data.adjustedOvertimeUnitPriceBase == 0
+        && request.resource.data.adjustedUnitPriceQualified == 0
+        && request.resource.data.adjustedOvertimeUnitPriceQualified == 0
+        && request.resource.data.billingCalculationVersion is int
+        && request.resource.data.billingCalculationVersion == 2;
     }
 
     function isValidOperationResultClientUpdate(docId) {
@@ -574,10 +616,12 @@ service cloud.firestore {
     }
 
     // --- Rules for 'OperationResults' subcollection under 'Companies' ---
-    // 同一tenant・稼働結果ID・lock境界と、専用operationが所有するfieldを保護する。
+    // 同一tenant・稼働結果ID・lock境界と、Trigger/請求処理が所有するfieldを保護する。
     match /Companies/{companyId}/OperationResults/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create: if false;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidOperationResultClientCreate(companyId, docId);
       allow update: if isAuthenticated()
                     && userCompanyId() == companyId
           && isValidOperationResultClientUpdate(docId);

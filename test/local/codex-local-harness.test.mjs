@@ -292,46 +292,16 @@ async function emp05SaveAs(actor, operations) {
   return saveOperation.run(actorCallableRequest({ actor, data: { operations } }));
 }
 
-async function emp05ResultCustomerMatrix() {
-  const actor = await seedSiteArchiveActor({ uid: "emp05-customer-matrix-manager", roles: ["manager"] });
-  const admin = getAdminFirestore(), root = `Companies/${actor.companyId}`, siteId = "emp05-customer-matrix-site", resultId = "emp05-customer-matrix-result";
-  const siteRef = admin.doc(`${root}/Sites/${siteId}`), resultRef = admin.doc(`${root}/OperationResults/${resultId}`);
-  const candidates = [["active", "ACTIVE"], ["terminated", "TERMINATED"]];
-  for (const [suffix, contractStatus] of candidates) {
-    const customerId = `emp05-matrix-${suffix}`;
-    await admin.doc(`${root}/Customers/${customerId}`).set({ docId: customerId, contractStatus });
-    await siteRef.set(emp05SiteData({ docId: siteId, uid: actor.uid, customerId, customer: {}, isTemporary: false, agreementsV2: [] }));
-    const id = `${resultId}-${suffix}`;
-    await emp05SaveAs(actor, [emp05Command(null, "create", emp05Overview(siteId), { kind: "result", documentId: id })]);
-    assert.equal((await admin.doc(`${root}/OperationResults/${id}`).get()).data().customerId, customerId);
-  }
-  await admin.doc(`${root}/Customers_archive/emp05-matrix-archive`).set({ docId: "emp05-matrix-archive" });
-  await admin.doc(`Companies/${CODEX_LOCAL_COMPANIES.secondary.id}/Customers/emp05-matrix-other`).set({ docId: "emp05-matrix-other" });
-  for (const customerId of ["emp05-matrix-missing", "emp05-matrix-archive", "emp05-matrix-other", "", 42, "parent/child", null, undefined]) {
-    const site = emp05SiteData({ docId: siteId, uid: actor.uid, customerId: customerId ?? null, customer: {}, isTemporary: false, agreementsV2: [] });
-    if (customerId === undefined) delete site.customerId; else site.customerId = customerId;
-    await siteRef.set(site);
-    await assertCallableError(emp05SaveAs(actor, [emp05Command(null, "create", emp05Overview(siteId), { kind: "result", documentId: resultId })]), "failed-precondition");
-    assert.equal((await resultRef.get()).exists, false);
-  }
-  const existing = admin.doc(`${root}/OperationResults/${resultId}-active`), before = (await existing.get()).data();
-  await admin.doc(`${root}/Customers/${before.customerId}`).delete();
-  await siteRef.delete();
-  const client = authenticatedFirestore(actor.uid, { isSuperUser: false });
-  const existingClient = doc(client, "Companies", actor.companyId, "OperationResults", `${resultId}-active`);
-  await assertSucceeds(updateDoc(existingClient, { remarks: "unrelated legacy reference", uid: actor.uid }));
-  const after = (await existing.get()).data(); assert.equal(after.customerId, before.customerId); assert.equal(after.remarks, "unrelated legacy reference");
-  await assertSucceeds(updateDoc(existingClient, { siteId: "missing-site", customerId: "missing-customer", uid: actor.uid }));
-  await assertSucceeds(deleteDoc(doc(client, "Companies", actor.companyId, "OperationResults", `${resultId}-active`)));
-  assert.equal((await existing.get()).exists, false);
-}
-
 async function emp05CustomerOrdering(order) {
   const { archiveCustomer } = await loadRebuildApis();
   const actor = await seedCustomerArchiveActor({ uid: `emp05-customer-${order}-actor` });
   const companyId = actor.companyId, customerId = `emp05-customer-${order}`, siteId = `${customerId}-site`, id = `${customerId}-result`;
   const archive = () => archiveCustomer.run(actorCallableRequest({ actor, data: { customerId, operationId: `${customerId}-archive`, reason: "合成参照競合" } }));
-  const write = () => emp05SaveAs(actor, [emp05Command(null, "create", emp05Overview(siteId), { kind: "result", documentId: id })]);
+  const client = authenticatedFirestore(actor.uid, { isSuperUser: false });
+  const write = () => setDoc(
+    doc(client, "Companies", companyId, "OperationResults", id),
+    operationResultClientCreateData({ docId: id, uid: actor.uid, customerId, siteId }),
+  );
   const seedSite = () => seedSiteArchiveDocument({ companyId, siteId, data: { customerId, customer: null, isTemporary: false } });
   try {
     await getAdminFirestore().doc(`Companies/${companyId}/Users/${actor.uid}`).update({ docId: actor.uid });
@@ -340,19 +310,23 @@ async function emp05CustomerOrdering(order) {
       await archive();
       // A legacy Site may outlive a Customer; a new result must still recheck it.
       await seedSite();
-      await assertCallableError(write(), "failed-precondition");
+      await assertFails(write());
       assert.equal(await readCas03Document(companyId, "OperationResults", id), null);
       const state = await readCustomerArchiveState(companyId, customerId); assert.equal(state.active, null); assert.ok(state.archive);
     } else {
       await seedSite();
-      if (order === "reference-first") { await write(); await assertCallableError(archive(), "failed-precondition"); }
+      if (order === "reference-first") { await assertSucceeds(write()); await assertCallableError(archive(), "failed-precondition"); }
       else {
         const [writer, archiver] = await Promise.allSettled([write(), archive()]);
-        assert.equal(writer.status, "fulfilled"); assert.equal(archiver.status, "rejected");
-        assert.equal(archiver.reason.code, "failed-precondition");
+        assert.equal(Number(writer.status === "fulfilled") + Number(archiver.status === "fulfilled"), 1);
       }
-      const state = await readCustomerArchiveState(companyId, customerId); assert.ok(state.active); assert.equal(state.archive, null);
-      assert.equal((await readCas03Document(companyId, "OperationResults", id)).customerId, customerId);
+      const state = await readCustomerArchiveState(companyId, customerId);
+      const reference = await readCas03Document(companyId, "OperationResults", id);
+      const referenced = Boolean(state.active) && Boolean(reference);
+      const archived = Boolean(state.archive) && reference === null;
+      assert.equal(referenced !== archived, true);
+      if (order === "reference-first") assert.equal(referenced, true);
+      if (reference) assert.equal(reference.customerId, customerId);
     }
   } finally {
     await cleanupCustomerArchiveScenario({ actorUid: actor.uid, customerIds: [customerId], references: [{ collectionName: "Sites", docId: siteId }, { collectionName: "OperationResults", docId: id }] });
@@ -1142,6 +1116,20 @@ function cas03ServerBillingOperationResult({ customerId, suffix }) {
     salesAmount: 0,
     taxRate: 0.1,
     isBillable: true,
+  };
+}
+
+function operationResultClientCreateData({ docId, uid, customerId, siteId }) {
+  return {
+    ...cas03ServerBillingOperationResult({ customerId, suffix: docId }),
+    docId,
+    uid,
+    siteId,
+    siteOperationScheduleId: null,
+    dateAt: ClientTimestamp.fromDate(new Date("2028-05-01T00:00:00.000Z")),
+    billingDateAt: ClientTimestamp.fromDate(new Date("2028-05-31T00:00:00.000Z")),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   };
 }
 
@@ -4253,7 +4241,7 @@ test("SITE-04 maintenance state fails closed for client Site revision and schedu
   assert.equal((await getDoc(schedule)).exists(), true);
 });
 
-test("OperationResult normal update/delete are tenant-wide while create and Schedule linkage stay closed", async () => {
+test("OperationResult normal create/update/delete are tenant-wide while Schedule linkage stays closed", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const customerId = "site-lifecycle-result-policy-customer";
   const cases = [
@@ -4348,12 +4336,13 @@ test("OperationResult normal update/delete are tenant-wide while create and Sche
     const standalone = doc(
       firestore, "Companies", companyId, "OperationResults", standaloneResultId,
     );
-    const createStandalone = setDoc(standalone, {
-      docId: standaloneResultId, customerId, siteId,
-      siteOperationScheduleId: standaloneResultId, uid,
-      updatedAt: serverTimestamp(),
+    const standaloneData = operationResultClientCreateData({
+      docId: standaloneResultId, uid, customerId, siteId,
     });
-    await assertFails(createStandalone, `${label} standalone create`);
+    await (normalWriter ? assertSucceeds : assertFails)(
+      setDoc(standalone, standaloneData),
+      `${label} standalone create`,
+    );
     await (normalWriter ? assertSucceeds : assertFails)(
       updateDoc(
         doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId),
@@ -4366,6 +4355,45 @@ test("OperationResult normal update/delete are tenant-wide while create and Sche
       `${label} standalone delete`,
     );
   }
+});
+
+test("OperationResult client create preserves standalone, identity, empty-child, adjustment, and billing-version boundaries", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "operation-result-create-boundary-writer";
+  const customerId = "operation-result-create-boundary-customer";
+  const siteId = "operation-result-create-boundary-site";
+  await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: [] });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const base = operationResultClientCreateData({
+    docId: "operation-result-create-boundary-base",
+    uid, customerId, siteId,
+  });
+  const attacks = [
+    { uid: "other" },
+    { isLocked: true },
+    { siteOperationScheduleId: "schedule" },
+    { articles: [{ articleId: "article", price: 100, quantity: 1 }] },
+    { employees: [{ id: "employee" }] },
+    { outsourcers: [{ id: "outsourcer" }] },
+    { employeeIds: ["employee"] },
+    { outsourcerIds: ["outsourcer"] },
+    { workers: [{ id: "employee" }] },
+    { useAdjusted: true },
+    { adjustedQuantityBase: 1 },
+    { billingCalculationVersion: 1 },
+  ];
+  for (const [index, patch] of attacks.entries()) {
+    const id = `operation-result-create-boundary-${index}`;
+    await assertFails(setDoc(
+      doc(firestore, "Companies", companyId, "OperationResults", id),
+      { ...base, docId: id, ...patch },
+    ));
+  }
+  const mismatchedId = "operation-result-create-boundary-mismatched";
+  await assertFails(setDoc(
+    doc(firestore, "Companies", companyId, "OperationResults", mismatchedId),
+    { ...base, docId: "other" },
+  ));
 });
 
 test("OperationResult client update preserves lock, article, billing, and lifecycle boundaries", async () => {
@@ -5568,6 +5596,12 @@ test("Site archive and OperationResult writer serialize without an archived Site
     });
     const firestore = authenticatedFirestore(uid, { isSuperUser: false });
     const customer = createSiteCustomerProjection((await getDoc(doc(firestore, "Companies", companyId, "Customers", customerId))).data());
+    const createResult = (siteId, resultId) => setDoc(
+      doc(firestore, "Companies", companyId, "OperationResults", resultId),
+      operationResultClientCreateData({
+        docId: resultId, uid, customerId, siteId,
+      }),
+    );
 
     const referenceFirstSite = "site05-race-reference-first";
     const referenceFirstId = "site05-race-reference-first-result";
@@ -5577,8 +5611,7 @@ test("Site archive and OperationResult writer serialize without an archived Site
       { companyId, collectionName: "OperationResults", docId: referenceFirstId },
     );
     await seedSiteArchiveDocument({ companyId, siteId: referenceFirstSite, data: { customerId, customer, isTemporary: false } });
-    const referenceFirst = doc(firestore, "Companies", companyId, "OperationResults", referenceFirstId);
-    await emp05SaveAs(actor, [emp05Command(null, "create", emp05Overview(referenceFirstSite), { kind: "result", documentId: referenceFirstId })]);
+    await assertSucceeds(createResult(referenceFirstSite, referenceFirstId));
     await assertCallableError(archiveSite.run(actorCallableRequest({
       actor,
       data: { siteId: referenceFirstSite, operationId: "site05-reference-first-op", reason: "race" },
@@ -5597,11 +5630,7 @@ test("Site archive and OperationResult writer serialize without an archived Site
       actor,
       data: { siteId: archiveFirstSite, operationId: "site05-archive-first-op", reason: "race" },
     }));
-    await assertFails(setDoc(
-      doc(firestore, "Companies", companyId, "OperationResults", archiveFirstId),
-      { siteId: archiveFirstSite, customerId, marker: "after-archive" },
-    ));
-    await assertCallableError(emp05SaveAs(actor, [emp05Command(null, "create", emp05Overview(archiveFirstSite), { kind: "result", documentId: archiveFirstId })]), "failed-precondition");
+    await assertFails(createResult(archiveFirstSite, archiveFirstId));
 
     const { addOperationResultToBilling } = await loadBillingServerWriters();
     const billingOperation = cas03ServerBillingOperationResult({
@@ -5629,15 +5658,12 @@ test("Site archive and OperationResult writer serialize without an archived Site
       { companyId, collectionName: "OperationResults", docId: concurrentId },
     );
     await seedSiteArchiveDocument({ companyId, siteId: concurrentSite, data: { customerId, customer, isTemporary: false } });
-    const concurrentReference = doc(
-      firestore, "Companies", companyId, "OperationResults", concurrentId,
-    );
     const settled = splitSettled(await Promise.allSettled([
       archiveSite.run(actorCallableRequest({
         actor,
         data: { siteId: concurrentSite, operationId: "site05-concurrent-op", reason: "race" },
       })),
-      emp05SaveAs(actor, [emp05Command(null, "create", emp05Overview(concurrentSite), { kind: "result", documentId: concurrentId })]),
+      createResult(concurrentSite, concurrentId),
     ]));
     assert.equal(settled.fulfilled.length, 1);
     assert.equal(settled.rejected.length, 1);
@@ -6292,7 +6318,6 @@ test("Firestore Rules treat every same-ID archive shape as a Customer tombstone"
 
 const CAS03_CUSTOMER_REFERENCE_COLLECTIONS = [
   { collectionName: "Sites", optionalOnCreate: true, deleteAllowed: false },
-  { collectionName: "OperationResults", optionalOnCreate: false, deleteAllowed: true },
   { collectionName: "Billings", optionalOnCreate: false, deleteAllowed: true },
 ];
 
@@ -6302,9 +6327,6 @@ for (const {
   deleteAllowed,
 } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
   test(`Firestore Rules enforce the ${collectionName} Customer reference matrix`, async () => {
-    // OperationResult create still obtains Customer through its dedicated writer;
-    // ordinary update/delete use the restored client/Rules path.
-    if (collectionName === "OperationResults") return emp05ResultCustomerMatrix();
     if (collectionName === "Billings") return emp05BillingCustomerMatrix();
     const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
     const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
@@ -6633,6 +6655,12 @@ for (const {
     } finally {
       await cleanupCas03Documents(cleanupEntries);
     }
+  });
+}
+
+for (const order of ["reference-first", "archive-first", "concurrent"]) {
+  test(`CAS-03 OperationResults ${order} ordering keeps the Customer reference invariant`, async () => {
+    await emp05CustomerOrdering(order);
   });
 }
 

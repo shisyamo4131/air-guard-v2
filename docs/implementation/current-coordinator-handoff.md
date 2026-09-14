@@ -17,10 +17,10 @@
 
 ## 次の作業
 
-1. 最優先の`FGA-06-RESULT-CALLABLE-RESTORE-07`は固定製品commit `5dac8d49`でLocal実装・検証済みです。過去実装を基準に、稼働実績の基本情報と作業員配列を`OperationResultManager`／`WorkersManager`、Air Manager、model標準保存へ戻し、専用writer、Employee存在確認transaction、再読込handler、旧実績編集Callable入力と連動Rulesを撤去しました。全domain 1446件、Local Emulator 179件、専用UI buildが成功しています。[Local検証記録](../verification/fga-06-result-callable-restore-local.md)を参照します。
-2. `FGA-06-RESULT-DELETE-CLIENT-06`で移行した物理削除とTrigger連携を維持し、07の同一Manager／Rules変更後に基本情報・作業員CRUD・物理削除をまとめて再検証します。[Local検証記録](../verification/fga-06-result-delete-client-local.md)を参照します。
-3. 次の承認境界はFirestore Rules・Functions・HostingのDev反映です。反映後、会社管理者sessionで基本情報・作業員CRUD・非lock削除・locked拒否・関連data収束・見た目を受け入れます。統括accountの重複確認は利用者判断により不要です。schema変更、migration、既存data一括変更、Prod、現場稼働予定deleteの移行は含めません。
-4. 予定入力内の現場新規登録は[FUT-0190](future-actions.md#fut-0190-現場稼働予定入力内の現場新規登録を復旧する)、サインアウト／session切替と従属cacheのcleanupは[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)へ分離済みです。次checkpointへの追加はscope合意に従います。この案内自体はDev・Prod、remote data変更の承認ではありません。
+1. `FGA-06-RESULT-DELETE-CLIENT-06`と`FGA-06-RESULT-CALLABLE-RESTORE-07`はDev反映・会社管理者受入れまで完了しました。見落としていた一覧CREATEは`FGA-06-RESULT-CREATE-CLIENT-08`で複数形Manager／model保存へLocal修正し、旧Callable入力を閉じました。[Local検証記録](../verification/fga-06-result-create-client-local.md)を参照します。
+2. 初回Dev受入れで作業員の勤務初期値継承不足を確認し、過去repositoryと現行`WorkersManager`契約に合わせて8つのdefault値を渡す補正をcommit `8d90d5d1`で反映しました。補正後は作業員追加・更新・削除・再読込、実績物理削除、Trigger errorなし、一覧0件、既存UIを確認済みです。
+3. 現在の次操作は08の最終Local検証、commit、承認後のDev反映・一覧作成受入れです。それを閉じてから、現場稼働予定の通常CRUDと物理削除をManager／client／Trigger境界へ戻せるか設計します。
+4. 予定入力内の現場新規登録は[FUT-0190](future-actions.md#fut-0190-現場稼働予定入力内の現場新規登録を復旧する)、サインアウト／session切替と従属cacheのcleanupは[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)へ分離済みです。次checkpointへの追加はscope合意に従います。
 
 ## 参照
 

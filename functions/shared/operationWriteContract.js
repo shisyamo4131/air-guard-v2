@@ -18,7 +18,7 @@ export function exactKeys(value, keys) { if (!plain(value) || Object.keys(value)
 export function operationAllowed(identity, user, command) {
   if (!identifier(identity.uid) || !identifier(identity.companyId) || typeof identity.isSuperUser !== "boolean" || !plain(user)
     || user.docId !== identity.uid || user.companyId !== identity.companyId || user.disabled !== false || user.isTemporary !== false || typeof user.isAdmin !== "boolean") return false;
-  if (command?.kind === "result" && ["overview", "workers", "delete"].includes(command.action)) return false;
+  if (command?.kind === "result" && ["create", "overview", "workers", "delete"].includes(command.action)) return false;
   if (user.isAdmin || (command?.kind === "schedule" && SCHEDULE_CUD_ACTIONS.has(command.action))) return true;
   return identity.isSuperUser === false && Array.isArray(user.roles) && user.roles.length <= EMPLOYEE_ROLES.length
     && user.roles.every((role) => EMPLOYEE_ROLES.includes(role)) && user.roles.some((role) => (command?.kind === "billing" ? ["manager", "accountant"] : ["manager", "controller"]).includes(role));
@@ -30,7 +30,7 @@ export function parseOperationCommand(input) {
   const { kind, action } = input;
   // Transaction document deletion is a client/Rules/Trigger operation.
   // Keep schedule deletion here until its own migration checkpoint.
-  if (kind === "result" && ["overview", "workers", "delete"].includes(action)) rejectInput();
+  if (kind === "result" && ["create", "overview", "workers", "delete"].includes(action)) rejectInput();
   if (action === "duplicate" ? !identifier(input.sourceId) || input.sourceId === input.documentId || !Object.hasOwn(input.changes, "dateAt") : Object.hasOwn(input, "sourceId")) rejectInput();
   if ((kind !== "schedule" && ["notify", "convert", "order"].includes(action)) || (kind !== "billing" && ["agreement", "adjusted", "lock"].includes(action))
     || (kind === "billing" && !["overview", "articles", "agreement", "adjusted", "lock"].includes(action)) || (kind === "schedule" && action === "articles")) rejectInput();
@@ -121,7 +121,7 @@ export function calculateOperation(raw, kind, update) {
 
 export function applyOperationCommand(raw, command) {
   const { action, kind, changes } = command;
-  if (kind === "result" && ["overview", "workers", "delete"].includes(action)) rejectInput();
+  if (kind === "result" && ["create", "overview", "workers", "delete"].includes(action)) rejectInput();
   operationEmployeeReferences(raw, kind === "schedule" ? { scheduleId: command.documentId } : {});
   if (kind === "schedule" && raw.operationResultId !== null && raw.operationResultId !== undefined) throw new OperationWriteError("failed-precondition", "実績化済みの予定は編集できません。");
   if (kind !== "schedule" && typeof raw.isLocked !== "boolean") throw new OperationWriteError("failed-precondition");

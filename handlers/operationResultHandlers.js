@@ -1,5 +1,15 @@
-// Result persistence is owned by the dedicated operation editor/commands.
-const unsupported = async () => { throw new Error("実績の保存は専用編集画面から実行してください。"); };
-export const handleCreate = unsupported;
-export const handleUpdate = unsupported;
-export const handleDelete = unsupported;
+import { onBeforeCreate, onBeforeUpdate } from "@/services/operation";
+
+export async function handleCreate(item) {
+  await onBeforeCreate(item);
+  await item.create();
+}
+
+export async function handleUpdate(item) {
+  await onBeforeUpdate(item);
+  await item.update();
+}
+
+export async function handleDelete(item) {
+  await item.delete();
+}

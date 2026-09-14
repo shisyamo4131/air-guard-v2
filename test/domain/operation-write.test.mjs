@@ -230,14 +230,15 @@ test("active same-tenant users can update and delete schedules while restricted 
   await assert.rejects(mixed.save(
     command(raw, "overview", { remarks: "must not commit" }),
     command(null, "create", { siteId: "site", dateAt: "2026-09-01", startTime: "08:00", endTime: "17:00", requiredPersonnel: 1 }, { kind: "result", documentId: "result" }),
-  ), { code: "permission-denied" });
+  ), { code: "invalid-argument" });
   assert.equal(mixed.writes.length, 0);
   assert.notEqual(mixed.records.get(path("schedule")).remarks, "must not commit");
 });
 
-test("result overview, workers, and delete are rejected at the Callable input boundary", async () => {
+test("result create, overview, workers, and delete are rejected at the Callable input boundary", async () => {
   const raw = operation("result");
   for (const rejected of [
+    command(null, "create", { siteId: "site", dateAt: "2026-09-01" }, { kind: "result" }),
     command(raw, "overview", { remarks: "client only" }, { kind: "result" }),
     command(raw, "workers", { startTime: "09:00" }, { kind: "result", rowAction: "update", array: "employees", position: 0 }),
     command(raw, "delete", {}, { kind: "result" }),
@@ -369,15 +370,12 @@ test("conversion uses nullish fallbacks for both worker kinds and preserves unch
   assert.equal(saved.employees[0].unknown.stamp, stamp);
 });
 
-test("normal result create derives Customer from Site and rejects missing Site or Customer before writing", async () => {
+test("normal result create is not accepted by the Callable writer", async () => {
   const create = command(null, "create", { siteId: "site", dateAt: "2026-09-01", startTime: "08:00", endTime: "17:00", requiredPersonnel: 1 }, { kind: "result" });
-  const valid = harness(null);
-  await valid.save(create);
-  assert.equal(valid.records.get(path("result")).customerId, "customer");
-  for (const removed of ["Sites/site", "Customers/customer"]) {
-    const state = harness(null); state.records.delete(`${root}/${removed}`);
-    await assert.rejects(state.save(create), { code: "failed-precondition" }); assert.equal(state.writes.length, 0);
-  }
+  const state = harness(null);
+  await assert.rejects(state.save(create), { code: "invalid-argument" });
+  assert.equal(state.writes.length, 0);
+  assert.equal(state.records.has(path("result")), false);
 });
 
 for (const array of ["articles"]) for (const sequence of ["remove-update", "move-remove", "add-update"]) {

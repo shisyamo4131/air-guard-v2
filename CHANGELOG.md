@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- FGA-06-RESULT-CALLABLE-RESTORE-07のLocal実装として、過去実装を基準に稼働実績の基本情報と作業員配列を`OperationResultManager`／複数形`WorkersManager`、Air Manager、`OperationResult.update()`へ戻した。後から追加された専用writer、Employee存在確認transaction、再読込handler、実績`overview`／`workers`／`delete` Callable入力とRulesのSite／Customer存在確認を撤去した。tenant・actor・document ID・非lock・専用operation所有fieldは保護し、UI、data shape、実績作成・複製、稼働外売上、請求、予定を維持した。固定製品commit `5dac8d49`で全domain 1446件、Local Emulator 179件、専用UI buildに合格した。Dev・Prod、migration、既存dataは変更していない。[Local検証記録](docs/verification/fga-06-result-callable-restore-local.md)を参照。
+- FGA-06-RESULT-CREATE-CLIENT-08として、一覧画面に残っていた`OperationResultsManager`の`OperationArrayManager`接続を過去実装に沿う`AirArrayManager`へ戻し、通常作成を`OperationResult.create()`へ接続した。現行の760px dialog、入力、ボタン文言、作成後の詳細遷移は維持する。Rulesは同一tenantの有効な本登録User、actor UID、document ID、live Site／Customer、空の作業員・稼働外売上・調整値、非lock、非予定紐付けを作成境界とし、旧Callableの実績create入力を拒否した。複製、稼働外売上、請求、lock、予定、通知、実績化、schema、migration、Dev・Prodは変更していない。[Local検証記録](docs/verification/fga-06-result-create-client-local.md)を参照。
+
+- FGA-06-RESULT-CALLABLE-RESTORE-07として、過去実装を基準に稼働実績の基本情報と作業員配列を`OperationResultManager`／複数形`WorkersManager`、Air Manager、`OperationResult.update()`へ戻した。後から追加された専用writer、Employee存在確認transaction、再読込handler、実績`overview`／`workers`／`delete` Callable入力とRulesのSite／Customer存在確認を撤去した。初回Dev受入れで確認した作業員の勤務初期値継承不足は、過去repositoryと現行component契約に合わせてcommit `8d90d5d1`で補正した。補正後に会社管理者sessionで作業員追加・更新・削除・再読込、実績物理削除、一覧0件、Trigger errorなし、既存UIを確認し、FGA-06-RESULT-DELETE-CLIENT-06とともに完了した。Prod、migration、既存data一括変更は行っていない。[Local検証記録](docs/verification/fga-06-result-callable-restore-local.md)と[Dev受入れ記録](docs/verification/fga-06-result-callable-restore-dev.md)を参照。
 
 - FGA-06-RESULT-DELETE-CLIENT-06のLocal実装として、稼働実績詳細の既存削除dialogを`OperationResultManager`／FireModelのclient deleteへ接続し、同一tenantの有効な本登録Userが非lock実績を物理削除できるRulesへ変更した。旧`saveOperation`の実績delete入力は拒否し、請求・勤怠・勤務回数・履歴・予定・日報等の関連data連携は既存Triggerへ維持した。勤務者10名を含む実績のclient削除、全domain 1454件、Local Emulator 180件、固定製品commit `07511fb3`の専用UI buildに合格した。Dev・Prod、schema、migration、既存data、現場稼働予定deleteは変更していない。[Local検証記録](docs/verification/fga-06-result-delete-client-local.md)を参照。
 

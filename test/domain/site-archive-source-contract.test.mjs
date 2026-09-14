@@ -54,7 +54,7 @@ test("archive use-case fixes the exact five direct reference queries and exclude
   assert.doesNotMatch(source, /transaction\.(?:set|update)\(archiveRef|\.restore\s*\(/u);
 });
 
-test("Rules open guarded OperationResult updates/deletes while retaining background write boundaries", async () => {
+test("Rules open guarded OperationResult create/update/delete while retaining background write boundaries", async () => {
   const rules = await read("firestore.rules");
   assert.match(
     rules,
@@ -73,7 +73,7 @@ test("Rules open guarded OperationResult updates/deletes while retaining backgro
     )?.[1];
     assert.ok(block, `${collectionName} Rules block`);
     if (collectionName === "OperationResults") {
-      assert.match(block, /allow create: if false;/u);
+      assert.match(block, /isValidOperationResultClientCreate\(companyId, docId\)/u);
       assert.match(block, /isValidOperationResultClientUpdate\(docId\)/u);
       assert.match(block, /isValidOperationResultClientDelete\(docId\)/u);
     }

@@ -196,8 +196,8 @@ test("schedule CUD uses tenant-wide server authorization while result client CRU
   const scheduleCud = ["create", "duplicate", "overview", "workers", "order", "delete"]
     .map((action) => ({ kind: "schedule", action }));
   const restrictedSchedule = [{ kind: "schedule", action: "notify" }, { kind: "schedule", action: "convert" }];
-  const resultClientCrud = ["overview", "workers", "delete"].map((action) => ({ kind: "result", action }));
-  const restrictedResult = ["create", "duplicate", "articles"].map((action) => ({ kind: "result", action }));
+  const resultClientCrud = ["create", "overview", "workers", "delete"].map((action) => ({ kind: "result", action }));
+  const restrictedResult = ["duplicate", "articles"].map((action) => ({ kind: "result", action }));
   const billing = ["overview", "articles", "agreement", "adjusted"].map((action) => ({ kind: "billing", action }));
   for (const roles of [[], ["controller"], ["accountant"], ["human-resource"], ["unknown"]]) {
     const user = { ...base, roles };

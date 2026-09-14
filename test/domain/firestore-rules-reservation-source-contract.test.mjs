@@ -113,7 +113,14 @@ test("Customer reference collections use explicit guarded matches outside the fa
     /match \/Companies\/\{companyId\}\/OperationResults\/\{docId\} \{([\s\S]*?)\n    \}/u,
   )?.[1];
   assert.ok(operationResultBody, "OperationResults must have an explicit document match");
-  assert.match(operationResultBody, /allow create: if false;/u);
+  assert.match(
+    operationResultBody,
+    /allow create:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?isValidOperationResultClientCreate\(companyId, docId\)/u,
+  );
+  assert.match(
+    source,
+    /function isValidOperationResultClientCreate\(companyId, docId\)[\s\S]*?isValidSiteReferenceCreate\(companyId\)[\s\S]*?hasExistingCustomerReferenceAfter\(companyId, request\.resource\.data\)[\s\S]*?request\.resource\.data\.docId == docId[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid[\s\S]*?request\.resource\.data\.isLocked == false[\s\S]*?request\.resource\.data\.siteOperationScheduleId == null[\s\S]*?request\.resource\.data\.articles\.size\(\) == 0[\s\S]*?request\.resource\.data\.workers\.size\(\) == 0[\s\S]*?request\.resource\.data\.billingCalculationVersion == 2/u,
+  );
   assert.match(
     operationResultBody,
     /allow update:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?isValidOperationResultClientUpdate\(docId\)/u,
