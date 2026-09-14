@@ -95,7 +95,7 @@
 | FGA-06-TRANSACTION-DELETE-BOUNDARY-05 | Completed | マスタdataのarchive・物理削除はCallableを維持し、transaction dataにはarchiveを設けず、物理削除をclient、関連data連携をTriggerへ委譲する境界を[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)へ確定した。製品変更・進捗加点なし |
 | FGA-06-RESULT-DELETE-CLIENT-06 | Completed | 稼働実績の物理削除を標準client deleteへ移し、tenant・非lock Rules、旧Callable拒否、既存Trigger連携、勤務者10名を含むLocal削除を検証した。Devでは会社管理者sessionで作業員CRUD後の合成実績を削除し、一覧0件とTrigger errorなしを確認した。[Dev受入れ記録](../verification/fga-06-result-callable-restore-dev.md)を参照 |
 | FGA-06-RESULT-CALLABLE-RESTORE-07 | Completed | 固定製品commit `5dac8d49`で稼働実績の通常UPDATEと作業員配列を標準Manager／model保存へ戻し、専用writer・参照存在確認transaction・再読込handler・旧実績編集Callable入力を撤去した。初回Dev受入れで確認した勤務初期値継承不足をcommit `8d90d5d1`で補正し、会社管理者による作業員CRUD・再読込・実績削除・Trigger・見た目受入れを完了した。FGA-06全体の加点は行わない |
-| FGA-06-RESULT-CREATE-CLIENT-08 | In progress | 07で見落とした一覧CREATEを、過去実装どおり複数形`OperationResultsManager`／`AirArrayManager`／`OperationResult.create()`へ戻す。現行UIを維持し、旧Callable入力を閉じ、作成時のlive参照・reserved field境界とSite archive競合をRules／Emulatorで守る。Local検証、固定commit、Dev反映、一覧作成・詳細遷移・Trigger・見た目受入れで完了する |
+| FGA-06-RESULT-CREATE-CLIENT-08 | Completed | 07で見落とした一覧CREATEを、複数形`OperationResultsManager`／`AirArrayManager`／`OperationResult.create()`へ戻した。現行UIを維持し、旧Callable入力を閉じ、作成時のlive参照・reserved field境界とSite／Customer archive競合をRules／Emulatorで守った。固定release `65a10bde`でFirestore Rules・Functions・HostingをDev反映し、会社管理者による一覧作成、詳細遷移、物理削除、一覧0件、Trigger errorなし、見た目を受け入れた。[Dev受入れ記録](../verification/fga-06-result-create-client-dev.md)を参照 |
 
 ## 完了条件
 
