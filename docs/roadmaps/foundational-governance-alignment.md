@@ -10,11 +10,7 @@
 
 ## 2026-09-15の仕様回答に対応する残作業
 
-[標準CRUDと後続処理](../specification.md#標準crudと後続処理)、[実績ロック](../specification.md#稼働実績ロックと画面別操作)、[archive](../specification.md#ドキュメントのアーカイブと物理削除)の承認済み方式を、各対象機能の実装工程へ反映する。今回の文書更新による製品進捗の加点はない。以下の過去checkpointで維持した専用Callable・一律lock拒否等を、現行の必須設計と読み替えない。
-
-- マスター工程: 業務状態変更とUser/Auth変更部分の分離、標準archive・restoreへの切替えを対象ごとに確認する。
-- transaction工程: [CRUD棚卸しの残作業](../implementation/operation-crud-simplification-inventory.md)から、請求・画面別lock・実績化・配置通知の標準クラス接続と既存Trigger維持を確認する。
-- 完了条件: 対象Manager／Class／Rules／Functionsが承認済み方式に一致し、画面別操作と認証・tenant境界、関連documentへの反映、失敗時の挙動を検証してDev受入れを行う。文書だけでこれらを完了扱いしない。
+[標準CRUD整合ロードマップ](standard-crud-alignment.md)を、この仕様差の解消順・状態・完了証拠の正本とする。実装事実は[CRUD棚卸し](../implementation/operation-crud-simplification-inventory.md)を参照する。過去checkpointの完了は当時の受入れ範囲を示し、専用Callable・一律lock拒否等を新仕様の必須設計や達成証拠へ読み替えない。新計画の率と本phaseの率は合算・平均せず、今回の計画作成で加点しない。既存FGA-06の未完checkpointは下表で引き続き管理し、新計画側から共有証拠を参照する。
 
 ## フェーズ原則
 

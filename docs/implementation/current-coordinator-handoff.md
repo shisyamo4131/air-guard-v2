@@ -4,7 +4,7 @@
 
 ## 現在の作業
 
-- 製品改修の継続先は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)。機能順、進捗、checkpointの完了条件・状態は同roadmapを正とします。
+- 棚卸し解消の継続先は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)。解消順、状態、次checkpointは同roadmapを正とし、既存phaseとの関係も同書から確認します。
 - 製品全体の残作業は[正式運用ロードマップ](../roadmaps/airguard-v2.md)、確認済み要件は[現行仕様](../specification.md)、実行証拠は[検証索引](../verification/README.md)を参照します。
 
 ## 未決事項と承認
@@ -17,7 +17,9 @@
 
 ## 次の作業
 
-2026-09-15の質疑応答で確定した[標準CRUDと後続処理](../specification.md#標準crudと後続処理)・[画面別lock](../specification.md#稼働実績ロックと画面別操作)を次の実装判断へ適用する。未移行箇所と受入れ条件は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md#2026-09-15の仕様回答に対応する残作業)へ集約し、下記の旧実装・受入れ記録を新仕様の達成証拠にしない。
+2026-09-15の質疑応答で確定した[標準CRUDと後続処理](../specification.md#標準crudと後続処理)・[画面別lock](../specification.md#稼働実績ロックと画面別操作)を次の実装判断へ適用する。解消順と次checkpointは[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#次の作業)を参照する。下記の旧実装・受入れ記録を新仕様の達成証拠にしない。
+
+### 既存FGA工程の参照（2026-09-15時点）
 
 1. `FGA-06-RESULT-DELETE-CLIENT-06`、`FGA-06-RESULT-CALLABLE-RESTORE-07`、見落としていた一覧CREATEを補正する`FGA-06-RESULT-CREATE-CLIENT-08`はDev反映・会社管理者受入れまで完了しました。[一覧CREATEのDev受入れ記録](../verification/fga-06-result-create-client-dev.md)を参照します。
 2. 初回Dev受入れで作業員の勤務初期値継承不足を確認し、過去repositoryと現行`WorkersManager`契約に合わせて8つのdefault値を渡す補正をcommit `8d90d5d1`で反映しました。補正後は作業員追加・更新・削除・再読込、実績物理削除、Trigger errorなし、一覧0件、既存UIを確認済みです。

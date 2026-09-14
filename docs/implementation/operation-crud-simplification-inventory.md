@@ -1,10 +1,47 @@
 # Operation CRUD簡素化の現行棚卸し
 
-- 確認日: 2026-09-14
-- checkpoint: FGA-06-SCHEDULE-MANAGER-RESTORE-09
-- 状態: 稼働実績の08以前はDev受入れ済み。現場稼働予定のAir Manager／model保存と単純なtenant Rulesへの復元・Firestore／HostingのDev反映後、上下番確定の左右画面が表示されない不具合を確認した。重複した`table`表示口を補正したcommit `12f05e5a`はHostingへDev再反映済み。配置管理・上下番確定の再受入れ待ち
-- 対象: 現場稼働予定、稼働実績、稼働請求の画面、Manager、`saveOperation` Callable、Firestore Rules
-- 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、進捗は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)
+- 確認日: 2026-09-15
+- checkpoint: INVENTORY-0915
+- 状態: 承認済み仕様とlocal実装の静的棚卸し。製品変更・Dev受入れを意味しない
+- 対象: マスタの状態変更・archive/restore、現場稼働予定、稼働実績、稼働請求、請求、配置通知の画面・Manager・Class・Callable・Firestore Rules・後続Trigger
+- 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、棚卸し解消の進捗は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)
+
+## 2026-09-15の実装棚卸し
+
+基準はlocal mainの`048e44e9cfd4ca887ec328e7e835c291579e68af`。対象は今回確定したarchive・状態変更・請求・実績lock・実績化・通知・後続Triggerである。実コードとinstalledクラスを読取り、同じ基準でmasterと請求を独立調査した。remote適用状態、実data、画面実操作、送信、runtime testは未確認。以下の優先度は改修順の判断であり、不具合の深刻度や実装承認ではない。
+
+| 対象 | 判定 | 現在の実装と仕様との差 | 最小の改修単位・維持条件 |
+|---|---|---|---|
+| Customer通常CRUD・取引状態／Outsourcer通常CRUD・取引状態 | 維持 | 単数・複数ManagerがClass.create/updateへ接続済み | 既存の標準保存を作り直さない。Outsourcerで未提供のarchive/restoreを自動追加しない |
+| Site・Employee通常CRUD | 大筋一致 | 標準Manager/Class保存は存在するが、状態変更を拒否するRulesが残る | 下記の状態変更工程で必要なRulesだけを合わせる。退職後の通常情報編集禁止など残した業務条件は一括解除しない |
+| Customer／Site／Employee archive | 高・要変更 | 専用Callableが独自envelopeを書いて原本をraw delete。標準Class.deleteを迂回し、原本delete・archive writeをRulesで拒否 | 各masterごとに入口、Classの従属検査、Rules、旧archive形式の互換性をまとめる。旧envelopeを標準restoreへ直接渡さない |
+| Restore | 提供範囲確認・archiveと同時検討 | client-adapterに標準restoreはあるが、対象masterの通常復旧入口は今回の検索で見つからない | 基盤の存在と製品UI提供を区別する。既存dataの有無・変換要否は未確認で、自動migrationしない |
+| Site手動終了・再開 | 高・要変更 | 専用editor→useSiteActions→Callable→server transaction。Rulesにもstatus変更拒否が残る | 手動入口・標準保存・Rulesを一体で整合。Classにはterminateが存在するが再開条件の完全一致は未確認。自動終了のsystem処理は維持 |
+| Employee退職・訂正 | 高・Class契約の整理が必要 | 専用Auth lifecycleが業務状態を更新。標準Employee.beforeUpdateもACTIVE→RESIGNEDを拒否し、toTerminatedにはUser.deleteまで含まれる | 単純な接続替えは不可。Classの業務状態更新と認証処理、入口、Rulesの分離を一つの設計単位にする。package変更自体は未承認・未実施 |
+| 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | 高・要変更 | Operation専用ManagerとsaveOperationが残る。Rulesはlock中update・lock変更・articles/調整値変更を拒否。Callableにもrole認可が残る | OperationResultsを共有する画面、標準OperationResult/OperationBilling、Rules、正規callerの撤去とtestを同じ工程で整合。経理画面へのアクセス制限は維持 |
+| 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
+| Billings入金予定日 | 中〜高・要変更 | 専用PaymentDateEditor→Callable、expected比較とfield限定保存。Billings Rulesはclient write全面拒否 | 提供済み入金予定日編集をManager/Classへ移す。Rulesと旧比較testを同時に整合。server actorは既にtenant中心でありrole撤去を重複計上しない |
+| 請求確定・確定後の編集削除 | 中・未提供UIを含む | 顧客請求のC/U/D handlerがunsupported。詳細の編集入口は入金予定日。Billingにstatus/confirmはあるが確定画面・issuer snapshot保存経路は今回未確認 | 「既存確定ロックの撤去」と誤分類しない。提供UI・標準保存・Rulesを実装する単位。現在の入金予定日編集から分ける |
+| 予定から実績化 | 高・要変更 | Generator→useOperationGenerator→saveOperation。通知の期待値比較やserver側変換が存在。ClassにはsyncToOperationResultがあるがRules createは予定ID=null・作業員空等を要求 | Generatorとクラス標準実績化、OperationResults作成Rules、旧convert callerを同時に整合。通知の実勤務時間反映・予定との紐付けは維持 |
+| 配置通知作成 | 維持 | schedule.notifyでClassから通知documentを生成し予定側状態を同じtransactionで更新 | 後続通知生成と送信までclientへ移さない |
+| 配置確認・上番・下番／通知編集 | 中・要変更 | useNotificationEditorが独自transaction、期待値比較、field patch、再読込を実装。Class.update/toConfirmed/toArrived/toLeavedを保存に使っていない | 通知Manager・本人向け操作・入力を標準クラスへ接続。状態ごとの時刻・実勤務値と後続通知条件を検証 |
+| Notifications生成・FCM・結果記録／実績から請求勤怠等の反映 | 維持 | ArrangementNotifications→Notifications→FCMの二段階Trigger、OperationResultのC/U/D→各projection同期が存在 | 新しい専用層を増やさず既存Triggerを維持。保存完了と後続反映完了を区別して検証する |
+
+### 主な一次根拠
+
+- Master通常保存: `components/Customer/Manager/index.vue`、`components/Site/Manager/index.vue`、`components/Employee/Manager/index.vue`、`components/Outsourcer/Manager/index.vue`と各複数形Manager。専用archiveは[Customer](../../functions/modules/customer/archiveCustomer.js)、[Site](../../functions/modules/sites/archiveSite.js)、[Employee](../../functions/modules/employees/archiveEmployee.js)。[Rules](../../firestore.rules)のCustomers/Employees/Sitesおよびarchive matchを照合した。
+- Site状態更新: [useSiteActions](../../composables/application/site/useSiteActions.js)のterminate/reactivate、[server lifecycle](../../functions/modules/sites/lifecycle.js)。Employeeの専用入口は[LifecycleActions](../../components/Employee/LifecycleActions.vue)。installed Schemasの`src/Employee.js`のbeforeUpdate/toTerminatedは、状態更新拒否とUser削除を含む。
+- 請求・lock: [OperationBilling Manager](../../components/OperationBilling/Manager/index.vue)、[useOperationSubmission](../../composables/application/operation/useOperationSubmission.js)、[operationWriteContract](../../functions/shared/operationWriteContract.js)、[Rules](../../firestore.rules)のisValidOperationResultClientCreate/Update/Delete。installed Schemasの`src/OperationBilling.js`の_shouldCheckLock/delete/toggleLockと`src/OperationResult.js`のhookを照合した。
+- 顧客請求: [customerBillingHandlers](../../handlers/customerBillingHandlers.js)、[入金予定日server処理](../../functions/modules/billings/updateBillingPaymentDate.js)、RulesのBillings match。installed Schemasの`src/Billing.js`に確定後update/deleteを一律拒否するhookは今回見つからない。
+- 実績化: [useOperationGenerator](../../composables/application/operation/useOperationGenerator.js)、[saveOperation](../../functions/modules/operations/saveOperation.js)。installed Schemasの`src/SiteOperationSchedule.js`のsyncToOperationResultは同ID実績作成と予定更新を同じtransactionで行う。
+- 通知: [標準作成への入口](../../composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js)、[独自通知editor](../../composables/application/operation/useNotificationEditor.js)、[本人向け操作](../../composables/application/operation/usePersonalNotification.js)、[配置通知Trigger](../../functions/triggers/arrangementNotification.js)、[送信・結果記録](../../functions/modules/utils/notifications.js)。
+- 実績の後続反映: [OperationResult Trigger](../../functions/triggers/operationResult.js)、[projection同期](../../functions/modules/operations/syncOperationResultProjections.js)。一つのprojectionの失敗で残りを実行せず終える構造ではなく、個別実行後に失敗を集約する。
+
+### 推奨する進め方と確認残
+
+棚卸しを一つずつ解消する順序・checkpoint・確認残の扱いは[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)を正とする。本書は確認日付きの実装事実を保持し、改修状態や次工程を重複管理しない。
+
+既存testには旧専用経路・client write拒否を期待するものがある。後続実装では`operation-write`、`operation-submission`、`billing-payment-date`、`client-billing-contract-parity`、各master archive、`employee-schema-compatibility`、`operation-result-projections`およびlocal harnessを対象に、旧期待値と新仕様を区別して更新する。今回testは存在・参照の確認だけで、runtime検証は実行していない。製品code、Rules、package、実data、remoteは変更していない。
 
 ## 2026-09-15仕様回答の反映と残作業
 
