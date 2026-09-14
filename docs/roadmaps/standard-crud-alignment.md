@@ -46,7 +46,7 @@ SCR番号は2026-09-15時点の改修優先順位に合わせて付番し直し�
 
 | 枝番 | 作業 | 具体的な改修・確認内容 | 完了の判断 | 状態 |
 |---|---|---|---|---|
-| SCR-01-01 | 保存契約と影響範囲の確定 | Billingの標準update、日付の型・null・派生年月、請求日との前後条件、document全体の保存内容、請求集計等の背景writerを照合する。既存日付検証とクラスに差があれば、その扱いと必要な修正範囲を確定する | 対象file、維持条件、互換性、rollback、test範囲を確定。package変更やdata変換の要否を根拠付きで判断できる | Planned |
+| SCR-01-01 | 保存契約と影響範囲の確定 | Billingの標準update、日付の型・null・派生年月、請求日との前後条件、document全体の保存内容、請求集計等の背景writerを照合する。既存日付検証とクラスに差があれば、その扱いと必要な修正範囲を確定する | 対象file、維持条件、互換性、rollback、test範囲を確定。package変更やdata変換の要否を根拠付きで判断できる | Completed（調査・設計） |
 | SCR-01-02 | 単数Managerと入力部品 | Billing instanceを受ける単数domain ManagerでAirItemManagerをラップする。入金予定日用customInputを設け、日付変更・未設定操作を構成する。既定editor・validation・submit・loading・errorを利用する | 独自dialogの責務をbase Managerへ移し、単一instance入力、UPDATE入口、入力・取消が仕様どおりに動く | Planned |
 | SCR-01-03 | 標準保存と画面の接続 | 詳細画面が購読するBilling instanceをManagerへ渡し、保存handlerから標準updateへ委譲する。専用getDocFromServer、expected比較、保存後の強制再取得を通常経路から外し、listenerを表示正本とする | 日付変更・未設定が保存／再表示される。保存失敗が標準error経路へ伝わり、別の請求fieldを意図せず欠落させない | Planned |
 | SCR-01-04 | Billings Rulesの整合 | client write全面拒否を見直し、今回の標準保存を認証・同一tenantの境界で成立させる。通常schema・日付業務条件をRulesへ複製しない。既存reader／背景writerとの境界を確認する | 同一tenantの正規保存が成功し、未認証・他tenantは拒否される。未提供の請求CRUD画面は追加されない | Planned |
@@ -58,7 +58,7 @@ SCR番号は2026-09-15時点の改修優先順位に合わせて付番し直し�
 
 SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路・Rules・旧経路を組み合わせた一つの変更として06で検証し、片側だけを先に公開しない。枝番ごとの調査・静的確認・直接対象testは進めるが、同じ回帰suiteを枝番ごとに重ねて実行しない。07の外部操作は既存のDev承認境界に従う。
 
-既存の検証入口は`test/domain/billing-payment-date.test.mjs`、`test/domain/client-billing-contract-parity.test.mjs`、`test/local/codex-local-harness.test.mjs`。新しい標準保存・Rules・背景writerとの接続を覆う検証は01で選ぶ。今回行ったのは枝番計画の作成であり、01の詳細契約確定や02以降の実装・製品検証を完了したとは扱わない。
+既存の検証入口は`test/domain/billing-payment-date.test.mjs`、`test/domain/client-billing-contract-parity.test.mjs`、`test/local/codex-local-harness.test.mjs`。新しい標準保存・Rules・背景writerとの接続を覆う検証は01で選ぶ。01の保存契約・互換性・rollback・検証範囲は[調査結果](../implementation/operation-crud-simplification-inventory.md#scr-01-01-保存契約の調査結果2026-09-15)を参照する。02以降の実装・製品検証は未完了で、親SCR-01は0点を維持する。
 
 ## 影響確認から次の1件を選ぶ
 
@@ -127,4 +127,4 @@ code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-
 
 ## 次の作業
 
-次はSCR-01-01として、入金予定日の保存契約と影響範囲を確定する。最初の実装対象としての確定は、標準Billing全体保存と背景writer・日付検証・Rulesの整合を確認してから行う。候補を1件ずつ現物で確認し、保存接続だけで済むか、Manager置換・共有Rules・保存形式・認証側の変更が必要かを整理する。確認した変更範囲が最小の独立操作について実装checkpointを具体化する。今回の終了条件は、SCR-01の枝番計画と参照整合・review・文書検証までとする。
+次はSCR-01-02として単数Managerと入金予定日customInputを作成する。01の調査契約を適用し、既定editor・validation・mode・error/loadingを再実装しない。02の範囲は部品と直接testまでとし、詳細pageへの接続・Rules・旧Callable撤去は03〜05へ残す。02単独では実保存・Dev公開の完了を主張しない。

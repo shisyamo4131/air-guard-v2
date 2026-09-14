@@ -43,6 +43,25 @@
 
 既存testには旧専用経路・client write拒否を期待するものがある。後続実装では`operation-write`、`operation-submission`、`billing-payment-date`、`client-billing-contract-parity`、各master archive、`employee-schema-compatibility`、`operation-result-projections`およびlocal harnessを対象に、旧期待値と新仕様を区別して更新する。今回testは存在・参照の確認だけで、runtime検証は実行していない。製品code、Rules、package、実data、remoteは変更していない。
 
+## SCR-01-01 保存契約の調査結果（2026-09-15）
+
+調査基準はlocal branchのcommit `7ad8dbb39b02e9c82da4a1fd889a1cc7d01da593`。terra/medium taskのread-only調査をcoordinatorが現物code・診断出力でreviewした。以下は後続実装の契約であり、製品への適用済み記録ではない。
+
+- 入力と保存: 詳細画面が購読するBilling instanceを単数domain Managerへ渡す。AirItemManagerの既定editorとcustomInputで入金予定日変更・null解除だけを提供する。保存はdraftの標準updateへ委譲し、client-adapterがdocument全体、管理field、schema validationを所有する。
+- 日付条件: 既存の「nullまたは請求日以降」は維持する。Billing classはDate/nullと派生年月を扱うが前後条件は検証しないため、入力側のminと、保存直前の共有operation contractで既存条件を検証する。日付相関をRulesへ複製せず、expected比較・独自再取得・競合拒否は撤去する。一般schemaをアプリ側へ複製しない。
+- 保存内容: status、adjustment、remarks、operationResults、createdAtを往復させ、uid・updatedAtは標準adapterが更新する。paymentDueDateAtからpaymentDueDate・paymentDueMonthをクラスが導出する。背景writerは既存rawと計算結果を合成し、手動の入金予定日を維持する。clientと背景writerの同時更新には現行document単位LWWを適用し、異なるfieldの完全保持を保証しない。
+- 互換性: 今回は既存schemaと日付3 fieldのshapeへ保存経路を合わせる。package変更・data変換を必須とする根拠は確認されていない。未知fieldの汎用保持を新要件にしない。privateMetadata等は合成testの例で、実製品writerの必須fieldとは確認されなかった。
+- 対象: 02で単数ManagerとcustomInput、03で詳細page・保存接続、04でBillings Rules、05で旧PaymentDateEditor・専用composable・Callable API/export/module・不要contractを整理する。共有helperは残存callerを確認する。直接testは既存billing-payment-date、client-billing-contract-parity、local harnessを関連範囲で更新する。Employee、User/Auth、請求確定UI、背景writerの設計変更は対象外。
+- rollback: 02の未接続部品は当該差分を戻せる。03〜05の切替後はclient・Rules・旧Callableを整合した組で戻す。形を変えない通常更新では専用migrationを予定しないが、codeの復元だけで保存済みの値を巻き戻したとは扱わない。旧clientの併存とFunction撤去順は07のrelease確認に含める。
+- 検証計画: 02はinstance入力、UPDATEのみ、日付入力・null解除・取消・disabled・base validation/error接続を確認。03〜06は全値のserialization、日付往復、保存成功・失敗・listener、背景集計後の日付保持を確認し、Rulesは認証・同一tenant境界を検証する。実保存の互換性は02開始前の検証済み条件ではなく、03〜06の完了条件である。07で対象Dev受入れを行う。
+
+### 診断とreviewの限界
+
+合成dataによる `node --input-type=module -e …` のメモリ内診断は各exit 0。請求日前とnullがBilling.validateを通ること、nullの派生日付がnullになること、代表的なstatus・adjustment・remarks・管理fieldがtoObjectに残ることを確認した。OperationResultの生成する66個のfield名はBilling内の往復で欠落しなかったが、全値一致・実Firestore保存・画面受入れは未検証である。schema外のunknown fieldは除去された。coordinatorは「未知field保持のためpackage改修必須」という初回判断を、合成例を要件に拡張したものとして差し戻し、必須ではないとの訂正を確認した。
+
+一次根拠は[旧日付contract](../../composables/domain/customerBilling/billingPaymentContract.js)、[背景Billing同期](../../functions/modules/billings/billingReferencePlan.js)、[背景保存](../../functions/modules/employees/backgroundReferencePlan.js)、installed Billing classとclient-adapterのupdate。現行仕様と食い違うCONF-0036の旧発行後制限は現行標準CRUDへ整合し、再導入しない。remote・実dataは未確認、製品testは未実施。調査・記録はproject-guidance-metadataとしてproject-docsとdiff-checkで検証し、製品suite・環境検証は製品変更がないため対象外とする。要件自体・schema・操作手順は変えないため、仕様version・ADR・manual・運用runbookは更新しない。
+記録差分の独立reviewでは、01の証拠限界と02の部品scopeが妥当と確認された。入金model未決の参照先をCONF-0035へ訂正した。02はbeforeEditとhandlerでCREATE/DELETEを拒否し、schema由来componentAttrsを使用する。親SCR-01の製品完了とは区別する。
+
 ## 2026-09-15仕様回答の反映と残作業
 
 保存方式と画面別lock条件は[現行仕様](../specification.md#標準crudと後続処理)・[画面別操作表](../specification.md#稼働実績ロックと画面別操作)で確定した。今回の文書変更で製品code・Rules・dataは切り替えていない。以下の確認日付き実装記録を移行済みと読み替えない。

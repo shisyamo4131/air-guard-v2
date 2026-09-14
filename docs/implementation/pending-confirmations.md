@@ -530,9 +530,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: 誰がどのstatusで入金予定日を変更でき、理由・変更履歴を必要とするか。
 - Why needed: 確定後の支払条件変更と回収予定の監査性を保つため。
 - Options and impact: DRAFTのみ、権限者＋理由、全status可＋履歴。
-- Current provisional treatment: 将来のinvoice-issued trigger前は請求担当者が編集でき、発行後は理由・履歴付き変更だけを許す。paid/cancelledは変更不可とする。現行statusではなく将来の発行境界を使い、`billings:read`単独では許可しない。
+- Current provisional treatment: 2026-09-15採用の[標準CRUD](../specification.md#標準crudと後続処理)を正とする。提供済み入金予定日編集はManager/Classへ統一し、旧発行後の理由・履歴必須、paid/cancelledの一律変更禁止を再適用しない。
 - Related FUT IDs: FUT-0031, FUT-0049, FUT-0051
-- Answer: 2026-08-11 暫定回答。将来のinvoice-issued trigger前は請求担当者がpaymentDueDateAtを編集できる。発行後はsilent overwriteを禁止し、before/after/reason/actor/timeの履歴を必須とする。paid/cancelledはimmutableとする。Customer支払条件変更は将来のdefaultだけへ反映し、既存Billingを自動変更しない。`billings:read`単独では許可せず、現行暫定statusではなく将来のinvoice-issued境界を使う。本方針は仕様成熟に伴い変更可能だが、現時点の回答としてAnsweredとする。
+- Answer: 2026-09-15の標準CRUD採用に合わせて旧2026-08-11暫定回答を置き換える。確定後も直接編集でき、CRUDのserver認可は認証・同一tenantとする。支払記録・部分入金・PAID判定はCONF-0035の未決として分離する。Customer支払条件変更は将来のdefaultへ反映し、既存Billingを自動変更しない扱いを維持する。
 
 ## CONF-0037 OperationBilling lockの対象範囲
 
