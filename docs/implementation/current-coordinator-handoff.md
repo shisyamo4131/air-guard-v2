@@ -18,8 +18,9 @@
 ## 次の作業
 
 1. `FGA-06-RESULT-MANAGER-CLIENT-04`はrelease commit `138b3a29`のHosting Dev反映と、会社管理者・統括による基本情報・従業員／外注先明細の保存再表示、削除、見た目受入れまで完了しています。[Dev受入れ記録](../verification/fga-06-result-manager-client-dev.md)を参照します。
-2. 次の製品checkpointは[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)に従い、稼働実績の物理削除を`saveOperation` CallableからDomain Manager／FireModelのclient deleteへ移し、関連data連携を既存Triggerへ維持します。勤務者行がある実績で発生した汎用errorを同条件で再現し、Rules、lock、Trigger、旧Callable caller、rollback、Dev受入れを一つのscopeとして設計reviewしてから実装します。transaction dataにはarchiveを追加しません。
-3. 予定入力内の現場新規登録は[FUT-0190](future-actions.md#fut-0190-現場稼働予定入力内の現場新規登録を復旧する)、サインアウト／session切替と従属cacheのcleanupは[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)へ分離済みです。次checkpointへの追加はscope合意に従います。この案内自体はcode、Rules、Functions、Dev・Prod、remote data変更の承認ではありません。
+2. `FGA-06-RESULT-DELETE-CLIENT-06`は固定製品commit `07511fb3`で、稼働実績の物理削除を`saveOperation` CallableからDomain Manager／FireModelのclient deleteへ移し、実績delete Callable入力を閉じました。関連data連携は既存Triggerへ維持し、勤務者10名を含む実績のclient削除、全domain 1454件、Local Emulator 180件、専用UI buildを完了しています。[Local検証記録](../verification/fga-06-result-delete-client-local.md)を参照します。
+3. 次の承認境界は固定commitのFirestore Rules・Functions・HostingのDev反映と、会社管理者・統括sessionでの非lock実績削除、locked実績拒否、関連data収束、現行UIの見た目受入れです。schema変更、migration、既存data一括変更、Prod、現場稼働予定deleteの移行は含めません。
+4. 予定入力内の現場新規登録は[FUT-0190](future-actions.md#fut-0190-現場稼働予定入力内の現場新規登録を復旧する)、サインアウト／session切替と従属cacheのcleanupは[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)へ分離済みです。次checkpointへの追加はscope合意に従います。この案内自体はDev・Prod、remote data変更の承認ではありません。
 
 ## 参照
 

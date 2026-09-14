@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- マスタdataのarchive・復旧・物理削除はCallableを維持し、transaction dataにはarchiveを設けず、製品が提供する物理削除をDomain Manager／FireModel／ClientAdapterのclient経路へ移し、削除後の関連data連携をTriggerへ委譲するガバナンスへ更新した。現行`saveOperation`の予定・実績deleteとclient delete拒否Rulesは後続FGA-06 checkpointで移行する既知実装差であり、今回の文書変更では製品code、Rules、Functions、data、Dev・Prodを変更していない。[ADR 0072](docs/decisions/0072-transaction-delete-client-trigger-boundary.md)を参照。
+- FGA-06-RESULT-DELETE-CLIENT-06のLocal実装として、稼働実績詳細の既存削除dialogを`OperationResultManager`／FireModelのclient deleteへ接続し、同一tenantの有効な本登録Userが非lock実績を物理削除できるRulesへ変更した。旧`saveOperation`の実績delete入力は拒否し、請求・勤怠・勤務回数・履歴・予定・日報等の関連data連携は既存Triggerへ維持した。勤務者10名を含む実績のclient削除、全domain 1454件、Local Emulator 180件、固定製品commit `07511fb3`の専用UI buildに合格した。Dev・Prod、schema、migration、既存data、現場稼働予定deleteは変更していない。[Local検証記録](docs/verification/fga-06-result-delete-client-local.md)を参照。
+
+- マスタdataのarchive・復旧・物理削除はCallableを維持し、transaction dataにはarchiveを設けず、製品が提供する物理削除をDomain Manager／FireModel／ClientAdapterのclient経路へ移し、削除後の関連data連携をTriggerへ委譲するガバナンスへ更新した。この文書checkpoint時点では`saveOperation`の予定・実績deleteとclient delete拒否Rulesを既知実装差として記録し、製品code、Rules、Functions、data、Dev・Prodを変更していなかった。実績deleteの後続実装は上記FGA-06-RESULT-DELETE-CLIENT-06を正とする。[ADR 0072](docs/decisions/0072-transaction-delete-client-trigger-boundary.md)を参照。
 
 - FGA-06-RESULT-MANAGER-CLIENT-04をrelease commit `138b3a29`でHostingへDev反映し、会社管理者・統括sessionで基本情報と従業員／外注先明細の追加・編集・削除・再読込、および既存画面の見た目を受け入れた。削除確認buttonの無効化不具合を補正し、合成OperationResultを削除、合成Siteを終了、合成Outsourcerを契約終了へ整理した。勤務者行が残る実績の物理削除で汎用errorとなり、行を空にした後は成功する未特定差を後続transaction delete checkpointの再現対象とした。[Dev受入れ記録](docs/verification/fga-06-result-manager-client-dev.md)を参照。
 

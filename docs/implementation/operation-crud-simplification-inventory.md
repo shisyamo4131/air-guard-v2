@@ -1,8 +1,8 @@
 # Operation CRUD簡素化の現行棚卸し
 
 - 確認日: 2026-09-14
-- checkpoint: FGA-06-TRANSACTION-DELETE-BOUNDARY-05
-- 状態: FGA-06-RESULT-MANAGER-CLIENT-04のDev受入れ完了。transaction物理削除のclient化・Trigger連携をガバナンスへ確定し、製品実装前
+- checkpoint: FGA-06-RESULT-DELETE-CLIENT-06
+- 状態: 稼働実績のclient物理削除を固定製品commit `07511fb3`でLocal実装・検証済み。Dev反映・受入れ前
 - 対象: 現場稼働予定、稼働実績、稼働請求の画面、Manager、`saveOperation` Callable、Firestore Rules
 - 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、進捗は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)
 
@@ -13,8 +13,8 @@
 3. 実績詳細の基本情報は`OperationResultManager`／`AirItemManager`、作業員明細は`OperationResultWorkersManager`／`AirArrayManager`から、`OperationResult.update()`の標準client保存へ接続した。作業員追加時だけ同じclient transactionで新規Employee参照を確認する。
 4. `functions/shared/operationWriteContract.js`が`create`、`duplicate`、`overview`、`workers`、`articles`、`order`、`delete`、`notify`、`convert`、`agreement`、`adjusted`、`lock`を一つのcommand契約へ集約する。
 5. `functions/modules/operations/saveOperation.js`は全commandを一つのFirestore transactionで処理し、Auth identityとUser、現場、従業員参照、期待値を検査する。予定ではSite `scheduleRevision`と配置通知、実績化では予定・通知・実績、請求では取極め・調整・lockを同じ入口で扱う。
-6. Firestore Rulesは`SiteOperationSchedules`のclient writeを全面拒否したまま、`OperationResults`では同一tenantの有効な本登録Userによる既存・非lock実績のupdateだけを許可する。create、delete、lock変更、稼働外売上、請求調整、billing version、lifecycle IDのclient変更は拒否する。transaction deleteのclient拒否はADR 0072採用後の既知実装差である。
-7. `saveOperation`の実績`overview`・`workers`分岐は旧client互換とrollbackのため残している。実績詳細画面の正規経路からは呼ばれない。稼働外売上、実績作成・複製・物理削除、請求は従来経路を維持する。
+6. Firestore Rulesは`SiteOperationSchedules`のclient writeを全面拒否したまま、`OperationResults`では同一tenantの有効な本登録Userによる既存・非lock実績のupdateとdeleteを許可する。create、lock変更、稼働外売上、請求調整、billing version、lifecycle IDのclient変更は拒否する。
+7. `saveOperation`の実績`overview`・`workers`分岐は旧client互換とrollbackのため残している。実績詳細画面の正規経路からは呼ばれず、実績`delete` commandは入力契約で拒否する。稼働外売上、実績作成・複製、請求は従来経路を維持する。
 
 ## 操作別の予備分類
 
@@ -39,7 +39,7 @@
 
 - FGA-06の完了済み2 checkpointはrole依存を緩和したが、専用Operation Manager、Callable、期待値競合、client write全面拒否を維持した。認可緩和の完了記録は有効だが、CRUD簡素化の完了とは扱わない。
 - ADR 0069と仕様は当初Air Managerを通常masterへ限定していた。ADR 0071と仕様訂正により通常業務data全般へ適用範囲を広げるが、製品codeは未移行である。
-- `saveOperation`は通常CRUD、transaction物理削除、通知、実績化、請求状態遷移を同じAPIへ集約している。transaction物理削除はADR 0072に反してCallableとclient delete拒否Rulesへ残っており、後続では予定・実績のdelete callerをDomain Manager／FireModelへ移し、関連処理をTriggerへ維持する。
+- `saveOperation`は通常CRUD、transaction物理削除、通知、実績化、請求状態遷移を同じAPIへ集約している。稼働実績deleteは固定製品commit `07511fb3`でclient／Rules／Trigger境界へ移行した。現場稼働予定deleteはCallableとclient delete拒否Rulesへ残る既知実装差であり、後続で別checkpointとして移行する。
 
 ## FGA-06-RESULT-MANAGER-CLIENT-04 実装・Dev受入れ結果
 
@@ -52,7 +52,19 @@ lockされていない既存実績の`overview`・`workers`だけを対象に実
 
 checkpointはDev受入れまで完了した。旧Callableの`overview`・`workers` rollback分岐と、transaction `delete`分岐の撤去は後続の変更単位とする。
 
+## FGA-06-RESULT-DELETE-CLIENT-06 Local実装結果
+
+固定製品commit `07511fb3`で、稼働実績詳細の既存削除dialogを`OperationResultManager`へ接続し、`OperationResult.delete()`の標準client経路へ移した。
+
+- 削除ボタン、確認dialog、文言、詳細画面の配置を維持し、削除時の保存処理だけを差し替えた。
+- Rulesは同一tenantの有効な本登録User、document ID一致、既存の非lock状態を要求する。create、locked result、仮登録・無効User、他tenantは拒否する。
+- `saveOperation`は実績`delete` commandを入力段階で拒否し、予定deleteは未移行のため維持する。
+- 既存のOperationResult削除Triggerが請求、日次勤怠、勤務回数実績、現場従業員履歴を同期し、既存cleanupが予定・日報を扱う構成は変更していない。
+- 従業員10名を含む実績のclient削除をLocal Emulatorで確認し、勤務者行を空にしないと汎用errorになる旧経路の症状は新経路では発生しなかった。旧Callable内での個別原因の切り分けは行っていない。
+- 全domain 1454件、Local Emulator 180件、固定commitの専用UI buildを完了した。[Local検証記録](../verification/fga-06-result-delete-client-local.md)を参照する。
+
+checkpointはLocal完了・Dev反映前である。schema変更、data migration、既存data一括変更、Prod変更はない。
+
 ## 未確認事項
 
-- Dev受入れ中、従業員・外注先行がある実績の物理削除は会社管理者sessionでも汎用errorとなり、両行を削除した後は成功した。原因は未特定であり、現行単体testが勤務者を持つ実績の削除成功を想定することと一致しない。transaction deleteのclient化では、同条件の再現、Rules、Trigger結果、error経路を対象検証へ含める。
-- Prod、migration、既存data全件、Trigger logと派生document全件は確認していない。今回のガバナンス更新自体は製品code、Rules、Functions、data、Dev・Prodを変更しない。
+- Dev、Prod、migration、既存data全件、remote Trigger logと派生document全件は確認していない。Dev受入れでは勤務者行を持つ合成実績の削除と、必要な関連dataの収束を確認する。
