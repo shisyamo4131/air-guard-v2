@@ -54,7 +54,7 @@ test("archive use-case fixes the exact five direct reference queries and exclude
   assert.doesNotMatch(source, /transaction\.(?:set|update)\(archiveRef|\.restore\s*\(/u);
 });
 
-test("Rules close operation and background reference writes while retaining notification state-only updates", async () => {
+test("Rules open only guarded OperationResult updates while retaining background write boundaries", async () => {
   const rules = await read("firestore.rules");
   assert.match(
     rules,
@@ -75,7 +75,10 @@ test("Rules close operation and background reference writes while retaining noti
       new RegExp(`match /Companies/\\{companyId\\}/${collectionName}/\\{[^}]+\\} \\{([\\s\\S]*?)\\n    \\}`, "u"),
     )?.[1];
     assert.ok(block, `${collectionName} Rules block`);
-    if (collectionName === "OperationResults") assert.match(block, /allow write: if false;/u);
+    if (collectionName === "OperationResults") {
+      assert.match(block, /allow create, delete: if false;/u);
+      assert.match(block, /isValidOperationResultClientUpdate\(companyId, docId\)/u);
+    }
     else if (collectionName === "ArrangementNotifications") {
       assert.match(block, /allow create, delete: if false;/u);
       assert.match(block, /isNotificationStateOnlyUpdate\(\)/u);

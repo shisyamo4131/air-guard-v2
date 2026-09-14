@@ -137,6 +137,7 @@
 ## OperationResult・派生同期・勤怠
 
 - [Operation・Schedule・Billing pages deep review](operation-schedule-billing-pages-deep-review.md)
+- [Operation CRUD簡素化の現行棚卸し](operation-crud-simplification-inventory.md): FGA-06で通常CRUD、例外、Callable技術要件、権限未決を操作別に分ける現在の移行入口。
 
 - [OperationResult生成](operation-result-generation.md)
 - [稼働実績編集のserver認可](operation-result-edit-authorization.md)

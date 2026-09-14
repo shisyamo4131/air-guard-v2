@@ -2,10 +2,10 @@
 
 - 日付: 2026-09-10
 - 状態: Accepted
-- 対象: Firestore上の通常のmaster dataを扱うCRUD component、一覧・選択UI、data編集dialog。Customer、Site、Employee、Outsourcerを最初の適用例とする
+- 対象: Firestore上の通常業務dataを扱うCRUD component、一覧・選択UI、data編集dialog。Customer、Site、Employee、Outsourcerを最初の適用例とする
 - 関連仕様: [Pageとcomponentの構成](../specification.md#pageとcomponentの構成)、[Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
-- 既存判断との関係: [ADR 0068](0068-domain-manager-wrapper-and-editor-dialog-convention.md)全体を置き換える。editable state所有と選択dispatchの判断を訂正し、480px既定、例外operation、listener・cache、認可境界は本ADRへ引き継ぐ
+- 既存判断との関係: [ADR 0068](0068-domain-manager-wrapper-and-editor-dialog-convention.md)全体を置き換える。editable state所有と選択dispatchの判断を訂正し、480px既定、例外operation、listener・cache、認可境界は本ADRへ引き継ぐ。[ADR 0071](0071-normal-business-manager-and-callable-boundary.md)が適用範囲をmaster dataからtransactionを含む通常業務dataへ拡張する
 
 ## 背景
 
@@ -15,7 +15,7 @@ ADR 0068は、単一documentの詳細・編集を単数Manager、collection・�
 
 ### Domain Managerの分類
 
-- Firestore上の通常のmaster dataで提供するC/U/Dは、editable stateを所有する単位に対応するdomain Managerを共通入口とする。
+- Firestore上の通常業務dataで提供するC/U/Dは、editable stateを所有する単位に対応するdomain Managerを共通入口とする。master dataとtransaction dataを同じ原則で扱い、個別operationの例外と移行順はADR 0071および対象checkpointで確定する。
 - 外部から渡された既存の単一instance、またはその場で生成した新規instanceを編集する場合は、単数形domain Managerが`AirItemManager`をラップする。Customerの`CustomerManager`、Siteの`SiteManager`、Employeeの`EmployeeManager`、Outsourcerの`OutsourcerManager`を最初の適用例とする。
 - collection・list自身が配列と行選択dispatchを所有する場合は、複数形domain Managerが`AirArrayManager`をラップする。Customerの`CustomersManager`、Siteの`SitesManager`、Employeeの`EmployeesManager`、Outsourcerの`OutsourcersManager`を最初の適用例とする。
 - 複数形Managerは、`AirArrayManager.beforeEdit`がtrueを返す場合は選択instanceを内部editorで編集する。collection固有の詳細画面を使う場合は、`beforeEdit`内でnavigationしてfalseを返し、内部dialogを開かない。page・listはどちらの場合も行選択を複数形Manager／AirArrayManagerへ渡し、直接detail routeまたはeditorへ迂回しない。
@@ -70,14 +70,14 @@ editable stateの所有単位を基準にすると、base Managerの実装責務
 
 - commit `9bd4d43c23bf113790add10691dc91b7445a99d4`のCustomer実装は、一覧Createを`CustomersManager`へ接続した点は維持できる。一方、Autocomplete内Createを`CustomersManager`へ接続した点は本ADRと不一致であり、`CustomerManager`のCREATEへ移す必要がある。Customer一覧はpageが行選択から直接detail routeへ遷移しており、`CustomersManager`／`AirArrayManager.beforeEdit`を経由していないため、選択dispatchの実装差として直す。
 - [旧利用者Local検証記録](../verification/fga-02-customer-manager-user-local.md)は当時の実装に対するimmutable receiptとして保持し、訂正後のruntime証拠へ読み替えない。
-- Site、Employee、Outsourcerと後続の対象masterは、各feature milestoneで通常masterに該当するoperationとeditable state所有者を確認して段階移行し、一括置換しない。
-- 現行`AirItemManager`はreactiveな`modelValue`をdeep watchして編集中itemへ反映する。一方、`AirArrayManager`は配列から選択したitemを内部editorへ渡した後、listenerによる配列更新を編集中itemへ再同期しない。Customer一覧は`beforeEdit`で詳細へ遷移して内部UPDATE editorを使わないため本checkpointの阻害要因ではないが、一覧内dialogでUPDATEする後続masterはAirVuetify3またはdomain wrapperで同じlistener直接接続契約を確立してから完了する。
+- Site、Employee、Outsourcerと後続の通常業務dataは、各feature milestoneで通常operationとeditable state所有者を確認して段階移行し、一括置換しない。
+- 現行`AirItemManager`はreactiveな`modelValue`をdeep watchして編集中itemへ反映する。一方、`AirArrayManager`は配列から選択したitemを内部editorへ渡した後、listenerによる配列更新を編集中itemへ再同期しない。Customer一覧は`beforeEdit`で詳細へ遷移して内部UPDATE editorを使わないため本checkpointの阻害要因ではないが、一覧内dialogでUPDATEする後続の通常業務dataはAirVuetify3またはdomain wrapperで同じlistener直接接続契約を確立してから完了する。
 - 保存schemaとoperationは変えないため、この分類訂正だけではdata migrationを要しない。
-- Customer、Site、Employeeの単数・複数形Managerは本契約へ揃える。正しいdomain instanceを渡す既存callerの動作と保存形式は変えない。Outsourcerやその他の未移行Managerは各機能checkpointで揃え、本変更では一括改修しない。
+- Customer、Site、Employeeの単数・複数形Managerは本契約へ揃える。正しいdomain instanceを渡す既存callerの動作と保存形式は変えない。Outsourcerやtransaction系を含むその他の未移行Managerは各機能checkpointで揃え、本変更では一括改修しない。
 
 ## 移行
 
-現在のCustomerは、一覧Createだけを`CustomersManager`へ接続し、行選択はpageが直接detail routeへ遷移する。目標では、一覧の行選択を`CustomersManager`／AirArrayManagerへ渡し、`beforeEdit`でdetail navigationを実行してfalseを返す。`CustomersManager`から`CustomerManager`は呼ばない。別途、`CustomerManager`へCREATE modeと作成結果eventを追加し、Autocomplete内Createを同Managerへ接続する。既存の詳細Updateはlistener由来の単一Customerを`CustomerManager`へ渡す。Customerの訂正後、Site、Employee、Outsourcerの順で同じ所有基準を適用し、後続の通常masterも着手時に対象operationと例外を確認して同じ基準へ段階移行する。
+現在のCustomerは、一覧Createだけを`CustomersManager`へ接続し、行選択はpageが直接detail routeへ遷移する。目標では、一覧の行選択を`CustomersManager`／AirArrayManagerへ渡し、`beforeEdit`でdetail navigationを実行してfalseを返す。`CustomersManager`から`CustomerManager`は呼ばない。別途、`CustomerManager`へCREATE modeと作成結果eventを追加し、Autocomplete内Createを同Managerへ接続する。既存の詳細Updateはlistener由来の単一Customerを`CustomerManager`へ渡す。Customerの訂正後、Site、Employee、Outsourcerの順で同じ所有基準を適用し、FGA-06ではtransaction系の通常operationも対象と例外を確認して同じ基準へ段階移行する。
 
 ## rollback
 
@@ -85,7 +85,7 @@ editable stateの所有単位を基準にすると、base Managerの実装責務
 
 ## 検証
 
-- 各対象masterで、単数Managerが外部既存instanceと新規instance、複数形Managerが配列と行選択dispatchを所有することをsource contractで確認する。
+- 各対象の通常業務dataで、単数Managerが外部既存instanceと新規instance、複数形Managerが配列と行選択dispatchを所有することをsource contractで確認する。
 - 単数Managerの`modelValue`が対象domain instanceだけを受け入れ、複数形Managerが空配列および全要素が対象domain instanceの配列だけを受け入れることをsource contractで確認する。
 - Customers一覧は行選択を`CustomersManager`内のAirArrayManagerへ渡し、`beforeEdit`のdetail navigationとfalseによるdialog抑止を使うことを確認する。Autocomplete内Createは`CustomerManager`内のAirItemManagerを通り、両Managerを相互に内包しないことを確認する。
 - Create成功時は割当済みdocument IDを含むcommit確定結果だけを選択し、失敗・結果不明時に選択しないことを確認する。

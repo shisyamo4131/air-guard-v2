@@ -14,7 +14,7 @@ FGA-04で通常保険保存をEmployee modelの`update()`へ接続した。確�
 | 世代値の互換性 | local Employee schemaが既存値を通常全文保存へ残す。新規作成時の0初期化と、不存在の既存fieldを読取りだけで補完しない条件を維持する |
 | 保証の限界 | expectedは同じ入力baselineとの整合確認であり、保存直前のserver最新値との競合検出ではない。busyは当該UIの再入抑止で、別tab・別端末の同時操作を防ぐものではない。古いcandidateのdocument全体保存による上書きを世代値で防げるとは扱わない |
 
-根拠source: [保険composable](../../composables/application/employee/useEmployeeInsurance.js)、[client遷移contract](../../composables/domain/employee/employeeInsuranceContract.js)、[Employee schema](../../schemas/Employee.js)。既存testは[UI保存test](../../test/domain/employee-editor.test.mjs)と[schema互換test](../../test/domain/employee-schema-compatibility.test.mjs)を参照する。UI保存testのharnessはFunctions側の同名contractを注入するため、その成功だけをclient contractの全分岐やremote競合防止の実証にしない。
+根拠source: `composables/application/employee/useEmployeeInsurance.js`、`composables/domain/employee/employeeInsuranceContract.js`、`schemas/Employee.js`。既存testは`test/domain/employee-editor.test.mjs`と`test/domain/employee-schema-compatibility.test.mjs`を参照する。UI保存testのharnessはFunctions側の同名contractを注入するため、その成功だけをclient contractの全分岐やremote競合防止の実証にしない。
 
 以下のEMP-04／EMP-01と初期調査は各時点の履歴。専用Callable・server競合拒否・role限定の記述を現在の通常保険保存へ適用しない。退職後編集禁止・保険の状態遷移・User/Auth・archive等の維持条件は現行仕様へ従う。
 

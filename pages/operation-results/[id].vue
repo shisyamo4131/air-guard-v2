@@ -90,12 +90,36 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
       <v-col cols="12" lg="9">
         <v-row>
           <v-col cols="12">
-            <OperationRowsManager
-              :document-id="docId"
-              kind="result"
-              group="workers"
+            <OperationResultWorkersManager
+              :model-value="doc.workers"
+              :result="doc"
               :disabled="doc.isLocked"
-            />
+              table-card
+            >
+              <template #toolbar="{ disabled, toCreate }">
+                <v-toolbar color="secondary" density="compact" title="作業員">
+                  <v-spacer />
+                  <v-btn
+                    :disabled="disabled"
+                    aria-label="従業員を追加"
+                    @click="toCreate({ isEmployee: true })"
+                  >従業員を追加</v-btn>
+                  <v-btn
+                    :disabled="disabled"
+                    aria-label="外注先を追加"
+                    @click="toCreate({ isEmployee: false })"
+                  >外注先を追加</v-btn>
+                </v-toolbar>
+              </template>
+              <template #item.displayName="{ item }">
+                <AtomsIconsHasLicense v-if="item.isQualified" size="x-small" />
+                <WorkerChip :worker="item" />
+              </template>
+              <template #item.actions="{ item, disabled, 'onClick:update': toUpdate, 'onClick:delete': toDelete }">
+                <v-btn icon="mdi-pencil" size="small" variant="text" :aria-label="`${item.workerId}を編集`" :disabled="disabled" @click="toUpdate(item)" />
+                <v-btn icon="mdi-delete" size="small" variant="text" :aria-label="`${item.workerId}を削除`" :disabled="disabled" @click="toDelete(item)" />
+              </template>
+            </OperationResultWorkersManager>
           </v-col>
           <v-col cols="12">
             <OperationRowsManager
@@ -111,8 +135,9 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
 
       <!-- 削除処理ボタン -->
       <v-col cols="12">
-        <OperationResultManager
+        <OperationManager
           :doc="doc"
+          kind="result"
           hide-delete-btn
           @submit:complete="() => router.replace('/operation-results')"
         >
@@ -143,7 +168,7 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
               </template>
             </v-card>
           </template>
-        </OperationResultManager>
+        </OperationManager>
       </v-col>
     </v-row>
   </v-container>
