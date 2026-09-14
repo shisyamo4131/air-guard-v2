@@ -2786,9 +2786,12 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 
 - 状態: Open
 - 発見日・工程: 2026-09-15、SCR-01-02の利用者code review。イベント転送の[FUT-0191](#fut-0191-domain-managerのイベント名を基底componentと揃える)と関連するが、入力選択の整理として区別する。
-- 確認済み事実: components配下のresolveCustomInput検索で、CustomerBilling、Outsourcer／Outsourcers、Employee／Employees、Site／Sitesの各Managerにprops.customInputのtypeof判定・関数呼出しを確認した。AirItemManager本体もcustomInputが関数ならeditModeを渡して解決する。CustomerBillingは利用者が編集中のため、着手時に再照合する。
+- 確認済み事実: 2026-09-15の拡張静的調査では、Outsourcer／Outsourcers、Employee／Employees、Site／Sitesの各Managerにprops.customInputの型判定・関数呼出しが残存する（6箇所）。当初の7箇所に含めたCustomerBillingは、利用者編集中のworktreeでprops.customInput || CustomInputの単純転送へ変更済み。着手時に再照合する。
+- 調査範囲・方法: components全域でcustomInput／custom-inputの宣言・転送・描画・activator exposeを追跡し、関数名に依存せずtypeof、isFunction、call／apply、別名・inline・computed経路を確認した。components外の追跡対象Vue／JS／TSも検索し、該当する3ページはcomponentの直接指定だった。追加の同種重複は確認していない。
+- 基底の確認: localのair-vuetify-v3/src/AirItemManager.vueとAirArrayManager.vueは、ともにFunctionへeditModeを渡して解決する。AirItemManagerの実装はactivator指定→prop→nullの優先順（付近の旧commentと相違）、AirArrayManagerはpropを解決する。
+- 区別する実装: 単純転送、importしたcomponentの直接指定、activatorでのexposeは重複解決に数えない。Operation/Editor.vueとOperation/AirEditor.vueの:isによる直接描画も同種ではない。OperationResult(s)／Workersには基底Managerと独自Editorへの転送が併存するが、resolverの二重呼出しとは確認できない。独自Editorと基底でFunction指定の意味が一致するかは未検証であり、今回の重複整理へ改修範囲を追加しない。
 - 後発改修の方針: 呼出側から受けたcustomInputは基底Managerへ渡し、型判定とresolver呼出しを重複実装しない。未指定時の既定入力と、CREATE/UPDATEで入力を選ぶdomain固有のfallback resolverは維持する。resolveCustomInputという名前だけで一括削除しない。
-- 対象と未確認: 上記単数・複数Managerと直接test。全caller、別名resolver、AirArrayManagerの現行解決契約、activator指定との優先順位は改修前に照合する。
+- 対象と未確認: 残存6箇所の単数・複数Managerと直接test。静的調査のみで、実呼出し回数・computed再評価・全callerのUI動作は未検証。改修時にcallerと基底の実体を再照合する。
 - 完了条件・test: customInput未指定・component指定・関数指定で同じ入力が選ばれ、editModeと呼出し回数が維持される。Employee／SiteのCREATE専用入力を失わず、既存activator優先順位・validation・CRUDを変更しない。
 - 互換性・rollback: 外部prop契約を変更せず内部の重複だけを整理する。差があればそのwrapperと対応testを対で復元する。共通packageの挙動変更は含めない。
 - 実施時期・承認境界: SCRの完了条件へ追加せず、後発の独立改修として記録する。今回は文書のみ。利用者が編集中のcodeを含め、製品code・test・基底componentは変更しない。
