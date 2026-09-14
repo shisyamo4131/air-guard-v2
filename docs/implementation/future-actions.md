@@ -16,6 +16,8 @@ Local completed、Resolved、Superseded等は記録された限定条件のま�
 
 ### Open
 
+[FUT-0192](#fut-0192-custominputの型判定と関数呼出しを基底managerへ委譲する)
+
 [FUT-0191](#fut-0191-domain-managerのイベント名を基底componentと揃える)
 
 [FUT-0005](#fut-0005-サインアウト完了条件へmodel-cleanupを含める) · [FUT-0006](#fut-0006-通知クリックを安全なpayload遷移と既存client再利用へ変更する) · [FUT-0007](#fut-0007-fcm-client-listenerと表示の重複を検証cleanupする) · [FUT-0008](#fut-0008-fcm-token-lifecycleと登録失敗の再試行を設計する) · [FUT-0009](#fut-0009-tokenとuser情報をログへ出さない) · [FUT-0010](#fut-0010-fcmtokens-rulesのtenant所有権field検証を強化する)
@@ -2779,3 +2781,14 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 互換性・rollback: event名変更で既存購読が切れるため、wrapperと利用側を対で修正・復元する。旧別名の恒久的な二重emitを既定にしない。
 - SCRを妨げない理由: 現時点で既存wrapper群の改名を直さなくても、請求詳細の標準保存接続は進められる。新しい機能改修へ無関係な既存wrapperの一括修正を混ぜない。
 - 承認境界: 今回は後発事項の記録のみ。対象全体のcode改修、共通component改名、追加の仕様整理・releaseは未実施。
+
+## FUT-0192 customInputの型判定と関数呼出しを基底Managerへ委譲する
+
+- 状態: Open
+- 発見日・工程: 2026-09-15、SCR-01-02の利用者code review。イベント転送の[FUT-0191](#fut-0191-domain-managerのイベント名を基底componentと揃える)と関連するが、入力選択の整理として区別する。
+- 確認済み事実: components配下のresolveCustomInput検索で、CustomerBilling、Outsourcer／Outsourcers、Employee／Employees、Site／Sitesの各Managerにprops.customInputのtypeof判定・関数呼出しを確認した。AirItemManager本体もcustomInputが関数ならeditModeを渡して解決する。CustomerBillingは利用者が編集中のため、着手時に再照合する。
+- 後発改修の方針: 呼出側から受けたcustomInputは基底Managerへ渡し、型判定とresolver呼出しを重複実装しない。未指定時の既定入力と、CREATE/UPDATEで入力を選ぶdomain固有のfallback resolverは維持する。resolveCustomInputという名前だけで一括削除しない。
+- 対象と未確認: 上記単数・複数Managerと直接test。全caller、別名resolver、AirArrayManagerの現行解決契約、activator指定との優先順位は改修前に照合する。
+- 完了条件・test: customInput未指定・component指定・関数指定で同じ入力が選ばれ、editModeと呼出し回数が維持される。Employee／SiteのCREATE専用入力を失わず、既存activator優先順位・validation・CRUDを変更しない。
+- 互換性・rollback: 外部prop契約を変更せず内部の重複だけを整理する。差があればそのwrapperと対応testを対で復元する。共通packageの挙動変更は含めない。
+- 実施時期・承認境界: SCRの完了条件へ追加せず、後発の独立改修として記録する。今回は文書のみ。利用者が編集中のcodeを含め、製品code・test・基底componentは変更しない。
