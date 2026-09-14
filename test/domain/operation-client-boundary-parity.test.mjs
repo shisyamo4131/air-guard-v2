@@ -190,30 +190,44 @@ test("client date and notification projections retain Functions parity", () => {
   assert.deepEqual(encoded(clientNotifications.prepareNotificationState(notification, input, now)), encoded(serverNotifications.prepareNotificationState(notification, input, now)));
 });
 
-test("schedule CUD and result editing use tenant-wide server authorization while restricted operations retain the UX role matrix", () => {
+test("schedule CUD uses tenant-wide server authorization while result client CRUD is rejected by the Callable contract", () => {
   const identity = { uid: "actor", companyId: "company", isSuperUser: false };
   const base = { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: false, roles: [] };
   const scheduleCud = ["create", "duplicate", "overview", "workers", "order", "delete"]
     .map((action) => ({ kind: "schedule", action }));
   const restrictedSchedule = [{ kind: "schedule", action: "notify" }, { kind: "schedule", action: "convert" }];
-  const resultEdits = ["overview", "workers"].map((action) => ({ kind: "result", action }));
-  const restrictedResult = ["create", "duplicate", "delete", "articles"].map((action) => ({ kind: "result", action }));
+  const resultClientCrud = ["overview", "workers", "delete"].map((action) => ({ kind: "result", action }));
+  const restrictedResult = ["create", "duplicate", "articles"].map((action) => ({ kind: "result", action }));
   const billing = ["overview", "articles", "agreement", "adjusted"].map((action) => ({ kind: "billing", action }));
   for (const roles of [[], ["controller"], ["accountant"], ["human-resource"], ["unknown"]]) {
     const user = { ...base, roles };
     for (const command of scheduleCud) assert.equal(serverCommands.operationAllowed(identity, user, command), true, `${roles}: ${command.action}`);
-    for (const command of resultEdits) assert.equal(serverCommands.operationAllowed(identity, user, command), true, `${roles}: result/${command.action}`);
     for (const command of restrictedSchedule) assert.equal(serverCommands.operationAllowed(identity, user, command), operationUxAllowed(identity, user), `${roles}: ${command.action}`);
     for (const command of restrictedResult) assert.equal(serverCommands.operationAllowed(identity, user, command), operationUxAllowed(identity, user), `${roles}: result/${command.action}`);
     for (const command of billing) assert.equal(serverCommands.operationAllowed(identity, user, command), operationUxAllowed(identity, user, { billing: true }), `${roles}: billing/${command.action}`);
   }
+  for (const command of resultClientCrud) {
+    assert.equal(serverCommands.operationAllowed(identity, base, command), false);
+    assert.equal(serverCommands.operationAllowed(identity, { ...base, isAdmin: true }, command), false);
+    assert.throws(
+      () => serverCommands.parseOperationCommand({
+        kind: command.kind,
+        action: command.action,
+        documentId: "result",
+        changes: {},
+        expected: {},
+        ...(command.action === "workers" ? { array: "employees", rowAction: "remove", position: 0 } : {}),
+      }),
+      { code: "invalid-argument" },
+    );
+  }
   const superIdentity = { ...identity, isSuperUser: true };
-  for (const command of [...scheduleCud, ...resultEdits]) assert.equal(serverCommands.operationAllowed(superIdentity, base, command), true, `super: ${command.kind}/${command.action}`);
+  for (const command of scheduleCud) assert.equal(serverCommands.operationAllowed(superIdentity, base, command), true, `super: ${command.kind}/${command.action}`);
   for (const command of [...restrictedSchedule, ...restrictedResult, ...billing]) assert.equal(serverCommands.operationAllowed(superIdentity, base, command), false, `super: ${command.kind}/${command.action}`);
   const admin = { ...base, isAdmin: true };
   assert.equal(operationUxAllowed(identity, admin), true);
-  for (const command of [...scheduleCud, ...restrictedSchedule, ...resultEdits, ...restrictedResult, ...billing]) assert.equal(serverCommands.operationAllowed(identity, admin, command), true);
+  for (const command of [...scheduleCud, ...restrictedSchedule, ...restrictedResult, ...billing]) assert.equal(serverCommands.operationAllowed(identity, admin, command), true);
   for (const user of [{ ...base, disabled: true }, { ...base, isTemporary: true }, { ...base, companyId: "other" }]) {
-    for (const command of [...scheduleCud, ...resultEdits]) assert.equal(serverCommands.operationAllowed(identity, user, command), false);
+    for (const command of scheduleCud) assert.equal(serverCommands.operationAllowed(identity, user, command), false);
   }
 });

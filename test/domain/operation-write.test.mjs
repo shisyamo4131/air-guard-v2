@@ -100,18 +100,6 @@ test("Site move bumps old and new revisions, checks both states, and unrelated u
   assert.deepEqual(state.records.get(path("schedule")).unknown, raw.unknown);
 });
 
-test("Customer/Site existence is required for new references but unrelated result updates preserve a legacy reference", async () => {
-  const raw = operation("result"), state = harness(raw, { kind: "result" });
-  state.records.delete(`${root}/Sites/site`); state.records.delete(`${root}/Customers/customer`);
-  await state.save(command(raw, "overview", { remarks: "legacy correction" }, { kind: "result" }));
-  const saved = state.records.get(path("result")); assert.equal(saved.customerId, raw.customerId); assert.equal(saved.siteId, raw.siteId);
-  await assert.rejects(
-    state.save(command(saved, "delete", {}, { kind: "result" })),
-    { code: "invalid-argument" },
-  );
-  assert.equal(state.records.has(path("result")), true);
-});
-
 const root = "Companies/company";
 const identity = { uid: "actor", companyId: "company", isSuperUser: false };
 const path = (kind, id = "operation") => `${root}/${kind === "schedule" ? "SiteOperationSchedules" : "OperationResults"}/${id}`;
@@ -247,123 +235,15 @@ test("active same-tenant users can update and delete schedules while restricted 
   assert.notEqual(mixed.records.get(path("schedule")).remarks, "must not commit");
 });
 
-test("active same-tenant users can edit unlocked result overview and employee or outsourcer rows independent of role", async () => {
-  const actorCases = [
-    { actor: { roles: [] } },
-    { actor: { roles: ["accountant"] } },
-    { actor: { roles: ["controller", "invented"] } },
-    { actor: { roles: [] }, identity: () => ({ ...identity, isSuperUser: true }) },
-  ];
-  for (const options of actorCases) {
-    const overviewRaw = operation("result"), overview = harness(overviewRaw, { kind: "result", ...options });
-    await overview.save(command(overviewRaw, "overview", { remarks: "tenant-wide result edit" }, { kind: "result" }));
-    assert.equal(overview.records.get(path("result")).remarks, "tenant-wide result edit");
-
-    for (const array of ["employees", "outsourcers"]) for (const rowAction of ["add", "update", "remove", "move"]) {
-      const model = new OperationResult(operation("result"));
-      model.addWorker({ id: "outsourcer-b", isEmployee: false }, -1);
-      const raw = model.toObject(), state = harness(raw, { kind: "result", ...options });
-      const changes = rowAction === "add"
-        ? { id: array === "employees" ? "employee-c" : "outsourcer-c" }
-        : rowAction === "update" ? { startTime: "09:00" } : {};
-      await state.save(command(raw, "workers", changes, {
-        kind: "result",
-        array,
-        rowAction,
-        position: 0,
-        ...(rowAction === "move" ? { destination: 1 } : {}),
-      }));
-      assert.ok(state.writes.length > 0, `${array}/${rowAction}`);
-    }
-  }
-});
-
-test("tenant-wide result editing still rejects lifecycle, article, billing, invalid actor and locked-result operations", async () => {
+test("result overview, workers, and delete are rejected at the Callable input boundary", async () => {
   const raw = operation("result");
-  const restricted = [
-    command(null, "create", { siteId: "site", dateAt: "2026-09-01", startTime: "08:00", endTime: "17:00", requiredPersonnel: 1 }, { kind: "result" }),
-    command(raw, "duplicate", { dateAt: "2026-09-02" }, { kind: "result", documentId: "copy", sourceId: "operation" }),
-    command(raw, "articles", { articleId: "article", price: 100, quantity: 1 }, { kind: "result", rowAction: "add", array: "articles", position: 0 }),
-    command(raw, "adjusted", { useAdjusted: true }, { kind: "billing" }),
-    command(raw, "lock", { desiredLocked: true }, { kind: "billing" }),
-  ];
-  for (const operationCommand of restricted) {
-    const state = harness(operationCommand.action === "create" ? null : raw, { kind: "result", actor: { roles: [] } });
-    await assert.rejects(state.save(operationCommand), { code: "permission-denied" });
-    assert.equal(state.writes.length, 0);
-  }
-
-  for (const actor of [{ roles: ["controller"] }, { isAdmin: true }]) {
-    const state = harness(raw, { kind: "result", actor });
-    await assert.rejects(
-      state.save(command(raw, "delete", {}, { kind: "result" })),
-      { code: "invalid-argument" },
-    );
-    assert.equal(state.writes.length, 0);
-  }
-
-  const edit = command(raw, "overview", { remarks: "must reject" }, { kind: "result" });
-  for (const options of [
-    { actor: { disabled: true } },
-    { actor: { isTemporary: true } },
-    { actor: { companyId: "other" } },
-    { identity: (count) => count === 2 ? { ...identity, companyId: "other" } : identity },
-  ]) {
-    const state = harness(raw, { kind: "result", ...options });
-    await assert.rejects(state.save(edit), { code: "permission-denied" });
-    assert.equal(state.writes.length, 0);
-  }
-  const missing = harness(raw, { kind: "result", actor: { roles: [] } });
-  missing.records.delete(`${root}/Users/actor`);
-  await assert.rejects(missing.save(edit), { code: "permission-denied" });
-  assert.equal(missing.writes.length, 0);
-
-  const lockedRaw = { ...raw, isLocked: true };
-  for (const lockedCommand of [
-    command(lockedRaw, "overview", { remarks: "must reject" }, { kind: "result" }),
-    command(lockedRaw, "workers", { startTime: "09:00" }, { kind: "result", rowAction: "update", array: "employees", position: 0 }),
-  ]) {
-    const state = harness(lockedRaw, { kind: "result", actor: { roles: [] } });
-    await assert.rejects(state.save(lockedCommand), { code: "failed-precondition" });
-    assert.equal(state.writes.length, 0);
-  }
-});
-
-test("tenant-wide result editing rejects stale expected state and a lock added after command preparation without writing", async () => {
-  const raw = operation("result");
-  const staleOverview = harness(raw, { kind: "result", actor: { roles: [] } });
-  staleOverview.records.set(path("result"), { ...raw, remarks: "parallel update" });
-  await assert.rejects(staleOverview.save(command(raw, "overview", { remarks: "requested update" }, { kind: "result" })), { code: "aborted" });
-  assert.equal(staleOverview.writes.length, 0);
-
-  const changedEmployees = raw.employees.map((worker, index) => index === 0 ? { ...worker, startTime: "09:00" } : worker);
-  const staleWorkers = harness(raw, { kind: "result", actor: { roles: [] } });
-  staleWorkers.records.set(path("result"), { ...raw, employees: changedEmployees, workers: [...changedEmployees, ...raw.outsourcers] });
-  await assert.rejects(staleWorkers.save(command(raw, "workers", { startTime: "10:00" }, { kind: "result", rowAction: "update", array: "employees", position: 0 })), { code: "aborted" });
-  assert.equal(staleWorkers.writes.length, 0);
-
-  for (const prepared of [
-    command(raw, "overview", { remarks: "requested update" }, { kind: "result" }),
-    command(raw, "workers", { startTime: "10:00" }, { kind: "result", rowAction: "update", array: "employees", position: 0 }),
-  ]) {
-    const locked = harness({ ...raw, isLocked: true }, { kind: "result", actor: { roles: [] } });
-    await assert.rejects(locked.save(prepared), { code: "failed-precondition" });
-    assert.equal(locked.writes.length, 0);
-  }
-});
-
-test("allowed result edits mixed with restricted result or billing commands reject the whole batch", async () => {
-  const raw = operation("result");
-  for (const [restricted, expectedCode] of [
-    [command(raw, "delete", {}, { kind: "result" }), "invalid-argument"],
-    [command(raw, "adjusted", { useAdjusted: true }, { kind: "billing" }), "permission-denied"],
+  for (const rejected of [
+    command(raw, "overview", { remarks: "client only" }, { kind: "result" }),
+    command(raw, "workers", { startTime: "09:00" }, { kind: "result", rowAction: "update", array: "employees", position: 0 }),
+    command(raw, "delete", {}, { kind: "result" }),
   ]) {
     const state = harness(raw, { kind: "result", actor: { roles: [] } });
-    await assert.rejects(state.save(
-      command(raw, "overview", { remarks: "must not commit" }, { kind: "result" }),
-      command(raw, "workers", { startTime: "09:00" }, { kind: "result", rowAction: "update", array: "employees", position: 0 }),
-      restricted,
-    ), { code: expectedCode });
+    await assert.rejects(state.save(rejected), { code: "invalid-argument" });
     assert.equal(state.writes.length, 0);
     assert.strictEqual(state.records.get(path("result")), raw);
   }
@@ -374,14 +254,14 @@ test("billing edits may run locked but result worker edits remain lock-protected
   await state.save(command(raw, "adjusted", { useAdjusted: true, adjustedQuantityBase: 7 }, { kind: "billing" }));
   const adjusted = state.records.get(path("result"));
   assert.deepEqual(adjusted.employees, raw.employees); assert.equal(adjusted.isLocked, true); assert.equal(adjusted.adjustedQuantityBase, 7);
-  await assert.rejects(state.save(command(adjusted, "workers", {}, { kind: "result", rowAction: "remove", array: "employees", position: 0 })), { code: "failed-precondition" });
+  await assert.rejects(state.save(command(adjusted, "workers", {}, { kind: "result", rowAction: "remove", array: "employees", position: 0 })), { code: "invalid-argument" });
   const unlock = command(adjusted, "lock", { desiredLocked: false }, { kind: "billing" });
   await state.save(unlock);
   await assert.rejects(state.save(unlock), { code: "aborted" });
   assert.equal(state.records.get(path("result")).isLocked, false);
   assert.equal(state.employeesRead().length, 0);
   const controller = harness(raw, { kind: "result" });
-  await assert.rejects(controller.save(command(raw, "overview", { remarks: "edit" }, { kind: "result" })), { code: "failed-precondition" });
+  await assert.rejects(controller.save(command(raw, "overview", { remarks: "edit" }, { kind: "result" })), { code: "invalid-argument" });
 });
 
 test("nonempty article operations patch only articles and their billing calculations", async () => {
@@ -500,7 +380,7 @@ test("normal result create derives Customer from Site and rejects missing Site o
   }
 });
 
-for (const array of ["employees", "articles"]) for (const sequence of ["remove-update", "move-remove", "add-update"]) {
+for (const array of ["articles"]) for (const sequence of ["remove-update", "move-remove", "add-update"]) {
   test(`multiple ${array} operations ${sequence} retain original positions`, async () => {
     const raw = operation("result", ["employee-a", "employee-b", "employee-c"]);
     raw.articles = ["article-a", "article-b", "article-c"].map((articleId) => ({ articleId, price: 10, quantity: 1 }));
@@ -571,7 +451,7 @@ test("actual server create plus ten worker adds checks ten unique Employee paths
   assert.equal(state.employeesRead().length - before, 10, "recreated destination is empty even though another destination still references all ten");
 });
 
-for (const kind of ["schedule", "result"]) test(`${kind} rejects duplicate outsourcer workerId but allows one outsourcer at distinct indexes`, async () => {
+for (const kind of ["schedule"]) test(`${kind} rejects duplicate outsourcer workerId but allows one outsourcer at distinct indexes`, async () => {
   const model = new (kind === "schedule" ? SiteOperationSchedule : OperationResult)(operation(kind));
   model.addWorker({ id: "other-outsourcer", isEmployee: false }, -1);
   const raw = model.toObject(), state = harness(raw, { kind });

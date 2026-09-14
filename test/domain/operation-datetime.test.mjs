@@ -87,22 +87,8 @@ async function scenarios() {
     result = state.records.get(path("result", "copy")); assert.equal(result.billingDate, "2026-10-20");
     await state.save(command(result, "articles", { articleId: "article", price: 300, quantity: 2 }, { kind: "billing", array: "articles", rowAction: "add", position: 0 }));
     result = state.records.get(path("result", "copy")); assert.equal(result.salesArticles, 600);
-    const before = encodeExpected(result); const noOp = await state.save(command(result, "overview", { remarks: result.remarks }, { kind: "result" }));
-    assert.equal(noOp.updated, false); assert.deepEqual(encodeExpected(state.records.get(path("result", "copy"))), before);
     await state.save(command(result, "duplicate", { dateAt: "2026-12-31" }, { kind: "result", documentId: "result-copy", sourceId: "copy" }));
     const duplicated = state.records.get(path("result", "result-copy")); assert.equal(duplicated.date, "2026-12-31"); assert.equal(duplicated.billingDate, "2027-01-20");
-    // A real result date edit crosses both the cutoff and the effective date of
-    // a revised agreement; fixed amounts detect wrong weekday/old agreement use.
-    if (day === "2026-09-08" && times.startTime === "08:00" && times.endTime === "17:00" && !isStartNextDay) {
-      await state.save(command(duplicated, "overview", { dateAt: "2026-11-20" }, { kind: "result" }));
-      const cutoffDay = state.records.get(path("result", "result-copy"));
-      assert.equal(cutoffDay.dayType, "WEEKDAY"); assert.equal(cutoffDay.agreement.key, "2020-01-01_DAY");
-      assert.equal(cutoffDay.billingDate, "2026-11-20"); assert.equal(cutoffDay.salesAmount, 21800); // 2 × (10000 + 600) + articles 600.
-      await state.save(command(cutoffDay, "overview", { dateAt: "2026-11-21" }, { kind: "result" }));
-      const followingDay = state.records.get(path("result", "result-copy"));
-      assert.equal(followingDay.dayType, "SATURDAY"); assert.equal(followingDay.agreement.key, "2026-11-21_DAY");
-      assert.equal(followingDay.billingDate, "2026-12-20"); assert.equal(followingDay.salesAmount, 51000); // 2 × (24000 + 1200) + articles 600.
-    }
     results.push({ day, times, isStartNextDay, date: duplicated.date, billing: duplicated.billingDate, sales: duplicated.sales, workers: duplicated.workers.map((row) => ({ date: row.date, start: row.startAt.toISOString(), end: row.endAt.toISOString(), minutes: row.totalWorkMinutes, dayType: row.dayType })) });
   }
   return results;

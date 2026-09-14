@@ -180,9 +180,8 @@ test("EMP05-D HTTP archive preserves raw, checks all dependencies and recovers e
   } finally { await state.cleanup(); }
 });
 
-for (const writerKind of ["reference", "user", "retirement"]) test(`EMP05-D archive versus actual ${writerKind} writer protects both commit orders and concurrency`, async () => {
+for (const writerKind of ["user", "retirement"]) test(`EMP05-D archive versus actual ${writerKind} writer protects both commit orders and concurrency`, async () => {
   const state = await emp05ArchiveFixture(writerKind), { admin, actor, prefix, identity } = state;
-  const { saveOperation } = await import("../../functions/modules/operations/saveOperation.js");
   const { createEmployeeLinkedTemporaryUser } = await import("../../functions/modules/auth/createTemporaryUser.js");
   const { terminateEmployee } = await import("../../functions/modules/auth/lifecycle/terminateEmployee.js");
   const authBefore = (await getAdminAuth().getUser(actor.uid)).toJSON(), actorBefore = (await admin.doc(`${prefix}/Users/${actor.uid}`).get()).data();
@@ -194,17 +193,7 @@ for (const writerKind of ["reference", "user", "retirement"]) test(`EMP05-D arch
       await ref.set({ ...state.original, docId: employeeId });
       const operationId = `05000000-0000-4000-8000-${String(900 + ++index).padStart(12, "0")}`, email = `d-${writerKind}-${index}@codex-test.invalid`;
       emailReservations.push(`UserEmailReservations/${createUserEmailReservationId(email)}`);
-      const resultId = `${employeeId}-result`, siteId = `${employeeId}-site`;
-      let resultBefore;
-      if (writerKind === "reference") {
-        const customerId = `${employeeId}-customer`;
-        await admin.doc(`${prefix}/Customers/${customerId}`).set({ docId: customerId, contractStatus: "ACTIVE" });
-        await admin.doc(`${prefix}/Sites/${siteId}`).set(emp05SiteData({ docId: siteId, uid: actor.uid, isTemporary: false, customerId, customer: {}, agreementsV2: [] }));
-        await saveOperation({ firestore: admin, resolveIdentity: async () => identity, input: { operations: [emp05Command(null, "create", emp05Overview(siteId), { kind: "result", documentId: resultId })] } });
-        resultBefore = (await admin.doc(`${prefix}/OperationResults/${resultId}`).get()).data();
-      }
       const write = (firestore = admin) => {
-        if (writerKind === "reference") return saveOperation({ firestore, resolveIdentity: async () => identity, input: { operations: [emp05Command(resultBefore, "workers", { id: employeeId }, { kind: "result", documentId: resultId, rowAction: "add", array: "employees", position: 0 })] } });
         if (writerKind === "user") return createEmployeeLinkedTemporaryUser({ firestore, auth: getAdminAuth(), companyId: actor.companyId, actorUid: actor.uid, input: { employeeId, email } });
         return terminateEmployee({ firestore, auth: getAdminAuth(), cleanupFcm: async () => { assert.fail("employee-only retirement must not clean User tokens"); }, identity, serverTodayJst: "2026-09-07", input: { operationId, employeeId, terminationDate: "2026-08-20", reasonOfTermination: "合成退職" } });
       };
@@ -223,12 +212,9 @@ for (const writerKind of ["reference", "user", "retirement"]) test(`EMP05-D arch
       const users = await admin.collection(`${prefix}/Users`).where("employeeId", "==", employeeId).get();
       const employeeReservation = await admin.doc(`${prefix}/EmployeeUserReservations/${employeeId}`).get(), emailReservation = await admin.doc(`UserEmailReservations/${createUserEmailReservationId(email)}`).get();
       const operation = await admin.doc(`${prefix}/LifecycleOperations/${operationId}`).get(), head = await admin.doc(`${prefix}/EmployeeLifecycleHeads/${employeeId}`).get(), lock = await admin.doc(`${prefix}/EmployeeLifecycleLocks/${employeeId}`).get();
-      const result = await admin.doc(`${prefix}/OperationResults/${resultId}`).get();
       if (archived.exists) {
         assert.equal(users.size, 0); for (const snapshot of [employeeReservation, emailReservation, operation, head, lock]) assert.equal(snapshot.exists, false);
-        if (writerKind === "reference") assert.deepEqual(result.data(), resultBefore); else assert.equal(result.exists, false);
-      } else if (writerKind === "reference") assert.deepEqual(result.data().employeeIds, [employeeId]);
-      else if (writerKind === "user") { assert.equal(users.size, 1); assert.equal(employeeReservation.exists, true); assert.equal(emailReservation.exists, true); }
+      } else if (writerKind === "user") { assert.equal(users.size, 1); assert.equal(employeeReservation.exists, true); assert.equal(emailReservation.exists, true); }
       else { assert.equal(live.data().employmentStatus, "RESIGNED"); assert.equal(operation.data().state, "completed"); assert.equal(head.exists, true); assert.equal(lock.exists, false); }
       await assert.rejects(getAdminAuth().getUserByEmail(email), (error) => error.code === "auth/user-not-found");
     }
@@ -331,10 +317,11 @@ async function emp05ResultCustomerMatrix() {
   const existing = admin.doc(`${root}/OperationResults/${resultId}-active`), before = (await existing.get()).data();
   await admin.doc(`${root}/Customers/${before.customerId}`).delete();
   await siteRef.delete();
-  await emp05SaveAs(actor, [emp05Command(before, "overview", { remarks: "unrelated legacy reference" }, { kind: "result" })]);
-  const after = (await existing.get()).data(); assert.equal(after.customerId, before.customerId); assert.equal(after.remarks, "unrelated legacy reference");
-  await assertCallableError(emp05SaveAs(actor, [emp05Command(after, "overview", { siteId: "missing-site" }, { kind: "result" })]), "failed-precondition");
   const client = authenticatedFirestore(actor.uid, { isSuperUser: false });
+  const existingClient = doc(client, "Companies", actor.companyId, "OperationResults", `${resultId}-active`);
+  await assertSucceeds(updateDoc(existingClient, { remarks: "unrelated legacy reference", uid: actor.uid }));
+  const after = (await existing.get()).data(); assert.equal(after.customerId, before.customerId); assert.equal(after.remarks, "unrelated legacy reference");
+  await assertSucceeds(updateDoc(existingClient, { siteId: "missing-site", customerId: "missing-customer", uid: actor.uid }));
   await assertSucceeds(deleteDoc(doc(client, "Companies", actor.companyId, "OperationResults", `${resultId}-active`)));
   assert.equal((await existing.get()).exists, false);
 }
@@ -503,8 +490,8 @@ test("EMP05-B HTTP operation writers preserve references, notification confirmat
   result = (await resultRef.get()).data();
   assert.equal((await billing([emp05Command(result, "lock", { desiredLocked: true }, { kind: "billing" })])).response.status, 200);
   result = (await resultRef.get()).data();
-  assert.equal((await call([emp05Command(result, "overview", { remarks: "locked normal" }, { kind: "result" })])).payload.error.status, "FAILED_PRECONDITION");
-  assert.equal((await billing([emp05Command(result, "workers", { id: "missing" }, { kind: "result", array: "employees", rowAction: "update", position: 0 })])).payload.error.status, "FAILED_PRECONDITION");
+  assert.equal((await call([emp05Command(result, "overview", { remarks: "locked normal" }, { kind: "result" })])).payload.error.status, "INVALID_ARGUMENT");
+  assert.equal((await billing([emp05Command(result, "workers", { id: "missing" }, { kind: "result", array: "employees", rowAction: "update", position: 0 })])).payload.error.status, "INVALID_ARGUMENT");
   assert.equal((await billing([emp05Command(result, "adjusted", { useAdjusted: true, adjustedQuantityBase: 3 }, { kind: "billing" })])).response.status, 200);
   result = (await resultRef.get()).data();
   const copy = emp05Command(result, "duplicate", { dateAt: "2028-05-02" }, { kind: "result", documentId: "emp05-copy", sourceId: id });
@@ -4410,6 +4397,18 @@ test("OperationResult client update preserves lock, article, billing, and lifecy
   const firestore = authenticatedFirestore(uid, { isSuperUser: false });
   const result = doc(firestore, "Companies", companyId, "OperationResults", resultId);
   await assertSucceeds(updateDoc(result, { remarks: "normal", uid, updatedAt: serverTimestamp() }));
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const admin = context.firestore();
+    await deleteDoc(doc(admin, "Companies", companyId, "Sites", siteId));
+    await deleteDoc(doc(admin, "Companies", companyId, "Customers", customerId));
+  });
+  await assertSucceeds(updateDoc(result, {
+    siteId: "missing-site",
+    customerId: "missing-customer",
+    remarks: "reference validation belongs to the application boundary",
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
   for (const patch of [
     { isLocked: true },
     { articles: [] },
@@ -6303,8 +6302,8 @@ for (const {
   deleteAllowed,
 } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
   test(`Firestore Rules enforce the ${collectionName} Customer reference matrix`, async () => {
-    // OperationResults now obtain Customer from the transaction's current Site;
-    // exercise that writer rather than granting the removed client CUD path.
+    // OperationResult create still obtains Customer through its dedicated writer;
+    // ordinary update/delete use the restored client/Rules path.
     if (collectionName === "OperationResults") return emp05ResultCustomerMatrix();
     if (collectionName === "Billings") return emp05BillingCustomerMatrix();
     const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;

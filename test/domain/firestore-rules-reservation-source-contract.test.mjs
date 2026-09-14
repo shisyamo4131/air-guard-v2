@@ -116,12 +116,13 @@ test("Customer reference collections use explicit guarded matches outside the fa
   assert.match(operationResultBody, /allow create: if false;/u);
   assert.match(
     operationResultBody,
-    /allow update:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?isValidOperationResultClientUpdate\(companyId, docId\)/u,
+    /allow update:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?isValidOperationResultClientUpdate\(docId\)/u,
   );
   assert.match(
     source,
-    /function isValidOperationResultClientUpdate\(companyId, docId\)[\s\S]*?resource\.data\.docId == docId[\s\S]*?request\.resource\.data\.docId == docId[\s\S]*?resource\.data\.isLocked == false[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid[\s\S]*?isValidSiteReferenceUpdate\(companyId\)[\s\S]*?isValidCustomerReferenceUpdate\(companyId\)/u,
+    /function isValidOperationResultClientUpdate\(docId\)[\s\S]*?resource\.data\.docId == docId[\s\S]*?request\.resource\.data\.docId == docId[\s\S]*?resource\.data\.isLocked == false[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid/u,
   );
+  assert.doesNotMatch(source, /isValid(?:Site|Customer)ReferenceUpdate/u);
   assert.match(
     operationResultBody,
     /allow delete:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?isValidOperationResultClientDelete\(docId\)/u,

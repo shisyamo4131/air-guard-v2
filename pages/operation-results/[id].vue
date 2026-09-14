@@ -90,11 +90,11 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
       <v-col cols="12" lg="9">
         <v-row>
           <v-col cols="12">
-            <OperationResultWorkersManager
-              :model-value="doc.workers"
-              :result="doc"
-              :disabled="doc.isLocked"
+            <WorkersManager
+              v-model="doc.workers"
+              :disabled="!doc.docId || doc.isLocked"
               table-card
+              @submit:complete="async () => await doc.update()"
             >
               <template #toolbar="{ disabled, toCreate }">
                 <v-toolbar color="secondary" density="compact" title="作業員">
@@ -119,7 +119,7 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
                 <v-btn icon="mdi-pencil" size="small" variant="text" :aria-label="`${item.workerId}を編集`" :disabled="disabled" @click="toUpdate(item)" />
                 <v-btn icon="mdi-delete" size="small" variant="text" :aria-label="`${item.workerId}を削除`" :disabled="disabled" @click="toDelete(item)" />
               </template>
-            </OperationResultWorkersManager>
+            </WorkersManager>
           </v-col>
           <v-col cols="12">
             <OperationRowsManager

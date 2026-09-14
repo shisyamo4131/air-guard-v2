@@ -4,6 +4,7 @@
 - 開始日: 2026-09-09
 - 現在の進捗: 80%
 - 目的: 利用者が提示するプロジェクト固有の根本ルールを正本へ反映し、通常業務CRUDに重なったrole・permission制御、専用Callable、重複Rulesを可能な限り緩和・簡素化する。通常CRUDとtransaction dataの物理削除はDomain Manager、`AirItemManager`／`AirArrayManager`、FireModel／ClientAdapterの標準client経路を有効活用し、マスタdataのarchive・物理削除その他の確認済み例外と、技術的にserverを必要とする最小operationだけを専用境界へ残す。transaction dataにはarchiveを設けず、削除後の関連data連携はTriggerへ委譲する。
+- FGA-06最優先基準: 新しい専用層を追加することではなく、過去実装と現行の標準Manager／model保存を照合し、後から過剰に追加されたCallable接続、専用writer、client transaction、競合検査と、それらを前提に増えたRulesを通常CRUDから除去する。server維持にはoperation固有の確認済み理由を必要とし、server検査をclientへ移植しただけの変更は簡素化完了としない。
 - 実装順: Customer管理 → Site管理 → Employee管理 → Outsourcer管理 → その他transaction系機能。
 - 進捗方式: milestone weightは工程完了の比率であり工数見積りではない。合計100。各機能milestoneは、着手時に利用者と合意した小checkpointへweightを配分し、各checkpointの実装、必須検証、必要なmigration、固定commitのDev反映・受入れが完了した場合だけ部分加点できる。ルール整理だけ、local実装だけ、未承認Dev待ちは製品milestoneへ加点しない。
 
@@ -45,6 +46,7 @@
 - FGA-06-RESULT-MANAGER-CLIENT-04は固定製品commit `40316475`で、非lock実績の基本情報を`AirItemManager`、従業員・外注先明細を`AirArrayManager`へ接続し、標準client document保存へ移した。Rulesは同一tenantの有効な本登録Userによる既存updateだけを開き、create、delete、lock、稼働外売上、請求調整、lifecycle IDを保護した。release commit `138b3a29`をHostingへDev反映し、会社管理者・統括の2 sessionで基本情報と従業員／外注先明細の追加・編集・削除・再読込、既存画面の見た目を受け入れた。削除確認buttonの無効化不具合は同releaseで修正し、合成実績を削除、合成Siteを終了、合成Outsourcerを契約終了へ整理した。[Local検証記録](../verification/fga-06-result-manager-client-local.md)と[Dev受入れ記録](../verification/fga-06-result-manager-client-dev.md)を根拠にcheckpointを完了した。FGA-06全体の残作業があるためphase進捗は80%を維持する。
 - FGA-06-TRANSACTION-DELETE-BOUNDARY-05では、[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)により、マスタdataのarchive・物理削除はCallable、transaction dataはarchiveなし・物理削除をclient経路・関連data連携をTriggerとする境界を確定した。現行`saveOperation`の予定・実績deleteとclient delete拒否Rulesは実装差として残し、後続の製品checkpointで段階移行する。文書・分類だけを変更し、製品code、Rules、Functions、data、Dev・Prodは変更していないため、phase進捗は80%を維持する。
 - FGA-06-RESULT-DELETE-CLIENT-06は固定製品commit `07511fb3`で、稼働実績詳細の既存削除dialogを`OperationResultManager`と標準client deleteへ接続し、Rulesをtenant共通の非lock deleteへ開いた。旧`saveOperation`の実績delete入力は拒否し、関連data連携は既存Triggerへ維持した。従業員10名を含む実績のclient削除、全domain 1454件、Local Emulator 180件、専用UI buildに合格した。Dev反映・受入れ前のためcheckpointはIn progress、FGA-06の加点は行わずphase進捗は80%を維持する。[Local検証記録](../verification/fga-06-result-delete-client-local.md)を参照する。
+- FGA-06-RESULT-CALLABLE-RESTORE-07はLocal実装・自動検証まで完了した。過去の`WorkersManager`／`AirArrayManager`と親`OperationResult.update()`の接続を基準に、後から追加された`useOperationResultWriter`、Employee存在確認transaction、再読込handler、実績`overview`／`workers` Callable入力を撤去し、OperationResult Rulesから通常CRUの従属先存在確認を外した。未決の稼働外売上、請求field、lock、実績作成・複製は開放せず、UIとdata shapeを維持した。全domain 1446/1446件とLocal Emulator 179/179件は終了コード0、専用UI buildはcleanな固定commitを要求するため固定commit後に実施する。固定commit・Dev受入れ前のため進捗は80%を維持する。
 
 ## FGA-02 Customer内部checkpoint
 
@@ -92,6 +94,7 @@
 | FGA-06-RESULT-MANAGER-CLIENT-04 | Completed | 非lock実績の基本情報・従業員／外注先明細をAir Managerと標準client保存へ移し、Rulesをtenant共通の限定updateへ簡素化した。自動検証、固定commitの専用UI build、HostingのDev反映、会社管理者・統括による保存・再表示・削除と見た目受入れを完了した。[Dev受入れ記録](../verification/fga-06-result-manager-client-dev.md)を参照 |
 | FGA-06-TRANSACTION-DELETE-BOUNDARY-05 | Completed | マスタdataのarchive・物理削除はCallableを維持し、transaction dataにはarchiveを設けず、物理削除をclient、関連data連携をTriggerへ委譲する境界を[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)へ確定した。製品変更・進捗加点なし |
 | FGA-06-RESULT-DELETE-CLIENT-06 | In progress | 稼働実績の物理削除を標準client deleteへ移し、tenant・非lock Rules、旧Callable拒否、既存Trigger連携、勤務者10名を含む削除、全domain・Local Emulator・専用UI buildを固定製品commit `07511fb3`で検証した。Firestore Rules・Functions・HostingのDev反映と権限別受入れ後に完了する |
+| FGA-06-RESULT-CALLABLE-RESTORE-07 | In progress | 過去実装を基準に稼働実績の通常UPDATEと作業員配列を`OperationResultManager`／`WorkersManager`、Air Manager、model標準保存へ戻し、専用writer・参照存在確認transaction・再読込handler・旧実績編集Callable入力を撤去した。Rulesもtenant・actor・document ID・非lock・未決field保護の最小境界へ寄せ、全domain 1446件とLocal Emulator 179件に合格した。固定commit後の専用UI build、Dev反映、会社管理者によるCRUD・見た目受入れが残る |
 
 ## 完了条件
 
