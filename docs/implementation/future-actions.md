@@ -16,6 +16,8 @@ Local completed、Resolved、Superseded等は記録された限定条件のま�
 
 ### Open
 
+[FUT-0193](#fut-0193-schemaクラスが提供する日付プロパティの再変換を整理する)
+
 [FUT-0192](#fut-0192-custominputの型判定と関数呼出しを基底managerへ委譲する)
 
 [FUT-0191](#fut-0191-domain-managerのイベント名を基底componentと揃える)
@@ -2795,3 +2797,14 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 完了条件・test: customInput未指定・component指定・関数指定で同じ入力が選ばれ、editModeと呼出し回数が維持される。Employee／SiteのCREATE専用入力を失わず、既存activator優先順位・validation・CRUDを変更しない。
 - 互換性・rollback: 外部prop契約を変更せず内部の重複だけを整理する。差があればそのwrapperと対応testを対で復元する。共通packageの挙動変更は含めない。
 - 実施時期・承認境界: SCRの完了条件へ追加せず、後発の独立改修として記録する。今回は文書のみ。利用者が編集中のcodeを含め、製品code・test・基底componentは変更しない。
+
+## FUT-0193 Schemaクラスが提供する日付プロパティの再変換を整理する
+
+- 状態: Open
+- 発見日・工程: 2026-09-15、SCR-01-02の利用者code review。
+- 確認済み事実: components/CustomerBilling/CustomInput.vueはdateInput(props.item.billingDateAt)をcomputed内で呼び、入金予定日のminへ渡していた。記録中に利用者のworktreeではprops.item.billingDateへの直接参照へ変更された（未検証・未コミット）。BillingクラスはbillingDate getterで日本時間のYYYY-MM-DDを提供しており、この用途ではクラスの機能を重複実装している。
+- 後発改修の方針: Billingインスタンスを扱う入力部品ではprops.item.billingDateを使い、不要になるdateInputのimport・computed・try/catchを整理する。クラスが提供する同等の日付プロパティを利用せず再変換する別名・inlineの実装も着手時に調査する。
+- 対象と未確認: 確認済み対象はCustomerBilling/CustomInput.vue。他箇所は未棚卸し。生データ・Callable用変換など、クラスのgetterを利用できない経路まで一律に置換せず、共通dateInput自体の削除は全利用先の確認なしに行わない。
+- 完了条件・test: Managerから渡るitemのクラスとgetter保持を確認し、請求日変更時のmin追従、日本時間の日付境界、未設定時の扱い、入金予定日の入力・解除を維持する。従来のcatchとgetterで不正値の扱いは同一と未確認のため、クラス契約と照合する。
+- 互換性・rollback: 保存形式・CRUD・Schemaパッケージを変更せず、入力側の重複を整理する。必要時は対象componentと対応testを対で復元する。
+- 実施時期・承認境界: SCRの完了条件へ追加せず、後発の独立改修として記録する。今回は文書のみ。利用者編集中のcodeを含め、製品code・test・packageは変更しない。
