@@ -61,6 +61,15 @@ import {
   summarizeCompanyLegacyStripePlan,
   verifyCompanyLegacyStripePostState,
 } from "../../scripts/migrate-company-legacy-stripe.mjs";
+import { parseApplyRepairArgs } from "../../scripts/apply-operation-result-projection-repair.mjs";
+
+test("operation-result repair has no implicit write mode", () => {
+  const required = ["--project", "air-guard-v2-dev", "--database", "(default)",
+    "--snapshot-file", "D:\\codex-private\\snapshot.json", "--expected-commit", "c".repeat(40)];
+  assert.throws(() => parseApplyRepairArgs(required));
+  assert.equal(parseApplyRepairArgs(["--apply", ...required]).mode, "apply");
+  assert.equal(parseApplyRepairArgs(["--rollback", ...required]).mode, "rollback");
+});
 
 function parseEmulatorHost(name) {
   const value = process.env[name];

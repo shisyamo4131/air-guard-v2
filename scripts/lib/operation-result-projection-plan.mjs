@@ -85,6 +85,8 @@ export function canonicalizeProjectionValue(value, seen = new WeakSet()) {
 function canonicalText(value) { return JSON.stringify(canonicalizeProjectionValue(value)); }
 function equivalent(left, right) { return canonicalText(left) === canonicalText(right); }
 function digest(value) { return createHash("sha256").update(canonicalText(value)).digest("hex"); }
+export const canonicalProjectionDigest = digest;
+export const projectionValuesEqual = equivalent;
 
 function normalizeDocuments(documents, projection, findings) {
   const result = [];
@@ -119,14 +121,14 @@ function block(state, code, key = null, current = null) {
   state.counts.blocked += 1;
   addFinding(state, code);
   state.details.push({ projection: state.name, action: "blocked", code, key,
-    currentRevision: current?.updateTime ?? current?.data?.updatedAt ?? null });
+    currentRevision: current?.updateTime ?? null });
 }
-function record(state, action, key, current = null, expected = null) {
+function record(state, action, key, current = null, expected = null, sourceIds = []) {
   state.counts[action] += 1;
   state.details.push({
     projection: state.name, action, key,
-    currentRevision: current?.updateTime ?? current?.data?.updatedAt ?? null,
-    expected,
+    currentRevision: current?.updateTime ?? null,
+    expected, sourceIds: [...new Set(sourceIds)].sort(),
   });
 }
 
@@ -182,8 +184,9 @@ function planDaily({ name, Schema, attendance, operations, current, targetIds, s
         [...group.operations.values()], true);
       const keep = attendance ? model.isAttended : group.operations.size > 0;
       if (!keep) { if (before) record(state, "extra", key, before); continue; }
-      if (!before) record(state, "missing", key, null, after);
-      else record(state, equivalent(before.data, after) ? "noop" : "update", key, before, after);
+      const sourceIds = [...group.operations.keys()];
+      if (!before) record(state, "missing", key, null, after, sourceIds);
+      else record(state, equivalent(before.data, after) ? "noop" : "update", key, before, after, sourceIds);
     } catch { block(state, "aggregate-invalid", key, before); }
   }
   return state;
@@ -241,8 +244,9 @@ function planBillings({ operations, current, customers, targetIds, startDate, en
         initial = billingInitial(key, first, customers.get(first.customerId));
       }
       const after = aggregateCandidate(Billing, before?.data || null, initial, rawOperations, false).after;
-      if (!before) record(state, "missing", key, null, after);
-      else record(state, equivalent(before.data, after) ? "noop" : "update", key, before, after);
+      const sourceIds = [...group.operations.keys()];
+      if (!before) record(state, "missing", key, null, after, sourceIds);
+      else record(state, equivalent(before.data, after) ? "noop" : "update", key, before, after, sourceIds);
     } catch (error) {
       block(state, error?.message === "customer-invalid" ? "customer-invalid" : "aggregate-invalid", key, before);
     }
@@ -320,8 +324,9 @@ function planHistories({ operations, current, targetIds, startDate, endDate }) {
       if (result.blocked) { block(state, "history-boundary-tie", key, before); continue; }
       const same = before && equivalent(before.data, result.after);
       if (result.tied && !same) { block(state, "history-boundary-tie", key, before); continue; }
-      if (!before) record(state, "missing", key, null, result.after);
-      else record(state, same ? "noop" : "update", key, before, result.after);
+      const sourceIds = group.entries.map((entry) => entry.id);
+      if (!before) record(state, "missing", key, null, result.after, sourceIds);
+      else record(state, same ? "noop" : "update", key, before, result.after, sourceIds);
     } catch { block(state, "aggregate-invalid", key, before); }
   }
   return state;
@@ -364,7 +369,7 @@ export function planOperationResultProjections({
   const differences = states.some((state) => state.counts.missing + state.counts.update + state.counts.extra > 0);
   return {
     complete, differences, perProjection, candidateCounts, findingCodeCounts,
-    planDigest: digest(details), details,
+    planDigest: digest(details.map(({ sourceIds: _sourceIds, ...detail }) => detail)), details,
     requiredCustomerIds: states[0].requiredCustomerIds,
     scanCounts: {
       OperationResults: operations.length,
