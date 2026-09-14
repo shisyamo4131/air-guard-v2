@@ -6,6 +6,49 @@ Devでは、OperationResult作成・更新後のBilling同期が先に失敗し�
 
 この文書は計画であり、Devデータの読取り・変更・デプロイを承認するものではない。対象会社、正確な開始日・終了日、件数は未確定である。
 
+## 読取り専用dry-runの準備状況
+
+読取り専用の差分確認toolは準備済みで、Devでは未実行である。純粋な計算部分はFirestoreへ接続せず、CLIを直接実行した場合だけDevを読み取る。apply、snapshot、rollback、削除の実装は含めず、これらはdry-run結果を確認した後の別checkpoint・別承認とする。
+
+2026-09-14時点で確認済みの接続先metadataは、Firebase project `air-guard-v2-dev`、database `(default)`、Firestore Standard edition / Native modeである。対象company、日付範囲、各collectionの件数上限は未確定であり、実行承認前に実値と根拠を固定する。
+
+実行templateは次のとおりである。`<...>`はすべてoperatorが実値を指定する必須項目であり、この文書は件数を既定値または承認済み値として定めない。
+
+```powershell
+$env:AIRGUARD_DEV_CREDENTIAL_PATH = '<承認済みのローカル読取り資格情報ファイルの絶対パス>'
+node scripts/check-operation-result-projections.mjs `
+  --read-only `
+  --project air-guard-v2-dev `
+  --database '(default)' `
+  --company-id '<対象company ID>' `
+  --start-date '<YYYY-MM-DD>' `
+  --end-date '<YYYY-MM-DD>' `
+  --page-size '<1回の読取り件数>' `
+  --max-operation-results '<OperationResultsの最大読取り件数>' `
+  --max-billings '<Billingsの最大読取り件数>' `
+  --max-daily-attendances '<DailyAttendancesの最大読取り件数>' `
+  --max-daily-operations-by-employee '<DailyOperationsByEmployeeの最大読取り件数>' `
+  --max-site-employee-histories '<SiteEmployeeHistoriesの最大読取り件数>' `
+  --max-customers '<必要なCustomersの最大読取り件数>' `
+  --timeout-ms '<全体の制限時間>' `
+  --expected-commit '<実行を承認した40桁commit SHA>'
+```
+
+toolは、実行前にproject、database、company ID、期間、branch、commit、cleanなworktree、資格情報のproject一致、Emulator・proxy・接続先上書きがないことを確認する。5 collectionはdocument ID順でpage読取りし、指定上限と同数だった場合も追加で1件だけ確認して、上限による打切りを成功と誤認しない。必要なCustomerだけを別上限内で読む。
+
+標準出力はJSON 1件だけとし、status、読取り完了の可否、project/database、company IDの集約用hash、対象期間、collection別読取り件数、派生先別の候補・不足・更新・一致・余分・計算不能件数、finding code別件数、plan digest、指定上限だけを含める。個人名、現場名、document ID、従業員・取引先・現場のID、実値、資格情報のemail、対象別hashは出力しない。
+
+| exit | 意味 |
+|---:|---|
+| 0 | 全pageを読み切り、差分なし |
+| 2 | 全pageを読み切り、不足・更新候補または余分な文書あり |
+| 3 | data不正、上限超過、timeout、page不完了、計算不能等により判定未完了 |
+| 64 | 必須引数の不足、余分な引数、形式・範囲不正 |
+| 70 | 想定外の内部error |
+| 78 | project/database/company、repository、commit、環境、資格情報等のtarget確認拒否 |
+
+同じ固定commit、company、期間、上限でread-only dry-runを2回行い、両方が`complete: true`で、件数と`planDigest`が一致した場合だけ安定した計画候補とする。exit 3・64・70・78、digest不一致、件数変化がある場合はsnapshotやapplyへ進まない。exit 2は想定される差分検出であり、それだけでapply承認とはしない。
+
 ## 対象
 
 正本は`Companies/{companyId}/OperationResults`とし、次の4派生先を照合する。
@@ -38,7 +81,7 @@ apply前は通常writerと対象Triggerの動きを止めるか、同等のTrans
 ## 停止条件
 
 - 対象project、database、company、日付範囲のいずれかが一意に確定しない。
-- dry-runが全pageを読み切れない、件数上限に達する、または同じ入力でdigestが安定しない。
+- dry-runが件数上限を超える、全pageが未読了になる、または同じ入力でdigestが安定しない。
 - OperationResult自体に計算不能な形状がある。
 - repair対象外の削除・余剰文書が見つかる。
 - snapshot、作成ID一覧、rollback手順のいずれかを準備できない。
