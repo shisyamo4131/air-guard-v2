@@ -5,7 +5,7 @@
 - 製品commit: `c3439f2de115a82ca29fb23da63275342530ac37`
 - release commit: `21013672a471e419ab26272cc80a73325db59db2`
 - GitHub Actions: [Dev deployment 34824366589](https://github.com/shisyamo4131/air-guard-v2/actions/runs/34824366589)
-- 状態: Firestore Rules・HostingのDev反映完了。正規画面の業務操作受入れは未実施
+- 状態: Firestore Rules・HostingのDev反映完了。上下番確定画面の受入れで表示崩れを確認し、Local補正・自動検証・buildまで完了。補正版のcommit・Dev再反映・再受入れは未実施
 
 ## Release境界
 
@@ -42,6 +42,10 @@
 - 同じtenant内の直接書込みがmodelの入力確認を迂回できる、簡素化に伴う既知riskは変わらない。
 - Prod、Functions、実data、migration、IAM、credentialは変更していない。
 
-## 利用者の受入れ
+## 利用者の受入れとLocal補正
 
-Devの正規画面で配置管理と上下番確定を確認し、成功または表示されたerrorと操作手順をこのcheckpointへ追記する。受入れ完了まではcheckpointを完了扱いにしない。
+- 2026-09-14のDev受入れで、上下番確定画面に本来の「左側の現場稼働予定一覧」と「右側の選択した予定の詳細・日報写真」が表示されず、外枠のManagerだけが表示される不具合を確認した。
+- 過去の同画面と現行Git履歴を照合した結果、`SiteOperationSchedulesManager`が画面本体用の`table`表示口を明示的に定義した後、同じ`table`表示口を汎用転送でも重ねて定義していた。後から定義された空の表示口が本来の左右画面を上書きしたことが原因だった。
+- Local補正では、汎用転送の対象から`table`を事前に除外し、画面本体用の表示口を一つだけにした。上下番確定画面の左一覧、右詳細、日報写真の接続を固定する回帰testも追加した。
+- 対象test 36/36件、全domain 1,434/1,434件、`npm run build`はそれぞれexit status 0で完了した。最初のsandbox内buildはWindowsの`readlink`権限で停止したため、同じcommandを許可済み環境で再実行して成功を確認した。
+- この補正はまだcommit、push、Dev再反映していない。Devの配置管理と上下番確定の再確認が終わるまでcheckpointを完了扱いにしない。

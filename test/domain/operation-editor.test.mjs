@@ -710,6 +710,8 @@ test("CREATE still reports an invalid preset setter failure and arrangement mana
 test("schedule managers use the standard Air manager and model handlers", async () => {
   const single = await source("components/SiteOperationSchedule/Manager/index.vue");
   const plural = await source("components/SiteOperationSchedules/Manager/index.vue");
+  const generator = await source("components/OperationResult/Generator/index.vue");
+  const generatorDetail = await source("components/OperationResult/Generator/Detail.vue");
   const workers = await source("components/SiteOperationSchedule/WorkerDetailManager/index.vue");
   const handlers = await source("handlers/siteOperationScheduleHandlers.js");
   const actions = await source("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js");
@@ -718,6 +720,11 @@ test("schedule managers use the standard Air manager and model handlers", async 
   assert.match(plural, /<air-array-manager/u);
   assert.match(plural, /:schema="SiteOperationSchedule"/u);
   assert.doesNotMatch(plural, /OperationArrayManager|useOperationEditor/u);
+  assert.match(plural, /Object\.keys\(slots\)\.filter\(\(name\) => name !== "table"\)/u);
+  assert.match(plural, /v-for="name in forwardedSlotNames"/u);
+  assert.doesNotMatch(plural, /v-for="\(_, name\) in \$slots"/u);
+  assert.match(generator, /<template #table="\{ items \}">[\s\S]*<List[\s\S]*<Detail/u);
+  assert.match(generatorDetail, /<SecurityReportsManager/u);
   assert.match(handlers, /await item\.create\(\)/u);
   assert.match(handlers, /await item\.update\(\)/u);
   assert.match(handlers, /await item\.delete\(\)/u);

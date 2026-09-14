@@ -27,6 +27,10 @@ const _props = defineProps({
 const props = useDefaults(_props, "SiteOperationSchedulesManager");
 const emit = defineEmits(["update:date-range"]);
 const { attrs } = useBaseManager("SiteOperationSchedulesManager");
+const slots = useSlots();
+const forwardedSlotNames = computed(() =>
+  Object.keys(slots).filter((name) => name !== "table"),
+);
 const events = computed(() => props.docs.map((doc) => doc.toEvent()));
 </script>
 
@@ -66,8 +70,8 @@ const events = computed(() => props.docs.map((doc) => doc.toEvent()));
         </v-card>
       </slot>
     </template>
-    <template v-for="(_, name) in $slots" #[name]="scope">
-      <slot v-if="name !== 'table'" :name="name" v-bind="scope || {}" />
+    <template v-for="name in forwardedSlotNames" #[name]="scope">
+      <slot :name="name" v-bind="scope || {}" />
     </template>
   </air-array-manager>
 </template>
