@@ -2,7 +2,7 @@
 
 - 確認日: 2026-09-14
 - checkpoint: FGA-06-SCHEDULE-MANAGER-RESTORE-09
-- 状態: 稼働実績の08以前はDev受入れ済み。現場稼働予定のAir Manager／model保存と単純なtenant RulesへのLocal復元・自動検証・固定commitのUI build済み。Dev反映・画面受入れ、配置管理・上下番確定エラーの調査待ち
+- 状態: 稼働実績の08以前はDev受入れ済み。現場稼働予定のAir Manager／model保存と単純なtenant Rulesへの復元・自動検証・固定commitのUI build・Firestore／HostingのDev反映済み。画面受入れ、配置管理・上下番確定エラーの調査待ち
 - 対象: 現場稼働予定、稼働実績、稼働請求の画面、Manager、`saveOperation` Callable、Firestore Rules
 - 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、進捗は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)
 

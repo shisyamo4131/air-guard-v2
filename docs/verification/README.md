@@ -37,6 +37,7 @@
 | FGA-06 現場稼働予定の通常C/U/D認可 Local検証 | [FGA-06 現場稼働予定の通常C/U/D認可 Local検証記録](fga-06-schedule-normal-auth-local.md) |
 | FGA-06 現場稼働予定の通常C/U/D認可 Dev反映・受入れ | [FGA-06 現場稼働予定の通常C/U/D認可 Dev反映・受入れ記録](fga-06-schedule-normal-auth-dev.md) |
 | FGA-06 現場稼働予定Manager復元 Local検証 | [FGA-06 現場稼働予定Manager復元 Local検証記録](fga-06-schedule-manager-restore-local.md) |
+| FGA-06 現場稼働予定Manager復元 Dev反映 | [FGA-06 現場稼働予定Manager復元 Dev反映記録](fga-06-schedule-manager-restore-dev.md) |
 | FGA-06 稼働実績の通常編集認可 Local検証 | [FGA-06 稼働実績の通常編集認可 Local検証記録](fga-06-result-edit-normal-auth-local.md) |
 | FGA-06 稼働実績の通常編集認可 Dev反映・受入れ | [FGA-06 稼働実績の通常編集認可 Dev反映・受入れ記録](fga-06-result-edit-normal-auth-dev.md) |
 | FGA-06 稼働実績Manager・client保存 Local検証 | [FGA-06 稼働実績Manager・client保存 Local検証記録](fga-06-result-manager-client-local.md) |
