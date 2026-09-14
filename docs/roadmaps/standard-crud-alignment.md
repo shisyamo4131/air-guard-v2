@@ -38,6 +38,28 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 
 SCR番号は2026-09-15時点の改修優先順位に合わせて付番し直した。SCR-01から順に各項目の現状と影響を確認して進める。新しい依存や影響が判明した場合は、その理由を示して優先順位を見直す。SCR-04とSCR-05など共有Rulesを扱う変更は並列編集せず、前工程との依存を確認する。既存の大項目も、独立して受入れ可能なら操作単位へ分け、配点は親項目の合計を維持する。
 
+## SCR-01 入金予定日編集の内訳
+
+対象は顧客請求詳細で提供済みの「入金予定日を変更／未設定にする」。請求の新規作成・確定・削除、入金実績モデルの追加、User/Auth変更は含めない。各枝番は同じ改修の作業・確認単位であり、個別に製品へ公開できることを意味しない。親SCR-01の10点は全枝番の完了で加点し、途中の部分加点は行わない。
+
+現行は[詳細画面](../../pages/billings/customers/[id].vue)が[useCustomerBilling](../../composables/dataLayers/useCustomerBilling.js)でBilling instanceを購読し、[PaymentDateEditor](../../components/CustomerBilling/PaymentDateEditor.vue)が別の[専用composable](../../composables/application/customerBilling/useBillingPaymentDate.js)で読取り・編集・Callable保存を行う。[Callable本体](../../functions/modules/billings/updateBillingPaymentDate.js)は期待値比較と日付fieldの部分更新を行い、[Rules](../../firestore.rules)はBillingsのclient writeを拒否している。
+
+| 枝番 | 作業 | 具体的な改修・確認内容 | 完了の判断 | 状態 |
+|---|---|---|---|---|
+| SCR-01-01 | 保存契約と影響範囲の確定 | Billingの標準update、日付の型・null・派生年月、請求日との前後条件、document全体の保存内容、請求集計等の背景writerを照合する。既存日付検証とクラスに差があれば、その扱いと必要な修正範囲を確定する | 対象file、維持条件、互換性、rollback、test範囲を確定。package変更やdata変換の要否を根拠付きで判断できる | Planned |
+| SCR-01-02 | 単数Managerと入力部品 | Billing instanceを受ける単数domain ManagerでAirItemManagerをラップする。入金予定日用customInputを設け、日付変更・未設定操作を構成する。既定editor・validation・submit・loading・errorを利用する | 独自dialogの責務をbase Managerへ移し、単一instance入力、UPDATE入口、入力・取消が仕様どおりに動く | Planned |
+| SCR-01-03 | 標準保存と画面の接続 | 詳細画面が購読するBilling instanceをManagerへ渡し、保存handlerから標準updateへ委譲する。専用getDocFromServer、expected比較、保存後の強制再取得を通常経路から外し、listenerを表示正本とする | 日付変更・未設定が保存／再表示される。保存失敗が標準error経路へ伝わり、別の請求fieldを意図せず欠落させない | Planned |
+| SCR-01-04 | Billings Rulesの整合 | client write全面拒否を見直し、今回の標準保存を認証・同一tenantの境界で成立させる。通常schema・日付業務条件をRulesへ複製しない。既存reader／背景writerとの境界を確認する | 同一tenantの正規保存が成功し、未認証・他tenantは拒否される。未提供の請求CRUD画面は追加されない | Planned |
+| SCR-01-05 | 旧専用経路の撤去 | PaymentDateEditorの旧実装、専用composable、updateBillingPaymentDateのAPI/export・本体、期待値比較等を参照確認して整理する。共有helperは利用元が残るものを削除しない | 正規画面から旧Callableへの到達がなく、不要な専用保存・競合stateと参照が残らない。公開済みFunctionの撤去対象も特定する | Planned |
+| SCR-01-06 | 自動検証と独立レビュー | 設定・変更・nullへの解除、請求日との条件、日付の往復、標準保存内容、listener反映、取消・失敗、tenant境界、背景集計との併存を確認する。旧Callable前提のtestを新契約へ更新する | 影響classに応じた必須gateと独立reviewが完了。既存成功証拠の再利用と未検証範囲を明示する | Planned |
+| SCR-01-07 | Dev受入れ・文書とFGA反映 | 固定commitの対象client／Rulesを整合して反映し、必要な旧Function撤去を承認済み範囲で実施する。詳細画面で変更・解除・再表示・失敗時表示を受入れ、証拠と棚卸しを更新する | 対象範囲のDev受入れとGit closeoutが完了。SCR-01を完了とし、同じ証拠で満たしたFGAの範囲だけ反映する | Planned |
+
+標準保存は現在の3日付fieldのpatchからBilling全体の保存に変わる。01では`operationResults`、status、調整・備考、計算値・管理fieldの往復と、背景実績更新後も入金予定日が維持されるかを確認する。通常のdocument単位last-write-winsを前提とし、同時更新の完全保持を目的とする独自lock・期待値比較は追加しない。`paymentDueDate`・`paymentDueMonth`は標準クラスの派生値を利用する。
+
+SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路・Rules・旧経路を組み合わせた一つの変更として06で検証し、片側だけを先に公開しない。枝番ごとの調査・静的確認・直接対象testは進めるが、同じ回帰suiteを枝番ごとに重ねて実行しない。07の外部操作は既存のDev承認境界に従う。
+
+既存の検証入口は`test/domain/billing-payment-date.test.mjs`、`test/domain/client-billing-contract-parity.test.mjs`、`test/local/codex-local-harness.test.mjs`。新しい標準保存・Rules・背景writerとの接続を覆う検証は01で選ぶ。今回行ったのは枝番計画の作成であり、01の詳細契約確定や02以降の実装・製品検証を完了したとは扱わない。
+
 ## 影響確認から次の1件を選ぶ
 
 上記の優先順位を基準に、着手前に各項目について次を確認する。小さな変更で独立して完了できる操作から着手し、1件を閉じた時点で残件を再評価する。未確認を「影響なし」と扱わない。
@@ -105,4 +127,4 @@ code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-
 
 ## 次の作業
 
-まずSCR-01 入金予定日を詳細確認する候補とする。最初の実装対象としての確定は、標準Billing全体保存と背景writer・日付検証・Rulesの整合を確認してから行う。候補を1件ずつ現物で確認し、保存接続だけで済むか、Manager置換・共有Rules・保存形式・認証側の変更が必要かを整理する。確認した変更範囲が最小の独立操作について実装checkpointを具体化する。今回の終了条件は、優先順位による再付番と参照整合・review・文書検証までとする。
+次はSCR-01-01として、入金予定日の保存契約と影響範囲を確定する。最初の実装対象としての確定は、標準Billing全体保存と背景writer・日付検証・Rulesの整合を確認してから行う。候補を1件ずつ現物で確認し、保存接続だけで済むか、Manager置換・共有Rules・保存形式・認証側の変更が必要かを整理する。確認した変更範囲が最小の独立操作について実装checkpointを具体化する。今回の終了条件は、SCR-01の枝番計画と参照整合・review・文書検証までとする。
