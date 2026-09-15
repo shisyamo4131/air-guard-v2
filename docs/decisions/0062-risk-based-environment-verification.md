@@ -22,7 +22,7 @@
 | 利用者環境Local | 利用者固有条件とUXの問題をDev前に発見し手戻りを抑える | 利用者Chrome・profile、`.env.local`、local表示、利用者環境固有の再現、必要なUX判断 | deploy済みartifact、Dev Functions・Rules・Indexes・remote data・外部service |
 | Dev | 製品変更を最終受入れする | 固定commitのdeploy済みartifact、対象service・Dev設定、remote認証・通信・権限・対象dataとの結合 | Prod固有状態、未確認の画面・actor・data、全利用者・全dataへの一般化 |
 
-- Codex専用Localと利用者環境Localは任意のpre-Dev検証とし、製品変更の最終受入れまたは完了証拠にはしない。
+- Codex専用LocalでのUI確認と利用者環境Localは任意のpre-Dev検証とし、製品変更の最終受入れまたは完了証拠にはしない。自動Local Emulator全件testの実行時点・成功証拠再利用は[ADR 0040の追加決定](0040-impact-based-staged-verification.md#2026-09-15-local-emulator全件確認の集約と証拠再利用)と検証policyに従う。この必須自動testを、任意のLocal UI確認へ読み替えない。
 - 自動testまたは静的検査が必要事項を直接証明する場合、同じ事項のために両Localを追加しない。
 - 両Localが同じ事項を証明する場合は、Codexが再現・完結できるCodex専用Localを優先する。
 - 利用者環境Localは、利用者Chrome・profile・表示環境、`.env.local`、利用者環境固有の再現、またはDev反映前の利用者によるUX判断が手戻りを実質的に抑える場合だけ選ぶ。

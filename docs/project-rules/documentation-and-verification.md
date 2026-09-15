@@ -28,7 +28,14 @@
 - 後続変更が証拠を失効させた、新しい実行経路を追加した、または既存証拠が必要事項の一部を証明しない場合は、不足または失効した範囲だけを検証する。「念のため」、慣例、suite名、別手段であることだけを理由に、変更と無関係なtestやsuite全体を再実行しない。再利用した証拠と追加実行の選定理由はcheckpointのcompletion reportまたは指定された証拠先へ記録する。
 - policy、project rules、release gateが明示的に必須とするgateは独断で省略しない。必須gateが既存検証と実質的に重複する場合は、重複する証明事項、既存証拠、非失効根拠を示し、必要なら別の承認済み変更でpolicy自体を見直すまで現行gateに従う。
 - project governance、permission、agent policyの変更は`governance-permissions-agents`としてcomprehensive gateを省略しない。common governance、生成`AGENTS.md`、managed referencesは承認済みsync以外で編集しない。
-- commandは記録済みの必須引数を省略せず実行し、exit status 0を独立確認した後だけ成功と記録する。後続編集が`invalidatedBy`に該当すれば該当gateを再実行する。
+- commandは記録済みの必須引数を省略せず実行し、exit status 0を独立確認した後だけ成功と記録する。後続編集が`invalidatedBy`に該当すれば、そのgateの失効単位に従って不足・失効結果を再検証する。Local Emulator全件gateの部分失効は下記の契約で扱い、非失効結果まで再実行しない。
 - repository-owned PowerShell gateはpolicy指定の`pwsh`を`-NoProfile`で実行し、`-ExecutionPolicy Bypass`、`-EncodedCommand`、検証文字列を復元するBase64 decode、legacy `powershell.exe`の子process起動を使用しない。fixtureは一意の隔離directoryに限定し、cleanup前に許可root内であることを検証する。
 - 新規未追跡fileは`git diff --check`の対象外になり得るため、review済みfileだけをstageして`git diff --cached --check`でも確認する。policy上の`git diff --check`自体は別に実行する。
 - 未承認のbuild、Emulator、Dev/Prod、network、remote/data、migration、release-only gateをpolicy記載だけから実行しない。省略可能なgateはpolicyの理由と証拠先に従い、既知失敗の回避目的では省略しない。
+
+### Local Emulator全件gateの実行時点
+
+- `local-emulator-suite`の通常の必須時点は、小工程のcompletionではなく、Dev反映候補の最終製品差分を固めたrelease検証段階とする。その候補に対して`npm run test:local`をまとめて1回実行する。過去releaseの全件成功と今回の個別testだけで、この初回全件確認を置き換えない。小工程ではcomponent・composable・Rules・Functions等の直接対象testを都度実行でき、最終候補gateは「段階未到来」と記録する。独立してDevへ反映する小工程はそれ自体を最終候補として扱う。
+- 最終候補の全件成功後は、変更とtestの影響範囲を照合する。非失効ならDev反映直前でも再実行しない。部分失効なら、初回全件成功のbaseline、以後の差分、影響するtest、再利用可能な結果、追加testのcommand・結果・独立exitを結び付け、失効・不足した範囲だけを更新してgateを充足する。全件を再実行した成功と、有効な証拠の再利用による充足を区別する。
+- 影響範囲不明、Emulator全体へ波及する基盤変更、明示された全件確認の例外は、通常の集約時点より優先して小工程でも全件確認を行う。理由は失効範囲とともに記録する。影響が限定できる変更を、FunctionsやRulesというfile種別だけで全件失効にしない。
+- 文書・governanceだけの変更は製品release gateを起動しない。任意のLocal UI検証、Dev最終受入れ、承認・外部作用の境界、他gateの要件は維持する。UI/applicationの`domain-full`を対象限定へ置き換える別件の検討は今回採用していない。実行・証拠の作り方は[Local Emulator手順](../runbooks/local-emulator-testing.md#全件確認と対象限定確認)を使う。

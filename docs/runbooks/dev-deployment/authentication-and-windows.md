@@ -2,12 +2,12 @@
 
 - 状態: Confirmed
 - 最終確認日: 2026-09-09
-- 役割: GitHub Actions標準経路が使えない場合のlocal Firebase CLI認証とWindows固有のtrust経路
+- 役割: 別承認のlocal Firebase CLI操作に使う認証とWindows固有のtrust経路
 - 対象: `air-guard-v2-dev`
 
 ## 適用条件
 
-標準のDev deployは[GitHub Actions手順](github-actions.md)を使う。利用者PCの`firebase login`や保存済みサービスアカウント鍵は前提にしない。この文書はActions障害の原因調査、またはcommit・service・実行者を固定して別承認されたlocal fallbackに限って使う。
+標準のDev deployは[GitHub Actions手順](github-actions.md)を使う。利用者PCの`firebase login`や保存済みサービスアカウント鍵は前提にしない。この文書はActions障害の原因調査、commit・service・実行者を固定して別承認されたlocal fallback、または[廃止済みFunctionの単発削除](../dev-deployment.md#廃止済みcloud-functionの単発削除)で使う。単発削除はActions障害を開始条件にせず、deploy用の全service dry-runを追加せずに対象操作に必要な認証を確認する。
 
 認証失敗を理由に自動でlocal fallbackへ切り替えない。Actionsの失敗点を確定し、再実行またはfallbackのどちらを採用するか決める。
 
@@ -37,7 +37,7 @@ Firebase CLIはdeployを実行する道具であり、`firebase login`は認証�
 | サービスアカウント | 本文の一時設定を使い、対象serviceのpreflightが成功 | Codexや機械実行で利用者loginに依存しない。現在は一部serviceの権限不足 |
 | 利用者account | 利用者loginと対象serviceの権限を確認 | 利用者がFirebase CLIを直接実行できる。loginの失効時は再認証が必要 |
 
-どちらもFirebase CLI、明示したDev project、`--only`で限定したservice、同じ固定artifactを使う。違いはFirebase側から見た実行者だけであり、利用者が同じサービスアカウント設定を使って実行するならCodex実行との認証上の違いはない。
+deployでは、どちらもFirebase CLI、明示したDev project、`--only`で限定したservice、同じ固定artifactを使う。単発削除ではFunction名とregionを直接指定する。違いはFirebase側から見た実行者だけであり、利用者が同じサービスアカウント設定を使って実行するならCodex実行との認証上の違いはない。
 
 | 用語 | この手順での意味 |
 |---|---|

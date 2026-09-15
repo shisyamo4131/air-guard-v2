@@ -9,6 +9,7 @@
 - 質問、比較、検討、診断、途中確認、完了報告を、code・仕様変更、merge、push、deployの承認とみなさない。重要仕様の変更前に現行規則、変更案、理由、影響、互換性、移行、rollback、確認方法を示す。
 - `main`操作、push、history rewrite、Prod deploy、npm公開、実dataの作成・更新・削除、data migration、外部service変更は個別の明示指示を必要とする。`main`へのpush承認は、承認対象commitについてGitHub Actionsが変更fileから選んだserviceをDevへ自動deployする承認を含む。手動実行、再実行、対象serviceの上書き、IAM・credential変更、migration、repair、Prodは含まず、別の明示指示を必要とする。破壊操作前に対象環境・data・復旧方法を確認する。
 - `.env`値、秘密鍵、token、Firebase Admin資格情報、Stripe/Webhook secret、実在の個人・顧客・勤怠・請求dataを文書、prompt、log、応答へ転記しない。
+- 廃止済みDev Cloud Functionの単発削除は、対象project・Function名・region・存在のread-only確認と、対象・復旧方法の提示による個別承認後、Firebase CLIで対象を明示して直接行う。通常workflowの一時編集・復元や広いdeployへの包括的な`--force`で代用しない。削除後一覧の1回確認と停止条件は[Dev単発削除手順](../runbooks/dev-deployment.md#廃止済みcloud-functionの単発削除)に従う。承認を別Function・別project・Prod・再実行・IAM・credential変更へ拡張しない。
 - `air-firebase-v2`、client/server adapter、`air-guard-v2-schemas`、`air-guard-v2-admin-sdk`は必要範囲をread-only調査できるが、変更は別承認とする。`air-vuetify-v3`はrepository内file参照packageとして利用箇所と境界を確認する。
 - 関連repositoryを変更する前に、対象、必要性、影響するconsumer、互換性、公開・導入順序、代替案を示し、まずAirGuardV2内だけで解決できないか確認してから別承認を得る。
 - critical identifierは当該turnにactual targetまたはtask-routed正本から確認する。Schemas consumer更新は[package release](../runbooks/package-release.md)のPreAdoption/PostAdoptionを使い、network未承認時はremote freshnessを未確認として残す。
@@ -18,7 +19,7 @@
 
 - 開発・Local検証の実行者は利用者とCodexだけとする。Devの他の試用者をLocalのprocess・log・data所有者として扱わない。
 - `Codex専用Local`は、Codexが専用demo project、専用port、`.codex-test/saved-data`、generated server、Codex管理browserを起動・操作・終了する隔離環境を指す。`利用者環境Local`は、利用者が`.env.local`、`./saved-data`、Chrome profile、利用者起動processを管理する環境を指す。両者を同じ検証環境、session、credential、cleanup対象として扱わない。
-- 両LocalはDev前の手戻り抑制用の任意検証であり、製品変更の最終受入れ・完了証拠にしない。製品変更は固定commitのDev反映と対象範囲のDev受入れ成功を最終受入れとする。文書・governance・test・専用local toolだけなど、Devの製品挙動を変えない変更はDev受入れ対象外。
+- 両LocalでのUI・利用者環境検証はDev前の手戻り抑制用の任意検証であり、製品変更の最終受入れ・完了証拠にしない。自動Local Emulator全件testはこれと区別し、[検証規則](documentation-and-verification.md#local-emulator全件gateの実行時点)が定める最終Dev候補の必須確認・非失効証拠の再利用を適用する。製品変更は固定commitのDev反映と対象範囲のDev受入れ成功を最終受入れとする。文書・governance・test・専用local toolだけなど、Devの製品挙動を変えない変更はDev受入れ対象外。
 - 環境検証は次表の保証範囲から選ぶ。実行した環境数を品質指標にせず、今回必要な証明事項を直接覆う最小の環境集合を使う。
 
 | 環境 | 主目的 | その環境で保証する範囲 | 保証しない範囲 |

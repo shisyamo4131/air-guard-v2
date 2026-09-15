@@ -205,6 +205,34 @@ if ($null -ne $verificationPolicy) {
     if (@($verificationPolicy.unknownImpactGateIds).Count -eq 0) {
         Add-CheckError 'Verification policy unknownImpactGateIds must not be empty.'
     }
+
+    # Full Emulator coverage belongs to the final product candidate, not each small checkpoint.
+    $emulatorGate = @($verificationPolicy.gates | Where-Object { $_.id -eq 'local-emulator-suite' })
+    if ($emulatorGate.Count -ne 1 -or $emulatorGate[0].command -ne 'npm run test:local') {
+        Add-CheckError 'Full Emulator gate must retain its unique ID and unfiltered command.'
+    } elseif (@($emulatorGate[0].stages).Count -ne 2 -or
+        @($emulatorGate[0].stages) -notcontains 'completion' -or
+        @($emulatorGate[0].stages) -notcontains 'release') {
+        Add-CheckError 'Full Emulator gate stages must be completion (exceptions) and release.'
+    }
+    foreach ($changeClass in @($verificationPolicy.classes)) {
+        $earlyGates = @($changeClass.iterationGateIds) + @($changeClass.targetedRegressionGateIds) + @($changeClass.completionGateIds)
+        if ($earlyGates -contains 'local-emulator-suite') {
+            Add-CheckError "Full Emulator suite cannot be an unconditional small-checkpoint gate: $($changeClass.id)"
+        }
+        if (@('ui-css-layout', 'application-logic', 'data-contract-schema-migration', 'build-release-deploy') -contains $changeClass.id) {
+            if (@($changeClass.releaseOnlyGateIds) -notcontains 'local-emulator-suite' -or
+                @($changeClass.omittableGateIds) -contains 'local-emulator-suite') {
+                Add-CheckError "Final product candidate must require full Emulator evidence: $($changeClass.id)"
+            }
+        }
+    }
+    if (@($verificationPolicy.unknownImpactGateIds) -notcontains 'local-emulator-suite') {
+        Add-CheckError 'Unknown-impact fallback must retain the full Emulator gate.'
+    }
+    if (@($verificationPolicy.comprehensiveGateIds) -contains 'local-emulator-suite') {
+        Add-CheckError 'Governance comprehensive checks must not unconditionally start product Emulators.'
+    }
 }
 if (Test-Path -LiteralPath $operationsPath) {
     $operationsContent = Get-Content -LiteralPath $operationsPath -Raw -Encoding UTF8

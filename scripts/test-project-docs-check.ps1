@@ -97,6 +97,26 @@ try {
     }
     Set-Content -LiteralPath $verificationPolicyPath -Encoding UTF8 -Value $validVerificationPolicy
 
+    foreach ($case in @('emulator in small completion', 'emulator in targeted regression', 'missing final emulator', 'omittable final emulator', 'missing emulator fallback', 'filtered full emulator command', 'targeted full emulator stage', 'governance starts product emulator')) {
+        $policyFixture = $validVerificationPolicy | ConvertFrom-Json
+        $dataClass = $policyFixture.classes | Where-Object { $_.id -eq 'data-contract-schema-migration' }
+        $uiClass = $policyFixture.classes | Where-Object { $_.id -eq 'ui-css-layout' }
+        $emulatorGate = $policyFixture.gates | Where-Object { $_.id -eq 'local-emulator-suite' }
+        switch ($case) {
+            'emulator in small completion' { $dataClass.completionGateIds += 'local-emulator-suite' }
+            'emulator in targeted regression' { $dataClass.targetedRegressionGateIds += 'local-emulator-suite' }
+            'missing final emulator' { $uiClass.releaseOnlyGateIds = @($uiClass.releaseOnlyGateIds | Where-Object { $_ -ne 'local-emulator-suite' }) }
+            'omittable final emulator' { $uiClass.omittableGateIds += 'local-emulator-suite' }
+            'missing emulator fallback' { $policyFixture.unknownImpactGateIds = @($policyFixture.unknownImpactGateIds | Where-Object { $_ -ne 'local-emulator-suite' }) }
+            'filtered full emulator command' { $emulatorGate.command = 'npm run test:local -- -TestNamePattern one-test' }
+            'targeted full emulator stage' { $emulatorGate.stages += 'targeted' }
+            'governance starts product emulator' { $policyFixture.comprehensiveGateIds += 'local-emulator-suite' }
+        }
+        Set-Content -LiteralPath $verificationPolicyPath -Encoding UTF8 -Value ($policyFixture | ConvertTo-Json -Depth 20)
+        Invoke-Checker $false $case
+    }
+    Set-Content -LiteralPath $verificationPolicyPath -Encoding UTF8 -Value $validVerificationPolicy
+
     $operationsPath = Join-Path $fixtureRoot 'docs/operations.md'
     $validOperations = Get-Content -LiteralPath $operationsPath -Raw -Encoding UTF8
     Set-Content -LiteralPath $operationsPath -Encoding UTF8 -Value ($validOperations.Replace('## Verification Matrix', '## Removed Verification Matrix'))

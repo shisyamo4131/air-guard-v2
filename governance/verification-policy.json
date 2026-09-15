@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "comprehensiveGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
-  "unknownImpactGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
+  "unknownImpactGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check", "local-emulator-suite"],
   "runtimeProfiles": [
     { "id": "powershell-7", "platform": "windows", "edition": "Core", "executable": "pwsh", "versionRule": "minimum-major=7", "required": true, "supportStatus": "supported" }
   ],
@@ -50,8 +50,8 @@
       "iterationGateIds": ["diff-check"],
       "targetedRegressionGateIds": ["domain-full"],
       "completionGateIds": ["project-docs", "domain-full", "diff-check"],
-      "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
-      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-emulator-suite", "local-ui-build"],
+      "releaseOnlyGateIds": ["local-emulator-suite", "generate-dev", "generate-prod"],
+      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-ui-build"],
       "omissionRecord": "Completion report or acceptance receipt"
     },
     {
@@ -60,17 +60,17 @@
       "iterationGateIds": ["diff-check"],
       "targetedRegressionGateIds": ["domain-full"],
       "completionGateIds": ["project-docs", "domain-full", "diff-check"],
-      "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
-      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-emulator-suite", "local-ui-build"],
+      "releaseOnlyGateIds": ["local-emulator-suite", "generate-dev", "generate-prod"],
+      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-ui-build"],
       "omissionRecord": "Completion report"
     },
     {
       "id": "data-contract-schema-migration",
       "triggers": ["Firestore, Realtime Database, Storage, schema, package contract, migration, Rules, or persisted-data compatibility"],
       "iterationGateIds": ["diff-check"],
-      "targetedRegressionGateIds": ["domain-full", "local-emulator-suite"],
-      "completionGateIds": ["project-docs", "domain-full", "local-emulator-suite", "diff-check"],
-      "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
+      "targetedRegressionGateIds": ["domain-full"],
+      "completionGateIds": ["project-docs", "domain-full", "diff-check"],
+      "releaseOnlyGateIds": ["local-emulator-suite", "generate-dev", "generate-prod"],
       "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-ui-build"],
       "omissionRecord": "Completion report or migration receipt"
     },
@@ -90,8 +90,8 @@
       "iterationGateIds": ["diff-check"],
       "targetedRegressionGateIds": ["project-docs", "domain-full"],
       "completionGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
-      "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
-      "omittableGateIds": ["local-emulator-suite", "local-ui-build"],
+      "releaseOnlyGateIds": ["local-emulator-suite", "generate-dev", "generate-prod"],
+      "omittableGateIds": ["local-ui-build"],
       "omissionRecord": "Approved release checkpoint evidence or completion report"
     }
   ],
@@ -155,10 +155,15 @@
     {
       "id": "local-emulator-suite",
       "command": "npm run test:local",
-      "stages": ["targeted", "completion", "release"],
+      "stages": ["completion", "release"],
       "includes": [],
-      "invalidatedBy": ["Functions, Rules, schema, Emulator configuration, test harness, or affected application behavior change"],
-      "evidenceDestination": "Checkpoint callback, completion report, or release evidence"
+      "invalidatedBy": [
+        "Product code, Functions, Rules, schema, dependencies, Emulator configuration, test harness, or affected behavior changes invalidate the mapped test results, not unrelated results",
+        "After a recorded full-suite success for the current final Dev product candidate, rerun only failed, missing or invalidated tests and combine them with explicitly verified unaffected results; record baseline, final diff, test names, exact commands and independent exits",
+        "Unknown impact, suite-wide infrastructure changes, or an explicit checkpoint exception require a full-suite run even before release; a previous release success plus targeted runs cannot replace the current candidate's initial full-suite run",
+        "No affected code, configuration, dependency, environment or test change means evidence remains valid, including immediately before Dev deployment; a commit or documentation-only change alone does not invalidate product results"
+      ],
+      "evidenceDestination": "Final Dev product-candidate release evidence: one full-suite run after the combined product diff is fixed, then validated reuse or mapped partial refresh per docs/runbooks/local-emulator-testing.md; completion use is limited to unknown-impact or explicit full-suite exceptions. Governance/document-only work does not activate product release gates. Targeted tests remain available in each small checkpoint; record partial runs separately, never as a fresh full-suite pass."
     },
     {
       "id": "local-ui-build",

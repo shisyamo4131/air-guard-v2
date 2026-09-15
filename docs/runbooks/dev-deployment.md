@@ -17,7 +17,7 @@ Devは、固定commitの製品を実際のFirebase設定・認証・権限・通
 | 目的 | 参照先 | 適用条件 |
 |---|---|---|
 | GitHub Actionsの設定・実行・復旧 | [GitHub Actions Dev deploy](dev-deployment/github-actions.md) | 標準のDev releaseで読む |
-| local Firebase CLIとWindowsのtrust | [Dev deployの認証とWindows環境](dev-deployment/authentication-and-windows.md) | Actions障害時に承認されたlocal fallbackを使う場合だけ読む |
+| local Firebase CLIとWindowsのtrust | [Dev deployの認証とWindows環境](dev-deployment/authentication-and-windows.md) | 承認済みlocal fallbackまたは廃止済みFunctionの単発削除で読む |
 | service別のremote検証 | [Dev remote検証](dev-deployment/remote-verification.md) | release対象serviceと受入れ経路に該当する節だけ読む |
 | Customer保存形式の事前検査 | [Customer互換性検査](dev-deployment/customer-compatibility.md) | project rulesの3条件に該当し、検査が必要な場合だけ読む |
 | data migration | [Data Migration Runbook](data-migrations.md) | data変換が必要なreleaseだけ読む |
@@ -83,10 +83,10 @@ worktreeがdirty、HEAD不一致、primary repository以外のworktree、対象p
 
 1. repository、branch、release commit、clean、primary-only worktreeを固定する。
 2. Dev project、release class、対象service、data影響、backup、rollback、停止条件、検証を固定する。
-3. 標準経路は[GitHub Actions手順](dev-deployment/github-actions.md)の専用service accountと鍵なし認証に固定する。local fallbackだけ[Windows認証手順](dev-deployment/authentication-and-windows.md)を読む。
+3. 標準経路は[GitHub Actions手順](dev-deployment/github-actions.md)の専用service accountと鍵なし認証に固定する。承認済みlocal fallbackまたは廃止済みFunctionの単発削除では[Windows認証手順](dev-deployment/authentication-and-windows.md)を読む。
 4. workflowが固定したFirebase CLI version、Dev project、対象service、GitHub Environment設定を確認する。remote変更直前の認証とdry-runはActions内で行う。
 5. gcloudを使うreleaseだけ、gcloudのtrust・token refresh・Dev projectへのread-only到達を独立確認する。
-6. 対象serviceの構文検査、validator、test、config検査を独立実行する。
+6. 対象serviceの構文検査、validator、test、config検査について有効な結果を確認し、不足・失効分を独立実行する。製品を変更するDev反映では、最終候補差分に対する[Local Emulator全件確認](local-emulator-testing.md#全件確認と対象限定確認)の成功証拠を必須とする。成功後に影響する変更がなければ、反映直前でも全件testを再実行しない。文書・governanceだけの変更は製品release gateの対象外。
 7. Hostingを含む場合、GitHub `dev` Environmentの暗号化設定を使い、Actions内で`npm run generate:dev`を独立実行する。
 8. artifactのsource SHA、Dev project、Emulator無効、必要fileをActions logで確認する。
 9. checkpointの承認範囲と現在状態を再照合する。
@@ -105,6 +105,17 @@ Dev server、Local browser検証、Codex専用UI buildはHosting release artifac
 - 手動dispatchは初回検証、障害からの限定再試行、明示されたserviceの再deployだけに使い、commitとserviceごとの別承認を得る。
 
 data migrationのdry-run・apply・post-checkはここへ追加せず、[共通migration手順](data-migrations.md#小規模dev-migrationの共通手順)と個別migration手順に従う。
+
+## 廃止済みCloud Functionの単発削除
+
+通常の製品code、Hosting、Rules、Functionsの反映は従来どおり`main` pushによるGitHub Actionsを使う。単発の旧Function削除は次の直接操作で行い、通常workflowに一時削除stepを追加して実行後に復元する手順や、恒久的な削除workflowは設けない。
+
+1. 対象Dev project、Function名、region、現在の存在をread-onlyで確認する。確認した一覧は削除後の比較にも使う。
+2. 削除対象と復旧方法を利用者へ提示し、個別承認を得る。復旧方法は旧Functionのsource revision・設定から対象を再deployする範囲を示し、削除だけで自動復旧できるとは扱わない。
+3. [local CLIの認証手順](dev-deployment/authentication-and-windows.md)で実行者を確認し、Firebase CLIの`functions:delete`へ承認済みFunction名、Dev project、regionを明示して直接削除する。広いFunctions deployへの包括的な`--force`で代用しない。認証・権限不足時は停止し、IAM・credentialを自動変更しない。
+4. 削除後にFunctions一覧をread-onlyで1回確認し、対象の不在と、削除前一覧の他Functionの残存を照合する。削除commandと一覧確認の結果・exit statusを記録する。確認に失敗した場合や結果が一致しない場合は未確認・失敗として報告し、自動再削除・反復確認をしない。
+
+承認は提示した対象と今回の操作だけに有効であり、別Function、別project、Prod、再実行、IAM・credential変更へ拡張しない。通常deployの承認とは分ける。廃止したexportが通常Functions deployを妨げる場合は、対象の直接削除を個別承認のもとで先に完了する。復旧が必要になった場合も対象を限定した再deployの承認境界へ戻る。
 
 ## 5. Devで検証する
 

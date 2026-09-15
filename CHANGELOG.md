@@ -4,7 +4,11 @@
 
 ## Unreleased
 
-- 通常data編集dialogの480pxは固定値ではなく原則値であり、画面ごとの内容に応じて狭い幅・広い幅のどちらも選べることを仕様へ明記した。CustomerBillingの入金予定日編集は360pxを採用し、標準Manager接続に合わせて画面・直接testを更新した。document IDは単一動的routeのparamから直接取得し、現在存在しない詳細間遷移だけに備えるpage再生成指定は追加しない。Billings Rulesは既存documentの通常更新だけを同じ会社の有効な本登録Userへ開き、更新者IDを確認する。新規作成・削除は閉じたまま、親Customer／Siteの存在、日付、通常schemaの検査はRulesへ追加していない。正規画面から到達しない旧入金予定日editor、専用composable、期待値比較contract、`updateBillingPaymentDate`のAPI・module・exportをLocal sourceから撤去した。背景Billing writer、data、deployは変更しておらず、remoteの旧Function撤去はDev release時に行う。
+- Local Emulator全件testを各小工程の完了条件から最終Dev候補差分の確認へ集約した。各工程の対象testは継続し、最終全件成功後は非失効証拠を再利用、失効・不足範囲だけを再検証する。影響不明・全体基盤変更・明示例外の全件確認は維持する。[ADR 0040](docs/decisions/0040-impact-based-staged-verification.md#2026-09-15-local-emulator全件確認の集約と証拠再利用)を参照。
+
+- 廃止済みDev Cloud Functionの単発削除は、対象と復旧方法を個別承認したFirebase CLIの直接操作へ統一した。通常のDev反映はmain pushによるGitHub Actionsを維持し、単発削除のための一時workflow編集・復元を行わない。[Dev手順](docs/runbooks/dev-deployment.md#廃止済みcloud-functionの単発削除)を参照。今回は方針・文書の変更で、Function削除やworkflow変更は行っていない。
+
+- 通常data編集dialogの480pxは固定値ではなく原則値であり、画面ごとの内容に応じて狭い幅・広い幅のどちらも選べることを仕様へ明記した。CustomerBillingの入金予定日編集は360pxを採用し、標準Manager接続に合わせて画面・直接testを更新した。document IDは単一動的routeのparamから直接取得し、現在存在しない詳細間遷移だけに備えるpage再生成指定は追加しない。Billings Rulesは既存documentの通常更新だけを同じ会社の有効な本登録Userへ開き、更新者IDを確認する。新規作成・削除は閉じたまま、親Customer／Siteの存在、日付、通常schemaの検査はRulesへ追加していない。正規画面から到達しない旧入金予定日editor、専用composable、期待値比較contract、`updateBillingPaymentDate`のAPI・module・exportを撤去し、Dev releaseで旧Functionの削除も完了した。[Dev受入れ記録](docs/verification/scr-01-billing-payment-date-dev.md)を参照。背景Billing writerと既存dataは変更していない。
 
 - 質疑応答で確定した業務状態変更・請求確定後の編集削除・実績化・配置通知の標準CRUD化と、実績ロックの画面別制約を[現行仕様](docs/specification.md#標準crudと後続処理)へ反映した。認証account操作は専用処理、通知送信と実績から請求・勤怠等への反映は既存Functionsトリガーへ維持する。今回は文書のみで、製品実装・Rules・data・deployは未変更。
 

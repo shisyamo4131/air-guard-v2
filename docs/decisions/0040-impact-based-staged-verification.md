@@ -5,6 +5,18 @@
 - 関連仕様: 開発ガバナンスと進捗管理
 - 関連判断: [0013](0013-managed-governance-reconstruction.md)、[0027](0027-codex-session-capacity-routing.md)、[0039](0039-evidence-bound-critical-identifiers.md)
 
+## 2026-09-15: Local Emulator全件確認の集約と証拠再利用
+
+利用者の採用決定により、Local Emulator全件testは小工程ごとの必須実行から、Dev反映候補となる最終製品差分が固まった時点の必須確認へ集約する。各工程では直接対象testを行い、最終候補の初回全件成功後は非失効の成功証拠を再利用する。部分失効は、初回証拠からの差分・影響するtest・非影響結果を照合して不足分だけを再実行する。影響不明、Emulator全体への基盤変更、明示例外は全件確認を優先する。
+
+毎回の全件起動を必須とする旧policyは、対象確認と既存証拠の再利用を求めるproject rulesに対して実行単位が粗かった。最終候補での全件確認を維持しながら重複実行を減らすための判断であり、時間短縮率や製品品質の改善を実測済みとは主張しない。過去releaseの全件成功と対象testの積上げだけで、今回候補の初回全件確認を省く案は採用しない。
+
+正本は[verification policy](../../governance/verification-policy.json)、運用は[検証規則](../project-rules/documentation-and-verification.md#local-emulator全件gateの実行時点)と[Local Emulator手順](../runbooks/local-emulator-testing.md#全件確認と対象限定確認)。既存のgate IDと実行runnerを維持し、生成表は正式syncから更新する。UI/applicationのdomain-full対象限定化は別件として残し、製品挙動、data、任意のLocal UI検証、Dev最終受入れ、外部操作の承認は変更しない。
+
+移行ではpolicyのstage配置、影響不明fallback、必須自動Emulatorと任意UIの区別、再利用・失効単位を文書とproject-owned validatorの異常系testへ反映する。governanceのcomprehensive gateと独立reviewで確認する。問題時は今回のpolicy・文書・検証器を整合した組で戻し、managed artifactも必要な場合は承認済み同期元から正規syncで戻す。履歴を書き換えず、旧規定へ戻す途中で生成表だけを残さない。
+
+以下の初回採用・移行のversionや実行結果は2026-09-01時点の履歴であり、現在のcommon versionや検証結果には読み替えない。
+
 ## 背景
 
 従来のガバナンスは、必須検証ごとの結果とexit statusを独立して観測することを要求した一方、変更内容から必須検証を選ぶ規則を定めていなかった。AirGuardV2では安全側として文書、managed governance、renderer、容量回帰、application syntax、対象test、全domain testを広く実行してきたが、aggregateに含まれるrendererの重複や、影響しないgateの反復が発生していた。

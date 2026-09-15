@@ -20,6 +20,14 @@ Private repositoryであるAirVuetify3は、当該repositoryだけを読める�
 
 ## 理由
 
+### 2026-09-15: 廃止済みFunctionの単発削除
+
+通常のDev反映は`main` pushによるActionsを維持する。一度限りの旧Function削除は、対象Dev project・Function名・region・存在を確認し、対象と復旧方法を示して個別承認を得た後、Firebase CLIで直接実行する。手順は[Dev runbook](../runbooks/dev-deployment.md#廃止済みcloud-functionの単発削除)を正とする。
+
+一時的なworkflow編集、review、commit、push、Actions待機、workflow復元と再commit・再pushを繰り返す負担を避けるための変更である。包括的なdeploy `--force`や恒久的な削除workflowは採用しない。通常deployの権限や他対象への承認を拡張せず、製品source・workflow自体はこの方針変更で編集しない。
+
+### 標準deployの理由
+
 push済みcommitとdeploy artifactを同じSHAへ結び付け、利用者PCのlogin状態と秘密鍵へ依存しない。repository・branch、GitHub Environment、provider条件の三層でDev以外や未承認refからの利用を防ぎ、変更のないserviceを再deployしない。
 
 ## 代替案

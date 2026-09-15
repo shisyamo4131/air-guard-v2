@@ -31,7 +31,7 @@
 ## フェーズごとのテスト範囲の合意
 
 - 着手前に、変更対象、test対象・対象外、操作と期待結果、環境・actor・data、完了条件をcheckpointへ固定する。実装承認から他機能全体の受入れまでを推論しない。
-- 試験運用中の通常の製品改修は、`直接対象の自動検証 → 必要な場合だけ選択したpre-Dev環境検証 → 固定commitのDev反映・対象範囲のDev受入れ`を標準順序とする。Codex専用Localと利用者環境Localは手戻り抑制のための任意工程であり、[Environment and approval rules](environment-and-approval.md#local-emulatorとlocal-ui)の保証範囲から今回必要な証明事項を直接覆う最小集合を選ぶ。自動検証が十分なら両Localを省略でき、Localを先に完了することをDev release判断の一律条件にしない。製品挙動を変える変更はDev受入れ前に完了扱いせず、文書・governance・testだけの変更やCodex専用local toolだけの変更はDev対象外とする。project rule・verification policy自体の変更、Rules・schema・Functions・認証認可その他の高risk境界、verification policyが別classで要求する必須gate、および承認済みreleaseに必要なgateは先送り・省略しない。改修規模が大きく最小loopを安全に適用できない場合は、範囲と検証方法を別途合意する。
+- 試験運用中の通常の製品改修は、`各工程の直接対象検証 → 最終Dev候補の必須自動検証 → 固定commitのDev反映・対象範囲のDev受入れ`を標準順序とする。必要な場合だけ選ぶLocal UI・利用者環境検証は、この間の手戻り抑制用の任意工程であり、[Environment and approval rules](environment-and-approval.md#local-emulatorとlocal-ui)の保証範囲から最小集合を選ぶ。自動検証が十分なら両LocalのUI確認は省略できるが、自動Emulator全件gateとは区別する。全件gateの実行時点・例外・再利用は[検証規則](documentation-and-verification.md#local-emulator全件gateの実行時点)を正とする。製品挙動を変える変更はDev受入れ前に完了扱いせず、文書・governance・testだけの変更やCodex専用local toolだけの変更はDev対象外とする。高risk境界を含む直接対象検証と各classの必須gateは、それぞれpolicyが定める段階で満たす。最終候補に属するgateを小工程で未実行とすることは必須検証の免除ではない。改修規模が大きく最小loopを安全に適用できない場合は、範囲と検証方法を別途合意する。
 - testは当該phaseの変更と直接必要な回帰へ限定する。関連fieldを読むだけの別機能について、業務全体の受入れを自動追加しない。影響確認と別機能の受入れを区別し、追加が必要なら理由・対象・延期時の影響を提示して合意する。
 - 合意済み範囲の再現・修正・再試験は継続し、commandやtest fileごとの再承認を求めない。発見した不足・不具合の修正義務を現在phaseへの追加権限とみなさず、対応時期の延期と修正の省略を区別する。
 - 現在の目的を妨げない独立問題だけを後続へ送る。今回の変更による回帰、承認済み必須条件の未達、安全な作業継続を妨げる問題は未完として扱い、必要なら影響作業を停止する。初期調査・設計の見落としを追加要求へすり替えず、条件補正と影響を利用者へ説明する。必須gateと安全境界は省略しない。

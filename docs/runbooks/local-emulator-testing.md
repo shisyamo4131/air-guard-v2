@@ -37,6 +37,20 @@ Codexの自動テストは、利用者用`./saved-data`、通常の`firebase.jso
 
 testやEmulatorを起動する前に、[Documentation and verification rules](../project-rules/documentation-and-verification.md#verification)の4点を照合する。今回の証明事項を同一または厳しい条件の有効な既存証拠が覆う場合は、commandや検証手段が異なることだけを理由に本suiteを再実行しない。追加検証が必要でも、対象HEAD、Functions・Rules・Firestore、tenant、設定、fixture、権限、loopback・外部作用deny、ownerとcleanup境界が一致する起動済みEmulatorは再利用し、失効または不足した部分だけを実行する。policyまたはrelease checkpointが明示する必須gateはこの判断だけで省略しない。
 
+### 全件確認と対象限定確認
+
+実行時点と例外は[検証規則](../project-rules/documentation-and-verification.md#local-emulator全件gateの実行時点)、gateの配置と失効条件は[verification policy](../../governance/verification-policy.json)を正とする。通常のrelease検証段階は、Dev反映候補の最終製品差分を固めたローカル確認から始まる。小工程の完了や、Dev反映直前という時点だけを理由に全件を重ねない。
+
+1. 各工程では、変更したcomponent・composable・Rules・Functionsと直接影響する接続部分に対応するtestを選ぶ。既存のdomain testは対象fileを指定でき、Emulatorの既存runnerは`-Mode Test -TestNamePattern`でtest名を限定できる。実際のtest名からpatternを選び、実行command、対象test、結果、独立exitを記録する。ゼロ一致や必要testのskipを成功証拠にしない。これらの対象testを追加しても、別gateである現行`domain-full`の必須条件を免除しない。
+2. 最終Dev候補差分が固まった時点で、フィルターを付けない`npm run test:local`を1回実行し、候補baseline・差分、実行条件、全件結果と独立exit 0を記録する。過去releaseの全件成功に今回の小工程testを足すだけでは、この候補の初回全件確認を満たさない。
+3. 成功後に、製品code・Functions・Rules・schema・依存関係・Emulator設定・harness・影響する動作の変更有無を確認する。影響する変更がなければ、Dev反映直前もその成功証拠を再利用する。commitを作ったことや非影響の文書編集だけでは製品testを失効させない。
+4. 部分失効では、初回全件成功から現在までの差分に対し、影響する既存test、新規test、再利用する非影響testを対応付ける。失敗・不足・失効したtestだけを再実行し、そのcommand・test名・結果・独立exitを初回証拠へ関連付ける。新しい全件成功とは記載せず「非失効結果と対象再検証によりgate充足」と報告する。結果を対応付けられなければ影響不明として全件を実行する。
+5. 全体へ波及する共通harness・Emulator基盤の変更、影響不明、明示的な全件確認の例外は、小工程でも全件を実行して根拠を記録する。FunctionsやRulesを変更したという分類だけで全件再実行を決めない。実行不能や既知の失敗を、後続工程への集約や証拠再利用で隠さない。
+
+全件testも対象testも専用demo・loopback・合成data・外部作用denyの実行境界を維持する。全件成功はDev最終受入れの代替ではない。
+
+### 実行準備
+
 初回、fixture変更時、または破損からの再生成時だけ、専用seedを作成します。
 
 ```powershell
