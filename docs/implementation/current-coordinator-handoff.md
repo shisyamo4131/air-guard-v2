@@ -5,6 +5,7 @@
 ## 現在の作業
 
 - 棚卸し解消の継続先は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)。解消順、状態、次checkpointは同roadmapを正とし、既存phaseとの関係も同書から確認します。
+- SCR-01「Billings入金予定日」は標準Manager／Class保存、Rules整合、旧Function撤去、Local自動検証、Dev反映・受入れまで完了し、同ロードマップで10点を加点済みです。次はSCR-02「配置通知の状態更新・編集」の現行経路と影響範囲を調査します。
 - 製品全体の残作業は[正式運用ロードマップ](../roadmaps/airguard-v2.md)、確認済み要件は[現行仕様](../specification.md)、実行証拠は[検証索引](../verification/README.md)を参照します。
 
 ## 未決事項と承認
@@ -17,14 +18,14 @@
 
 ## 次の作業
 
-2026-09-15の質疑応答で確定した[標準CRUDと後続処理](../specification.md#標準crudと後続処理)・[画面別lock](../specification.md#稼働実績ロックと画面別操作)を次の実装判断へ適用する。解消順と次checkpointは[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#次の作業)を参照する。下記の旧実装・受入れ記録を新仕様の達成証拠にしない。
+次は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#次の作業)に従い、SCR-02「配置通知の状態更新・編集」の現行画面、保存経路、通知生成への影響を調査し、最小の改修単位と検証範囲を提示する。製品code・Rulesの変更、Dev反映、実data操作は、調査結果とcheckpoint範囲の確認後に別途進める。
 
 ### 既存FGA工程の参照（2026-09-15時点）
 
 1. `FGA-06-RESULT-DELETE-CLIENT-06`、`FGA-06-RESULT-CALLABLE-RESTORE-07`、見落としていた一覧CREATEを補正する`FGA-06-RESULT-CREATE-CLIENT-08`はDev反映・会社管理者受入れまで完了しました。[一覧CREATEのDev受入れ記録](../verification/fga-06-result-create-client-dev.md)を参照します。
 2. 初回Dev受入れで作業員の勤務初期値継承不足を確認し、過去repositoryと現行`WorkersManager`契約に合わせて8つのdefault値を渡す補正をcommit `8d90d5d1`で反映しました。補正後は作業員追加・更新・削除・再読込、実績物理削除、Trigger errorなし、一覧0件、既存UIを確認済みです。
-3. `FGA-06-SCHEDULE-MANAGER-RESTORE-09`で、現場稼働予定の通常CRUD、配置作業員、複製、配置通知を過去のAir Manager／model保存へ戻し、Rulesをtenant境界へ簡素化しました。release `21013672`のFirestore・Hostingへの[Dev反映](../verification/fga-06-schedule-manager-restore-dev.md)後、上下番確定の左右画面が表示されない受入れ不具合を確認しました。[ADR 0073](../decisions/0073-schedule-manager-and-rules-restoration.md)を参照します。
-4. 原因は、予定Managerで画面本体用の`table`表示口と汎用転送の同名表示口が重複し、空の方が本来の左一覧・右詳細・日報写真を上書きしていたことです。汎用転送から`table`を除外したcommit `12f05e5a`をGitHub ActionsでHostingへDev再反映しました。次は利用者が表示を再確認し、配置管理と上下番確定処理そのもののエラーを別々に再現します。
+3. `FGA-06-SCHEDULE-MANAGER-RESTORE-09`では、現場稼働予定の通常CRUD、配置作業員、複製、配置通知をAir Manager／model保存へ戻し、Rulesをtenant境界へ簡素化しました。上下番確定の左右画面を上書きしていた表示口の重複も補正してDevへ再反映済みです。[ADR 0073](../decisions/0073-schedule-manager-and-rules-restoration.md)と[Dev反映記録](../verification/fga-06-schedule-manager-restore-dev.md)を参照します。
+4. 左一覧・右詳細・日報写真の見た目は利用者が暫定確認済みですが、対象データ発生後の配置管理・上下番確定処理の受入れは残っています。この未完事項は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md#fga-06-transaction系内部checkpoint)で管理し、SCR-02の調査と同じ修正・受入れを二重計上しません。
 5. 予定入力内の現場新規登録は[FUT-0190](future-actions.md#fut-0190-現場稼働予定入力内の現場新規登録を復旧する)、サインアウト／session切替と従属cacheのcleanupは[FUT-0005](future-actions.md#fut-0005-サインアウト完了条件へmodel-cleanupを含める)へ分離済みです。次checkpointへの追加はscope合意に従います。
 
 ## 参照
