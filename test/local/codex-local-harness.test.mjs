@@ -53,7 +53,9 @@ import {
 import { createSiteCustomerProjection } from "../../utils/site/siteCustomerProjection.js";
 import { encodeExpected } from "../../functions/shared/employeeContract.js";
 import { expectedForOperation, notificationExpectation } from "../../functions/shared/operationWriteContract.js";
-import { prepareNotificationState, expectedNotificationState } from "../../functions/shared/notificationStateContract.js";
+import FireModel from "@shisyamo4131/air-firebase-v2";
+import ClientAdapter from "@shisyamo4131/air-firebase-v2-client-adapter";
+import { ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
 import {
   inspectStripeMigrationRepositoryPreconditions,
   planCompanyLegacyStripeMigration,
@@ -80,6 +82,24 @@ function parseEmulatorHost(name) {
   assert.equal(host, "127.0.0.1", `${name} must use loopback`);
   assert.ok(Number.isInteger(port), `${name} must use a numeric port`);
   return { host, port };
+}
+
+async function withClientModelAdapter(firestore, uid, companyId, callback) {
+  const previousAdapter = (() => { try { return FireModel.getAdapter(); } catch { return null; } })();
+  const previousConfig = FireModel.getConfig();
+  const previousFirestore = ClientAdapter.firestore;
+  const previousAuth = ClientAdapter.auth;
+  ClientAdapter.firestore = firestore;
+  ClientAdapter.auth = { currentUser: { uid } };
+  FireModel.setAdapter(Object.create(ClientAdapter.prototype));
+  FireModel.setConfig({ prefix: `Companies/${companyId}` });
+  try { return await callback(); }
+  finally {
+    FireModel.setAdapter(previousAdapter);
+    FireModel.setConfig(previousConfig);
+    ClientAdapter.firestore = previousFirestore;
+    ClientAdapter.auth = previousAuth;
+  }
 }
 
 function emp05Command(raw, action, changes = {}, extra = {}) {
@@ -534,29 +554,70 @@ test("EMP05-B HTTP operation writers preserve references, notification confirmat
   const conversion = emp05Command(raw, "convert", {}, { notifications: Object.fromEntries(Object.entries(notices).map(([key, value]) => [key, notificationExpectation(value)])) });
   const userFirestore = authenticatedFirestore(actor.uid, { isSuperUser: false });
   const noticeId = notificationIds[0], noticeRef = doc(userFirestore, "Companies", companyId, "ArrangementNotifications", noticeId);
-  await assertSucceeds(runTransaction(userFirestore, async (transaction) => {
-    const snapshot = await transaction.get(noticeRef), current = snapshot.data();
-    const patch = prepareNotificationState(current, { expected: expectedNotificationState(current), changes: { targetStatus: "LEAVED", actualStartTime: "11:00", actualEndTime: "18:00", actualBreakMinutes: 0, actualIsStartNextDay: false, isQualified: false, isOjt: true } });
-    transaction.update(noticeRef, { ...patch, uid: actor.uid, updatedAt: serverTimestamp() });
+  await assertSucceeds(withClientModelAdapter(userFirestore, actor.uid, companyId, async () => {
+    const current = (await getDoc(noticeRef)).data();
+    const item = new ArrangementNotification(current);
+    item.actualStartTime = "11:00"; item.actualEndTime = "18:00"; item.actualIsStartNextDay = false; item.actualBreakMinutes = 0;
+    item.isQualified = false; item.isOjt = true;
+    item.status = "LEAVED";
+    await item.update();
   }));
-  // Personal and management controllers use this same raw expectation/patch.
+  const managementNotice = (await admin.doc(`${root}/ArrangementNotifications/${noticeId}`).get()).data();
+  assert.equal(managementNotice.status, "LEAVED"); assert.equal(managementNotice.actualStartTime, "11:00"); assert.equal(managementNotice.actualEndTime, "18:00"); assert.equal(managementNotice.actualBreakMinutes, 0); assert.equal(managementNotice.actualIsStartNextDay, false);
+  assert.equal(managementNotice.isQualified, false); assert.equal(managementNotice.isOjt, true); assertValidAdminTimestamp(managementNotice.confirmedAt, "management confirmedAt"); assertValidAdminTimestamp(managementNotice.arrivedAt, "management arrivedAt"); assertValidAdminTimestamp(managementNotice.leavedAt, "management leavedAt");
+  await admin.doc(`${root}/Users/${actor.uid}`).update({ receiveConfirmedArrangementNotification: true, receiveArrivedArrangementNotification: true, receiveLeavedArrangementNotification: true });
+  const { onArrangementNotificationCreated, onArrangementNotificationUpdated } = await import("../../functions/triggers/arrangementNotification.js");
+  const notificationCollection = admin.collection(`${root}/Notifications`);
+  const notificationIdsBefore = async () => new Set((await notificationCollection.get()).docs.map((snapshot) => snapshot.id));
+  const updatedNotice = { ...managementNotice, docId: noticeId, shouldNotify: true };
+  for (const [status, preference] of [["CONFIRMED", "receiveConfirmedArrangementNotification"], ["ARRIVED", "receiveArrivedArrangementNotification"], ["LEAVED", "receiveLeavedArrangementNotification"]]) {
+    const beforeIds = await notificationIdsBefore();
+    await onArrangementNotificationUpdated.run({ params: { companyId, notificationId: noticeId }, data: { before: { data: () => ({ ...updatedNotice, status: status === "CONFIRMED" ? "ARRANGED" : status === "ARRIVED" ? "CONFIRMED" : "ARRIVED" }) }, after: { data: () => ({ ...updatedNotice, status }) } } });
+    const afterSnapshots = (await notificationCollection.get()).docs;
+    const created = afterSnapshots.filter((snapshot) => !beforeIds.has(snapshot.id));
+    cleanup.push(...created.map((snapshot) => ["Notifications", snapshot.id]));
+    assert.equal(created.length, 1, `${status} transition creates one notification`);
+    const createdData = created[0].data();
+    const recipients = (await admin.collection(`${root}/Users`).where(preference, "==", true).get()).docs.map((snapshot) => snapshot.id);
+    assert.equal(createdData.sourceType, "arrangement"); assert.equal(createdData.sourceId, noticeId); assert.equal(createdData.data.arrangementNotificationId, noticeId); assert.equal(createdData.data.siteId, updatedNotice.siteId); assert.equal(createdData.data.shiftType, updatedNotice.shiftType); assert.deepEqual([...createdData.recipientUserIds].sort(), [...recipients].sort()); assert.equal(createdData.status, "pending");
+    const sameStatusIds = await notificationIdsBefore();
+    await onArrangementNotificationUpdated.run({ params: { companyId, notificationId: noticeId }, data: { before: { data: () => ({ ...updatedNotice, status }) }, after: { data: () => ({ ...updatedNotice, status }) } } });
+    const sameStatusCreated = (await notificationCollection.get()).docs.filter((snapshot) => !sameStatusIds.has(snapshot.id));
+    cleanup.push(...sameStatusCreated.map((snapshot) => ["Notifications", snapshot.id]));
+    assert.equal(sameStatusCreated.length, 0, `${status} same-status event is a no-op`);
+  }
+  const beforeCreateIds = await notificationIdsBefore();
+  await onArrangementNotificationCreated.run({ params: { companyId, notificationId: noticeId }, data: { data: () => ({ ...updatedNotice, shouldNotify: false }) } });
+  const shouldNotifyFalseCreated = (await notificationCollection.get()).docs.filter((snapshot) => !beforeCreateIds.has(snapshot.id));
+  cleanup.push(...shouldNotifyFalseCreated.map((snapshot) => ["Notifications", snapshot.id]));
+  assert.equal(shouldNotifyFalseCreated.length, 0, "shouldNotify=false does not create notification");
+  // Personal and management controllers use the standard model transitions.
   // Preserve the existing same-company role-less actor permission at real Rules.
   const personal = await seedSiteLifecycleTransportActor({ uid: "emp05-operation-personal", roles: [] });
   const personalFirestore = authenticatedFirestore(personal.uid, { isSuperUser: false });
   const personalRef = doc(personalFirestore, "Companies", companyId, "ArrangementNotifications", noticeId);
-  await admin.doc(`${root}/ArrangementNotifications/${noticeId}`).update({ createdAt: new AdminTimestamp(1788200000, 123456789), emp05Unknown: { retained: true } });
-  const originalNotice = (await admin.doc(`${root}/ArrangementNotifications/${noticeId}`).get()).data();
-  assert.notEqual(originalNotice.createdAt.nanoseconds % 1000000, 0);
-  for (const targetStatus of ["ARRANGED", "CONFIRMED", "ARRIVED", "LEAVED"]) {
-    await assertSucceeds(runTransaction(personalFirestore, async (transaction) => {
-      const current = (await transaction.get(personalRef)).data();
-      const patch = prepareNotificationState(current, { expected: expectedNotificationState(current), changes: { targetStatus, actualStartTime: "11:00", actualEndTime: "18:00", actualBreakMinutes: 0, actualIsStartNextDay: false, isQualified: false, isOjt: true } });
-      transaction.update(personalRef, { ...patch, uid: personal.uid, updatedAt: serverTimestamp() });
+  let confirmedAt;
+  let arrivedAt;
+  for (const [targetStatus, method] of [["ARRANGED", "toArranged"], ["CONFIRMED", "toConfirmed"], ["ARRIVED", "toArrived"], ["LEAVED", "toLeaved"]]) {
+    await assertSucceeds(withClientModelAdapter(personalFirestore, personal.uid, companyId, async () => {
+      const current = (await getDoc(personalRef)).data();
+      const item = new ArrangementNotification(current);
+      if (method === "toLeaved") {
+        item.actualStartTime = "11:00"; item.actualEndTime = "18:00"; item.actualIsStartNextDay = false; item.actualBreakMinutes = 0;
+        item.isQualified = false; item.isOjt = true;
+      }
+      await item[method]();
     }));
     const nextNotice = (await admin.doc(`${root}/ArrangementNotifications/${noticeId}`).get()).data();
     assert.equal(nextNotice.status, targetStatus);
-    assert.deepEqual(encodeExpected(nextNotice.createdAt), encodeExpected(originalNotice.createdAt));
-    assert.deepEqual(nextNotice.emp05Unknown, originalNotice.emp05Unknown);
+    if (targetStatus === "ARRANGED") { assert.equal(nextNotice.confirmedAt, null); assert.equal(nextNotice.arrivedAt, null); assert.equal(nextNotice.leavedAt, null); }
+    if (targetStatus === "CONFIRMED") { assertValidAdminTimestamp(nextNotice.confirmedAt, "personal confirmedAt"); assert.equal(nextNotice.arrivedAt, null); assert.equal(nextNotice.leavedAt, null); confirmedAt = encodeExpected(nextNotice.confirmedAt); }
+    if (targetStatus === "ARRIVED") { assertValidAdminTimestamp(nextNotice.confirmedAt, "personal confirmedAt after arrived"); assertValidAdminTimestamp(nextNotice.arrivedAt, "personal arrivedAt"); assert.equal(nextNotice.leavedAt, null); assert.deepEqual(encodeExpected(nextNotice.confirmedAt), confirmedAt); arrivedAt = encodeExpected(nextNotice.arrivedAt); }
+    if (targetStatus === "LEAVED") {
+      assertValidAdminTimestamp(nextNotice.confirmedAt, "personal confirmedAt after leaved"); assertValidAdminTimestamp(nextNotice.arrivedAt, "personal arrivedAt after leaved"); assertValidAdminTimestamp(nextNotice.leavedAt, "personal leavedAt"); assert.deepEqual(encodeExpected(nextNotice.confirmedAt), confirmedAt); assert.deepEqual(encodeExpected(nextNotice.arrivedAt), arrivedAt);
+      assert.equal(nextNotice.actualStartTime, "11:00"); assert.equal(nextNotice.actualEndTime, "18:00"); assert.equal(nextNotice.actualBreakMinutes, 0); assert.equal(nextNotice.actualIsStartNextDay, false);
+      assert.equal(nextNotice.isQualified, false); assert.equal(nextNotice.isOjt, true);
+    }
   }
   assert.equal((await call([conversion])).payload.error.status, "ABORTED"); assert.equal((await resultRef.get()).exists, false); assert.equal((await scheduleRef.get()).data().operationResultId, null);
   notices[noticeId] = (await admin.doc(`${root}/ArrangementNotifications/${noticeId}`).get()).data();
@@ -672,6 +733,13 @@ const {
   Timestamp: AdminTimestamp,
   getFirestore: getAdminFirestore,
 } = requireFromFunctions("firebase-admin/firestore");
+
+function assertValidAdminTimestamp(value, label) {
+  assert.equal(value instanceof AdminTimestamp, true, label);
+  assert.equal(Number.isInteger(value.seconds), true, `${label}.seconds`);
+  assert.equal(Number.isInteger(value.nanoseconds), true, `${label}.nanoseconds`);
+  assert.equal(value.nanoseconds >= 0 && value.nanoseconds < 1_000_000_000, true, `${label}.nanoseconds range`);
+}
 
 async function loadRebuildApis() {
   if (!rebuildApis) {

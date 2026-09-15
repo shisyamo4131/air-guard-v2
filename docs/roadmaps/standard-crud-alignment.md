@@ -26,7 +26,7 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 | マイルストーン | 重み | 得点 | 状態 | 完了条件・対象となる確認 |
 |---|---:|---:|---|---|
 | SCR-01 Billings入金予定日 | 10 | 10 | Completed | 提供済み編集をManager／Classへ接続し、Rulesと旧比較testを整合。保存・再表示・失敗、tenant境界を検証する |
-| SCR-02 配置通知の状態更新・編集 | 10 | 0 | Planned | Managerと本人向け確認・上番・下番を標準クラスへ接続し、独自期待値比較・patch transactionを整理。時刻・実勤務値・表示収束と既存通知生成条件を検証する |
+| SCR-02 配置通知の状態更新・編集 | 10 | 0 | In Progress（Local完了・Dev待ち） | Managerと本人向け確認・上番・下番を標準クラスへ接続し、Schemas生成とのnotify parityを揃え、時刻・実勤務値・表示収束と既存通知生成条件をLocalで検証済み。Dev受入れは未実施 |
 | SCR-03 Site手動終了・再開 | 10 | 0 | Planned | 終了・再開の既存業務条件と標準クラスを照合し、入口・保存・Rulesを整合。自動終了system処理と終了後の通常編集条件を維持する |
 | SCR-04 予定から実績化 | 10 | 0 | Planned | Generatorを標準syncToOperationResultへ接続し、同ID実績作成・予定更新・通知実勤務値反映・作成Rulesを整合。旧convert callerを撤去し、既存実績作成を回帰確認する |
 | SCR-05 稼働請求・実績lock・稼働外売上 | 10 | 0 | Planned | 取極め・調整・lock等を既存OperationBilling／OperationResultの標準保存へ接続し、共有Rulesを整合。画面別操作表、経理画面アクセス、稼働請求からの実績削除禁止、請求・勤怠等への後続反映を検証する |
@@ -127,4 +127,4 @@ code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-
 
 ## 次の作業
 
-次はSCR-02 配置通知の状態更新・編集について、現行画面・保存経路・通知生成への影響を調査し、最小の改修単位と検証範囲を提示する。SCR-01の製品code・Rules・Dev反映と受入れは完了している。
+SCR-02の製品codeとtest codeは準備済みで、得点は0のままとする。Schemas `3.0.0-dev.3`をroot/Functionsへ導入し、package identityとintegrityの`PostAdoption`は成功した。配置通知生成の`actualIsStartNextDay`はFunctionsのnotify生成分岐にも実勤務値を引き継ぐよう補正した。TESTERのLocal UI確認、ユーザー本人の遷移確認、domain-full 1433/1433、Local Emulator 180/180を含む対象検証は成功済みである。DEV read-only確認では配置通知2579件を取得し、翌日開始1件と関連予定・勤務実績の整合を確認したため、migration/repairは不要と判断した。詳細は[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)を参照する。次は利用者review後、Dev反映と会社管理者受入れを別承認で実行する。Local検証済みでも完了、Dev反映、進捗加点は記録しない。SCR-01の製品code・Rules・Dev反映と受入れは完了している。

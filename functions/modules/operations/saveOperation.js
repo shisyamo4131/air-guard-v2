@@ -227,7 +227,7 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
                 await requireSite(worker.siteId);
                 const id = `${documentId}_${worker.workerId}`;
                 if (notifications.get(id) !== null) fail("failed-precondition", "予定と通知の状態が一致しません。最新情報を確認してください。");
-                const notification = operationDateTime(new ArrangementNotification({ ...rawForClass(worker), actualStartTime: worker.startTime, actualEndTime: worker.endTime, actualBreakMinutes: worker.breakMinutes, shouldNotify: changes.shouldNotify })).toObject();
+                const notification = operationDateTime(new ArrangementNotification({ ...rawForClass(worker), actualStartTime: worker.startTime, actualEndTime: worker.endTime, actualBreakMinutes: worker.breakMinutes, actualIsStartNextDay: worker.isStartNextDay, shouldNotify: changes.shouldNotify })).toObject();
                 try { operationDateTime(new ArrangementNotification(notification)).validate(); } catch { fail("invalid-argument"); }
                 notification.docId = id;
                 (await plan(`${root}/ArrangementNotifications/${id}`, "notification")).after = { ...(notifications.get(id) || {}), ...notification };

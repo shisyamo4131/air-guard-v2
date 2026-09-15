@@ -63,6 +63,7 @@
 | Employee Dev反映前archive API接続・Local検証 | [Employee Dev反映前API接続 Local検証記録](employee-dev-preflight-local.md) |
 | 配置管理の単純な楽観的更新・Dev接続受入れ | [配置管理の楽観的更新 Dev接続受入れ記録](arrangement-optimistic-dev-acceptance.md) |
 | SCR-01 入金予定日の標準CRUD Dev反映 | [SCR-01 入金予定日 Dev release記録](scr-01-billing-payment-date-dev.md) |
+| SCR-02 配置通知の標準CRUD Local検証 | [SCR-02 配置通知 Local検証記録](scr-02-arrangement-notification-local.md) |
 | PowerShell検証gateのNorton再検知防止 | [PowerShell検証runtime hardening記録](norton-powershell-gate-hardening.md) |
 | 検証選択の判断 | [ADR 0040](../decisions/0040-impact-based-staged-verification.md) |
 | 文書責務と最終状態検証の判断 | [ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md) |

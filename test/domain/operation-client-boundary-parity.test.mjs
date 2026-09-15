@@ -8,8 +8,6 @@ import * as serverCommands from "../../functions/shared/operationWriteContract.j
 import { applyOperationProjection } from "../../composables/domain/operation/operationProjection.js";
 import * as clientReferences from "../../composables/domain/operation/operationReferences.js";
 import * as serverReferences from "../../functions/shared/operationReferences.js";
-import * as clientNotifications from "../../composables/domain/operation/notificationStateContract.js";
-import * as serverNotifications from "../../functions/shared/notificationStateContract.js";
 import { operationDateTime as clientDateTime } from "../../composables/domain/operation/operationDateTime.js";
 import { operationDateTime as serverDateTime } from "../../functions/shared/operationDateTime.js";
 import { operationUxAllowed } from "../../utils/auth/policies/operationActorPolicy.js";
@@ -180,14 +178,7 @@ test("client date and notification projections retain Functions parity", () => {
     actualIsStartNextDay: worker.isStartNextDay,
   })).toObject();
   assert.deepEqual([...clientReferences.notificationEmployeeReferences(notification)], [...serverReferences.notificationEmployeeReferences(notification)]);
-  assert.deepEqual(clientNotifications.expectedNotificationState(notification), serverNotifications.expectedNotificationState(notification));
   assert.deepEqual(clientCommands.notificationExpectation(notification), serverCommands.notificationExpectation(notification));
-  const input = {
-    expected: serverNotifications.expectedNotificationState(notification),
-    changes: { targetStatus: "ARRIVED", isQualified: false, isOjt: true },
-  };
-  const now = new Date("2026-09-12T00:00:00+09:00");
-  assert.deepEqual(encoded(clientNotifications.prepareNotificationState(notification, input, now)), encoded(serverNotifications.prepareNotificationState(notification, input, now)));
 });
 
 test("schedule CUD uses tenant-wide server authorization while result client CRUD is rejected by the Callable contract", () => {

@@ -41,12 +41,12 @@ test("root and Functions use the corrected exact schema without Stripe dependenc
   for (const manifest of [rootPackage, functionsPackage]) {
     assert.equal(
       manifest.dependencies["@shisyamo4131/air-guard-v2-schemas"],
-      "3.0.0-dev.1",
+      "3.0.0-dev.3",
     );
   }
   assert.equal(Object.hasOwn(functionsPackage.dependencies, "stripe"), false);
   const expectedInstallCommand =
-    "npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1 && cd functions && npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1 && cd ..";
+    "npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.3 && cd functions && npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.3 && cd ..";
   for (const scriptName of ["install:schemas", "install:schemas@dev"]) {
     const command = rootPackage.scripts[scriptName];
     assert.equal(command, expectedInstallCommand);

@@ -1,7 +1,7 @@
 import { operationDateTime } from "../../functions/shared/operationDateTime.js";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import * as Vue from "vue";
 import { Timestamp } from "firebase/firestore";
 import { ArrangementNotification, SiteOperationSchedule, OperationResult, OperationBilling, ArticleDetail, User } from "@shisyamo4131/air-guard-v2-schemas";
@@ -536,6 +536,60 @@ test("result detail adopts Air managers without changing its visible operation c
   ]) assert.ok(page.includes(binding), binding);
   assert.match(page, /@submit:complete="async \(\) => await doc\.update\(\)"/u);
   assert.doesNotMatch(page, /OperationResultWorkersManager/u);
+});
+
+test("arrangement notification managers use standard CRUD transitions and no deleted notification contracts", async () => {
+  const single = await source("components/ArrangementNotification/Manager/index.vue");
+  const personal = await source("components/ArrangementNotifications/Manager/index.vue");
+  const leaved = await source("components/ArrangementNotification/Manager/toLeaved.vue");
+  const generatorDetail = await source("components/OperationResult/Generator/Detail.vue");
+  assert.match(single, /air-item-manager/u); assert.match(single, /useBaseManager/u); assert.match(single, /item\.update\(\)/u);
+  assert.match(single, /includesStatus/u); assert.match(single, /customInput/u); assert.match(single, /beforeEdit/u); assert.match(single, /submit:complete/u); assert.match(single, /toUpdate/u);
+  assert.match(single, /const hasValidDoc = computed\([\s\S]*?props\.doc instanceof ArrangementNotification[\s\S]*?Boolean\(props\.doc\.docId\)/u);
+  assert.match(single, /function toUpdate\(item = props\.doc\)[\s\S]*?if \(!\(item instanceof ArrangementNotification\) \|\| !item\.docId\) return false;[\s\S]*?manager\.value\?\.toUpdate\(item\)/u);
+  assert.match(single, /disabled: slotProps\.disableUpdate \|\| !hasValidDoc/u);
+  assert.doesNotMatch(single, /if \(!props\.doc\?\.docId\)/u);
+  assert.match(generatorDetail, /:doc="notificationsMap\[worker\.notificationKey\]"/u);
+  assert.match(generatorDetail, /:disabled="props\.loading \|\| activatorProps\.disabled"/u);
+  assert.match(personal, /air-array-manager/u); assert.match(personal, /useBaseManager/u); assert.match(personal, /new SiteOperationSchedule\(\)\.fetchDoc/u);
+  assert.match(personal, /baselineStatus/u); assert.match(personal, /DEFINITION\.value\?\.\[baselineStatus\.value\]\?\.next\?\.transition/u); assert.match(personal, /await item\[transition\]\(\)/u); assert.match(personal, /#input-default/u); assert.match(personal, /#editor-actions/u); assert.match(personal, /ArrangementNotificationTransitionBtn/u); assert.match(personal, /ArrangementNotificationManagerToLeaved/u); assert.match(personal, /modelValue/u);
+  assert.match(personal, /:loading="loading"/u); assert.match(personal, /:disabled="disabled \|\| loading"/u); assert.match(personal, /emit\("submit:complete", event\.item\)/u); assert.match(personal, /manager\.value\?\.quitEditing\(\)/u);
+  assert.match(personal, /async function handleUpdate\(item\)[\s\S]*?return await item\[transition\]\(\);/u);
+  assert.match(personal, /function closeEditor\(\)[\s\S]*?manager\.value\?\.quitEditing\(\);/u);
+  assert.match(personal, /<v-btn[\s\S]*?v-else[\s\S]*?block[\s\S]*?variant="text"[\s\S]*?:disabled="loading"[\s\S]*?@click="closeEditor"[\s\S]*?>閉じる/u);
+  assert.match(personal, /editingDocId/u); assert.match(personal, /listenerSnapshot/u); assert.match(personal, /props\.modelValue\.find\(\(item\) => item\.docId === editingDocId\.value\)/u); assert.match(personal, /equal\(snapshot, listenerSnapshot\.value\)/u); assert.match(personal, /manager\.value\.updateProperties\(snapshot\)/u); assert.match(personal, /manager\.value\?\.updateProperties\(toSnapshot\(latest\)\)/u); assert.doesNotMatch(personal, /draft\.initialize\(latest\)/u); assert.doesNotMatch(personal, /\.initialize\(latest\)/u); assert.match(personal, /baselineStatus\.value = latest\.status/u); assert.match(personal, /clearEditingState/u); assert.match(personal, /listenerSnapshot\.value = null/u);
+  assert.match(leaved, /air-item-manager/u); assert.match(leaved, /item\.toLeaved\(\)/u); assert.match(leaved, /dateAt/u); assert.match(leaved, /actualStartTime/u); assert.match(leaved, /actualEndTime/u); assert.match(leaved, /actualIsStartNextDay/u); assert.match(leaved, /actualBreakMinutes/u); assert.match(leaved, /submit:complete/u); assert.match(leaved, /activator/u);
+  const combined = `${single}\n${personal}\n${leaved}`;
+  for (const forbidden of ["useNotificationEditor", "usePersonalNotification", "OperationEditor", "getDocFromServer", "runTransaction", "expectedNotificationState", "prepareNotificationState", "notificationStateContract"]) assert.doesNotMatch(combined, new RegExp(forbidden, "u"));
+  for (const path of ["composables/application/operation/useNotificationEditor.js", "composables/application/operation/usePersonalNotification.js", "composables/domain/operation/notificationStateContract.js", "functions/shared/notificationStateContract.js"]) await assert.rejects(access(new URL(`../../${path}`, import.meta.url)));
+  const itemManager = await source("node_modules/air-vuetify-v3/src/composables/useItemManager.js");
+  assert.match(itemManager, /internalItem\.value\[key\] = value/u); assert.match(itemManager, /await props\.handleUpdate\(internalItem\.value\)/u); assert.match(itemManager, /item: Vue\.computed\(\(\) => _cloneObject\(internalItem\.value\)\)/u);
+});
+
+test("arrangement listener synchronization updates the internal manager clone only for the edited document", async () => {
+  const editingDocId = Vue.ref("doc-a");
+  const listenerSnapshot = Vue.ref(null);
+  const docs = Vue.reactive([{ docId: "doc-a", status: "ARRANGED", confirmedAt: new Date("2026-09-01T00:00:00Z"), arrivedAt: null }, { docId: "doc-b", status: "ARRANGED", confirmedAt: null, arrivedAt: null }]);
+  const internalItem = Vue.reactive({ docId: "doc-a", status: "ARRANGED", confirmedAt: docs[0].confirmedAt, arrivedAt: null });
+  const handled = [];
+  const manager = { updateProperties(snapshot) { for (const [key, value] of Object.entries(snapshot)) if (key in internalItem) internalItem[key] = value; }, async handleUpdate() { handled.push({ ...internalItem }); } };
+  const snapshotOf = (item) => ({ ...item });
+  const sync = () => {
+    const latest = docs.find((item) => item.docId === editingDocId.value);
+    if (!latest) return;
+    const snapshot = snapshotOf(latest);
+    if (JSON.stringify(snapshot) === JSON.stringify(listenerSnapshot.value)) return;
+    manager.updateProperties(snapshot); listenerSnapshot.value = snapshot;
+  };
+  sync();
+  docs[0] = { ...docs[0], status: "CONFIRMED", confirmedAt: null, arrivedAt: new Date("2026-09-02T00:00:00Z") }; sync();
+  assert.equal(internalItem.status, "CONFIRMED"); assert.equal(internalItem.confirmedAt, null); assert.ok(internalItem.arrivedAt);
+  await manager.handleUpdate(); assert.equal(handled.at(-1).status, "CONFIRMED"); assert.equal(handled.at(-1).confirmedAt, null);
+  const beforeOther = { ...internalItem }; docs[1] = { ...docs[1], status: "ARRIVED", arrivedAt: new Date("2026-09-03T00:00:00Z") }; sync(); assert.deepEqual({ ...internalItem }, beforeOther);
+  let releaseFetch; const fetchSchedule = new Promise((resolve) => { releaseFetch = resolve; });
+  const beforeEdit = async () => { await fetchSchedule; const latest = docs.find((item) => item.docId === editingDocId.value); manager.updateProperties(snapshotOf(latest)); listenerSnapshot.value = snapshotOf(latest); };
+  const pending = beforeEdit(); docs[0] = { ...docs[0], status: "LEAVED", confirmedAt: null, arrivedAt: null }; releaseFetch(); await pending;
+  assert.equal(internalItem.status, "LEAVED"); assert.equal(internalItem.confirmedAt, null); assert.equal(internalItem.arrivedAt, null);
 });
 
 test("result collection create uses its plural Air manager and model persistence without changing the editor controls", async () => {

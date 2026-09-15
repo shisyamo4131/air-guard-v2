@@ -4,10 +4,11 @@ import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Site, SiteOperationSchedule, OperationResult, ArrangementNotification, AgreementV2 } from "@shisyamo4131/air-guard-v2-schemas";
+import FireModel from "@shisyamo4131/air-firebase-v2";
+import ClientAdapter from "@shisyamo4131/air-firebase-v2-client-adapter";
 import { Timestamp } from "../../functions/node_modules/firebase-admin/lib/firestore/index.js";
 import { saveOperation } from "../../functions/modules/operations/saveOperation.js";
 import { expectedForOperation, notificationExpectation } from "../../functions/shared/operationWriteContract.js";
-import { prepareNotificationState, expectedNotificationState } from "../../functions/shared/notificationStateContract.js";
 import { operationDateTime } from "../../functions/shared/operationDateTime.js";
 import { parseDate, encodeExpected } from "../../functions/shared/employeeContract.js";
 
@@ -68,15 +69,49 @@ async function scenarios() {
       const id = `copy_${worker.workerId}`, noticePath = `Companies/company/ArrangementNotifications/${id}`;
       let notice = state.records.get(noticePath);
       assert.equal(notice.actualEndAt.getTime(), worker.endAt.getTime());
-      for (const targetStatus of ["ARRANGED", "CONFIRMED", "ARRIVED", "LEAVED"]) {
-        const patch = prepareNotificationState(notice, { expected: expectedNotificationState(notice), changes: { targetStatus, actualStartTime: "09:00", actualEndTime: "18:00", actualBreakMinutes: 0, actualIsStartNextDay: !isStartNextDay, isQualified: false, isOjt: false } }, parseDate("2026-09-12"));
-        notice = { ...notice, ...patch };
+      const item = new ArrangementNotification(notice);
+      item.actualStartTime = "09:00";
+      item.actualEndTime = "18:00";
+      item.actualIsStartNextDay = isStartNextDay;
+      item.actualBreakMinutes = 0;
+      item.isQualified = false;
+      item.isOjt = false;
+      const previousAdapter = (() => { try { return FireModel.getAdapter(); } catch { return null; } })();
+      const previousConfig = FireModel.getConfig();
+      const adapter = Object.create(ClientAdapter.prototype);
+      adapter.update = async () => null;
+      FireModel.setAdapter(adapter);
+      FireModel.setConfig({ prefix: "Companies/company" });
+      try {
+        for (const transition of ["toArranged", "toConfirmed", "toArrived", "toLeaved"]) {
+          if (transition === "toLeaved") {
+            item.actualStartTime = "09:00"; item.actualEndTime = "18:00"; item.actualIsStartNextDay = isStartNextDay; item.actualBreakMinutes = 0;
+            item.isQualified = false; item.isOjt = false;
+          }
+          await item[transition]();
+          if (transition === "toArranged") {
+            assert.equal(item.status, "ARRANGED"); assert.equal(item.confirmedAt, null); assert.equal(item.arrivedAt, null); assert.equal(item.leavedAt, null);
+            assert.equal(item.actualStartTime, item.startTime); assert.equal(item.actualEndTime, item.endTime); assert.equal(item.actualIsStartNextDay, item.isStartNextDay); assert.equal(item.actualBreakMinutes, 60);
+          }
+          if (transition === "toConfirmed") {
+            assert.equal(item.status, "CONFIRMED"); assert.ok(item.confirmedAt instanceof Date); assert.equal(item.arrivedAt, null); assert.equal(item.leavedAt, null);
+          }
+          if (transition === "toArrived") {
+            assert.equal(item.status, "ARRIVED"); assert.ok(item.confirmedAt instanceof Date); assert.ok(item.arrivedAt instanceof Date); assert.equal(item.leavedAt, null);
+          }
+          if (transition === "toLeaved") assert.equal(item.status, "LEAVED");
+        }
+      } finally {
+        FireModel.setAdapter(previousAdapter);
+        FireModel.setConfig(previousConfig);
       }
-      // Preserve existing JST semantics: actual dates use scheduled next-day
-      // and scheduled span flags, even when actual times/flag differ.
+      notice = item.toObject();
+      assert.equal(notice.status, "LEAVED");
+      assert.ok(notice.confirmedAt instanceof Date); assert.ok(notice.arrivedAt instanceof Date); assert.ok(notice.leavedAt instanceof Date);
+      assert.equal(notice.actualStartTime, "09:00"); assert.equal(notice.actualEndTime, "18:00"); assert.equal(notice.actualBreakMinutes, 0); assert.equal(notice.isQualified, false); assert.equal(notice.isOjt, false);
       const start = new Date("2026-09-12T09:00:00+09:00").getTime() + (isStartNextDay ? 86400000 : 0);
       assert.equal(notice.actualStartAt.getTime(), start);
-      assert.equal(notice.actualEndAt.getTime(), start + 9 * 3600000 + (times.span ? 86400000 : 0));
+      assert.equal(notice.actualEndAt.getTime(), start + 9 * 3600000);
       state.records.set(noticePath, notice); notices[id] = notificationExpectation(notice);
     }
     await state.save(command(copy, "convert", {}, { notifications: notices }));

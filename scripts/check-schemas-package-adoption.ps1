@@ -9,7 +9,6 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Web.Extensions
 
 function Invoke-GitText {
     param(
@@ -26,9 +25,7 @@ function Invoke-GitText {
 
 function Convert-JsonDictionary {
     param([Parameter(Mandatory = $true)][string]$Text)
-    $serializer = New-Object System.Web.Script.Serialization.JavaScriptSerializer
-    $serializer.MaxJsonLength = [int]::MaxValue
-    return $serializer.DeserializeObject($Text)
+    return ($Text | ConvertFrom-Json -AsHashtable -Depth 100)
 }
 
 function Read-JsonDictionary {

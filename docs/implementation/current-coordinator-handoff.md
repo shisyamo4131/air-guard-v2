@@ -5,7 +5,7 @@
 ## 現在の作業
 
 - 棚卸し解消の継続先は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)。解消順、状態、次checkpointは同roadmapを正とし、既存phaseとの関係も同書から確認します。
-- SCR-01「Billings入金予定日」は標準Manager／Class保存、Rules整合、旧Function撤去、Local自動検証、Dev反映・受入れまで完了し、同ロードマップで10点を加点済みです。次はSCR-02「配置通知の状態更新・編集」の現行経路と影響範囲を調査します。
+- SCR-01「Billings入金予定日」は標準Manager／Class保存、Rules整合、旧Function撤去、Local自動検証、Dev反映・受入れまで完了し、同ロードマップで10点を加点済みです。SCR-02「配置通知の状態更新・編集」は標準Manager／Class接続を完了し、Schemas `3.0.0-dev.3`をroot/Functionsへ導入しました。PostAdoption、直接対象test、TESTERのLocal UI確認、ユーザー本人の遷移確認、domain-full 1433/1433、Local Emulator 180/180、最終Local T21は成功しました。DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断しましたが、Dev受入れ、buildは未実施で、SCR-02は未完・得点0です。[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)を参照してください。
 - 製品全体の残作業は[正式運用ロードマップ](../roadmaps/airguard-v2.md)、確認済み要件は[現行仕様](../specification.md)、実行証拠は[検証索引](../verification/README.md)を参照します。
 
 ## 未決事項と承認
@@ -18,7 +18,7 @@
 
 ## 次の作業
 
-次は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#次の作業)に従い、SCR-02「配置通知の状態更新・編集」の現行画面、保存経路、通知生成への影響を調査し、最小の改修単位と検証範囲を提示する。製品code・Rulesの変更、Dev反映、実data操作は、調査結果とcheckpoint範囲の確認後に別途進める。
+次は最終差分の利用者review後、Dev反映と会社管理者受入れを別承認で実行する。Schemas `3.0.0-dev.3`導入、saveOperationのnotify分岐における`actualIsStartNextDay` parity補正、PostAdoption、直接対象test、Local UI、domain-full、Local Emulator 180/180、最終Local T21の成功は確認済みだが、SCR-02の完了・Dev反映・進捗加点は行わない。DEV read-only確認ではmigration/repair不要と判断したが、writeは0件である。build、FCM実配信、backend日付算術、dashboard本人表示、Dev受入れは未検証であり、Rules、Dev、Prod、実data、package publishは別の承認境界に残す。
 
 ### 既存FGA工程の参照（2026-09-15時点）
 

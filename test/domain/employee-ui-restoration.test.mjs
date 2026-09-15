@@ -11,7 +11,8 @@ import { formatNumber } from "../../utils/formats/util.js";
 import { employeeReadLabel } from "../../composables/domain/employee/employeeReadLabel.js";
 
 const source = (file) => readFile(new URL(`../../${file}`, import.meta.url), "utf8");
-const dialogs = ["Employee/Certifications/Manager/index.vue", "Insurance/Transition/Manager.vue", "Operation/Editor.vue", "ArrangementNotifications/Manager/index.vue", "ArrangementNotification/Manager/toLeaved.vue", "Employee/ArchiveDialog.vue"];
+const dialogs = ["Employee/Certifications/Manager/index.vue", "Insurance/Transition/Manager.vue", "Operation/Editor.vue", "Employee/ArchiveDialog.vue"];
+const managerDialogs = ["ArrangementNotifications/Manager/index.vue", "ArrangementNotification/Manager/toLeaved.vue"];
 async function setup(file, supplied, returns) {
   const { descriptor } = parse(await source(file));
   const code = descriptor.scriptSetup.content.replace(/import[\s\S]*?;\s*/gu, "");
@@ -19,7 +20,7 @@ async function setup(file, supplied, returns) {
   return new Function(...Object.keys(bindings), `${code}; return { ${returns} };`)(...Object.values(bindings));
 }
 test("editor dialogs scroll the card body while title/actions remain outside it; all changed SFCs compile", async () => {
-  for (const file of [...dialogs, "SiteOperationSchedule/Duplicator/index.vue", "Employees/Manager/index.vue", "Operation/ArrayManager.vue", "Operation/Manager.vue", "Operation/RowsManager.vue", "Workers/DataTable/index.vue", "ArticleDetails/DataTable/index.vue", "Employee/Autocomplete.vue"]) {
+  for (const file of [...dialogs, ...managerDialogs, "SiteOperationSchedule/Duplicator/index.vue", "Employees/Manager/index.vue", "Operation/ArrayManager.vue", "Operation/Manager.vue", "Operation/RowsManager.vue", "Workers/DataTable/index.vue", "ArticleDetails/DataTable/index.vue", "Employee/Autocomplete.vue"]) {
     const path = `components/${file}`, { descriptor, errors } = parse(await source(path), { filename: path });
     assert.deepEqual(errors, []);
     const script = compileScript(descriptor, { id: path });
@@ -35,6 +36,14 @@ test("editor dialogs scroll the card body while title/actions remain outside it;
       if (file.includes("Duplicator")) assert.equal(find(body, "v-date-picker").length, 1);
     }
   }
+  const pluralManager = await source("components/ArrangementNotifications/Manager/index.vue");
+  const leavedManager = await source("components/ArrangementNotification/Manager/toLeaved.vue");
+  assert.match(pluralManager, /<air-array-manager\b/u);
+  assert.match(pluralManager, /disable-delete/u);
+  assert.match(pluralManager, /hide-delete-btn/u);
+  assert.match(leavedManager, /<air-item-manager\b/u);
+  assert.match(leavedManager, /disable-delete/u);
+  assert.match(leavedManager, /hide-delete-btn/u);
   assert.match(await source("components/Operation/ArrayManager.vue"), /class="d-flex flex-column flex-grow-1 overflow-hidden"/u);
   for (const file of ["pages/employees/index.vue", "pages/employees/resigned.vue"]) assert.match(await source(file), /class="d-flex flex-column flex-grow-1 overflow-hidden"/u);
 });

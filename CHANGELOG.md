@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- SCR-02として、rootアプリとCloud Functionsへ公開Schemas exact `3.0.0-dev.3`を導入し、PostAdoptionでname/version/resolved/integrityの一致を確認した。配置通知生成のsaveOperation notify分岐へSchemasの`actualIsStartNextDay` parity（`worker.isStartNextDay`）を反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21が成功した。TESTERの会社管理者Local UIで取消・必須field validation・一時値保存・listener反映・reload保持・baseline復元、ユーザー本人の一方向遷移とLEAVED時の「閉じる」のみ表示を確認した。DEV read-only確認では配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した。writeは0件である。build、Dev/Prod、remote/data、FCM実配信、backend日付算術、Dev受入れは未実施で、SCR-02は未完・得点0、状態はLocal完了・Dev待ちを維持する。[Local検証記録](docs/verification/scr-02-arrangement-notification-local.md)を参照。
+
 - Local Emulator全件testを各小工程の完了条件から最終Dev候補差分の確認へ集約した。各工程の対象testは継続し、最終全件成功後は非失効証拠を再利用、失効・不足範囲だけを再検証する。影響不明・全体基盤変更・明示例外の全件確認は維持する。[ADR 0040](docs/decisions/0040-impact-based-staged-verification.md#2026-09-15-local-emulator全件確認の集約と証拠再利用)を参照。
 
 - 廃止済みDev Cloud Functionの単発削除は、対象と復旧方法を個別承認したFirebase CLIの直接操作へ統一した。通常のDev反映はmain pushによるGitHub Actionsを維持し、単発削除のための一時workflow編集・復元を行わない。[Dev手順](docs/runbooks/dev-deployment.md#廃止済みcloud-functionの単発削除)を参照。今回は方針・文書の変更で、Function削除やworkflow変更は行っていない。

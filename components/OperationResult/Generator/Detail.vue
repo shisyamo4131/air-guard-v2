@@ -98,6 +98,7 @@ const actionBtnAttrs = computed(() => {
                     icon="mdi-pencil"
                     @click="() => activatorProps.toUpdate()"
                     size="small"
+                    :disabled="props.loading || activatorProps.disabled"
                   />
                 </template>
               </ArrangementNotificationManager>

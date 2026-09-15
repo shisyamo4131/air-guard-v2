@@ -24,7 +24,7 @@
 | 請求確定・確定後の編集削除 | 中・未提供UIを含む | 顧客請求のC/U/D handlerがunsupported。詳細の編集入口は入金予定日。Billingにstatus/confirmはあるが確定画面・issuer snapshot保存経路は今回未確認 | 「既存確定ロックの撤去」と誤分類しない。提供UI・標準保存・Rulesを実装する単位。現在の入金予定日編集から分ける |
 | 予定から実績化 | 高・要変更 | Generator→useOperationGenerator→saveOperation。通知の期待値比較やserver側変換が存在。ClassにはsyncToOperationResultがあるがRules createは予定ID=null・作業員空等を要求 | Generatorとクラス標準実績化、OperationResults作成Rules、旧convert callerを同時に整合。通知の実勤務時間反映・予定との紐付けは維持 |
 | 配置通知作成 | 維持 | schedule.notifyでClassから通知documentを生成し予定側状態を同じtransactionで更新 | 後続通知生成と送信までclientへ移さない |
-| 配置確認・上番・下番／通知編集 | 中・要変更 | useNotificationEditorが独自transaction、期待値比較、field patch、再読込を実装。Class.update/toConfirmed/toArrived/toLeavedを保存に使っていない | 通知Manager・本人向け操作・入力を標準クラスへ接続。状態ごとの時刻・実勤務値と後続通知条件を検証 |
+| 配置確認・上番・下番／通知編集 | SCR-02 In Progress（Local完了・Dev待ち） | 単数・本人向けManagerはAir ManagerとArrangementNotificationの標準`update()`／遷移methodへ接続し、旧expected比較・patch transaction・再読込経路を撤去した。Schemas `3.0.0-dev.3`をroot/Functionsへ導入し、notify生成の`actualIsStartNextDay` parityをsaveOperationにも反映した。直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21、TESTERの会社管理者Local UI、ユーザー本人の遷移確認は成功した。DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した | 利用者review後、Dev反映と会社管理者受入れを別承認で実行する。build、FCM実配信、backend日付算術、dashboard本人表示、Dev受入れは未検証 |
 | Notifications生成・FCM・結果記録／実績から請求勤怠等の反映 | 維持 | ArrangementNotifications→Notifications→FCMの二段階Trigger、OperationResultのC/U/D→各projection同期が存在 | 新しい専用層を増やさず既存Triggerを維持。保存完了と後続反映完了を区別して検証する |
 
 ### 主な一次根拠
@@ -34,7 +34,7 @@
 - 請求・lock: [OperationBilling Manager](../../components/OperationBilling/Manager/index.vue)、[useOperationSubmission](../../composables/application/operation/useOperationSubmission.js)、[operationWriteContract](../../functions/shared/operationWriteContract.js)、[Rules](../../firestore.rules)のisValidOperationResultClientCreate/Update/Delete。installed Schemasの`src/OperationBilling.js`の_shouldCheckLock/delete/toggleLockと`src/OperationResult.js`のhookを照合した。
 - 顧客請求: [customerBillingHandlers](../../handlers/customerBillingHandlers.js)、01-05で撤去した旧`updateBillingPaymentDate`のGit履歴、RulesのBillings match。installed Schemasの`src/Billing.js`に確定後update/deleteを一律拒否するhookは今回見つからない。
 - 実績化: [useOperationGenerator](../../composables/application/operation/useOperationGenerator.js)、[saveOperation](../../functions/modules/operations/saveOperation.js)。installed Schemasの`src/SiteOperationSchedule.js`のsyncToOperationResultは同ID実績作成と予定更新を同じtransactionで行う。
-- 通知: [標準作成への入口](../../composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js)、[独自通知editor](../../composables/application/operation/useNotificationEditor.js)、[本人向け操作](../../composables/application/operation/usePersonalNotification.js)、[配置通知Trigger](../../functions/triggers/arrangementNotification.js)、[送信・結果記録](../../functions/modules/utils/notifications.js)。
+- 通知: [標準作成への入口](../../composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js)、[単数Manager](../../components/ArrangementNotification/Manager/index.vue)、[本人向け複数Manager](../../components/ArrangementNotifications/Manager/index.vue)、[下番Manager](../../components/ArrangementNotification/Manager/toLeaved.vue)、[配置通知Trigger](../../functions/triggers/arrangementNotification.js)、[送信・結果記録](../../functions/modules/utils/notifications.js)。
 - 実績の後続反映: [OperationResult Trigger](../../functions/triggers/operationResult.js)、[projection同期](../../functions/modules/operations/syncOperationResultProjections.js)。一つのprojectionの失敗で残りを実行せず終える構造ではなく、個別実行後に失敗を集約する。
 
 ### 推奨する進め方と確認残
@@ -42,6 +42,14 @@
 棚卸しを一つずつ解消する順序・checkpoint・確認残の扱いは[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)を正とする。本書は確認日付きの実装事実を保持し、改修状態や次工程を重複管理しない。
 
 既存testには旧専用経路・client write拒否を期待するものがある。後続実装では`operation-write`、`operation-submission`、`billing-payment-date`、`client-billing-contract-parity`、各master archive、`employee-schema-compatibility`、`operation-result-projections`およびlocal harnessを対象に、旧期待値と新仕様を区別して更新する。今回testは存在・参照の確認だけで、runtime検証は実行していない。製品code、Rules、package、実data、remoteは変更していない。
+
+## SCR-02 Local検証後・Dev前の実装状態（2026-09-15）
+
+単数の配置通知編集、本人向け確認・上番・下番を`AirItemManager`／`AirArrayManager`へ接続し、編集対象`ArrangementNotification`の標準`update()`／`toConfirmed()`／`toArrived()`／`toLeaved()`等へ保存を委譲するcodeとtestを準備した。本人向け複数Managerは選択したlistener由来documentを追跡し、同documentのlistener更新時だけ編集中draft全体を最新instanceで置き換える。別documentだけの更新ではdraftを置き換えない。
+
+旧`useNotificationEditor`、`usePersonalNotification`、client／Functionsの`notificationStateContract`は到達元とtestを更新して削除した。`operationCommandContract`／`operationWriteContract`の`notificationExpectation`等は実績化で使用中のため維持する。Firestore Rules、配置通知の作成・状態変更Trigger、Notifications作成、FCM送信・結果記録には製品差分を加えていない。
+
+自動test codeは、標準クラスの4遷移、実勤務時刻・日跨ぎ・勤務時間、manager接続、同一tenant Rules、CONFIRMED／ARRIVED／LEAVED進入時のNotifications生成、同status非生成、`shouldNotify=false`を対象に更新した。listenerによる編集中draft全体の置換、別document更新時の入力維持、失敗時のdialog・入力保持、loadingと連打抑止はTESTERのLocal UIで確認した。Schemas `3.0.0-dev.3`はsource tag・release evidence・registry・root/Functionsのversion、resolved、integrity、installed sourceが一致し、`PostAdoption`は成功した。saveOperationのnotify生成分岐にも`actualIsStartNextDay`の実勤務値引継ぎを反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21は成功した。TESTERは会社管理者Local UIでLEAVED通知の取消、必須field validation、一時値保存、listener反映、reload保持、baseline復元を確認し、ユーザー本人は一方向遷移とLEAVED時の「閉じる」のみ表示を確認した。Local EmulatorはFirebase CLI 15.30.1、`demo-air-guard-v2-codex`、127.0.0.1 loopback、合成data、外部作用denyで実行し、cleanup、saved-data fingerprint不変、port残存なしを確認した。DEV read-only確認では配置通知2579件の必要最小fieldを取得し、翌日開始1件と関連予定・勤務実績の整合を確認したためmigration/repair不要と判断した。writeは0件である。build、Dev/Prod、FCM実配信、backend日付算術、dashboard本人表示、Dev受入れは未検証で、SCR-02はLocal完了・Dev待ち、得点0である。[Local検証記録](../verification/scr-02-arrangement-notification-local.md)を参照する。
 
 ## SCR-01-01 保存契約の調査結果（2026-09-15）
 

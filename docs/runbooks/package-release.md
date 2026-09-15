@@ -1,14 +1,14 @@
 # package release runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-09-01
+- 最終確認日: 2026-09-15
 - 役割: 関連packageのconsumer更新、公開、rollback
 
 ## 関連パッケージの更新
 
-`air-guard-v2-schemas`の公開済みversionをルートアプリとCloud Functionsへ同時に反映する場合、security・authorizationに関係するcatalog変更では`@dev`やrangeを使わず、承認済みのexact versionを両方へ指定する。現在のAirGuardV2 app/Functions consumerは、legacy Stripe fieldをCompany schemaから除去した`3.0.0-dev.1`へ固定している。旧`2.4.2-dev.167`はSTRIPE-02 local checkpointのrollback baselineとして履歴保持し、artifactをunpublishしない。Admin SDKはlocal commit `c95660d`でexact `.167`を維持し、未知CCB pathへの旧破壊操作をfail closedにするが、CCB-aware backup/restore自体は未提供である。
+`air-guard-v2-schemas`の公開済みversionをルートアプリとCloud Functionsへ同時に反映する場合、security・authorizationに関係するcatalog変更では`@dev`やrangeを使わず、承認済みのexact versionを両方へ指定する。現在のAirGuardV2 app/Functions consumerは`3.0.0-dev.3`へ固定し、SCR-02のPostAdoptionでversion、resolved tarball、integrityの一致を確認済みである。直前consumerの`3.0.0-dev.2`、旧`3.0.0-dev.1`、`2.4.2-dev.167`はそれぞれ履歴またはSTRIPE-02 local checkpointのrollback baselineとして保持し、artifactをunpublishしない。Admin SDKはlocal commit `c95660d`でexact `.167`を維持し、未知CCB pathへの旧破壊操作をfail closedにするが、CCB-aware backup/restore自体は未提供である。
 
-Schemas sourceでは`@shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1`がtag `v3.0.0-dev.1`から公開済みである。STRIPE-02でAirGuardV2 root/Functionsへ同時導入し、変更後preflightでversion、resolved tarball、integrityの一致を確認済みである。registry freshnessの追加照会、Dev反映、Admin SDK更新はこのlocal checkpointへ含めない。
+Schemas sourceでは`@shisyamo4131/air-guard-v2-schemas@3.0.0-dev.3`がtag `v3.0.0-dev.3`から公開済みである。AirGuardV2 root/Functionsへ同時導入し、変更後preflightでversion、resolved tarball、integrityの一致を確認済みである。SCR-02ではnotify生成の実勤務値引継ぎをFunctions側にも補正し、直接対象testとPostAdoptionに成功した。Dev反映、Admin SDK更新はこのlocal checkpointへ含めない。
 
 package名やversionをprompt・task reportから転記してinstallを開始しない。変更前に次のread-only preflightを実行し、source tag manifest、repository release evidence、現在のroot/Functions manifest・lock chainを確認する。
 
@@ -17,8 +17,8 @@ pwsh -NoProfile -File scripts/check-schemas-package-adoption.ps1 `
   -SchemasRepository C:\Users\seven\projects\AirGuard\air-guard-v2-schemas `
   -ConsumerRepository C:\Users\seven\projects\AirGuard\air-guard-v2 `
   -ExpectedPackageName '@shisyamo4131/air-guard-v2-schemas' `
-  -TargetVersion '3.0.0-dev.1' `
-  -ReleaseEvidencePath C:\Users\seven\projects\AirGuard\air-guard-v2-schemas\docs\evidence\release-3.0.0-dev.1.md `
+  -TargetVersion '3.0.0-dev.3' `
+  -ReleaseEvidencePath C:\Users\seven\projects\AirGuard\air-guard-v2-schemas\docs\evidence\release-3.0.0-dev.3.md `
   -Mode PreAdoption
 ```
 
@@ -26,9 +26,9 @@ consumer変更後は同じ引数の`-Mode PostAdoption`を独立commandで実行
 
 ```powershell
 $env:NODE_USE_SYSTEM_CA = "1"
-npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1
+npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.3
 Push-Location functions
-npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1
+npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.3
 Pop-Location
 ```
 

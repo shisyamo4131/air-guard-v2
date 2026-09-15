@@ -4,11 +4,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import * as Vue from "vue";
 import { SiteOperationSchedule, OperationResult, ArrangementNotification, User } from "@shisyamo4131/air-guard-v2-schemas";
-import { Timestamp } from "firebase/firestore";
 import * as contract from "../../functions/shared/operationWriteContract.js";
 import * as referenceContract from "../../functions/shared/operationReferences.js";
 import * as employeeContract from "../../functions/shared/employeeContract.js";
-import { prepareNotificationState, expectedNotificationState, NOTIFICATION_STATE_PATCH } from "../../functions/shared/notificationStateContract.js";
 import { operationUxAllowed } from "../../utils/auth/policies/operationActorPolicy.js";
 
 const source = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
@@ -16,20 +14,6 @@ async function factory(path, name, bindings) { const code = (await source(path))
 const flush = async () => { await Promise.resolve(); await Vue.nextTick(); await Promise.resolve(); };
 function schedule() { const model = new SiteOperationSchedule({ docId: "operation", siteId: "site", dateAt: new Date("2026-09-01"), startTime: "08:00", endTime: "17:00" }); model.addWorker({ id: "employee", isEmployee: true }, -1); return model.toObject(); }
 function notification() { const worker = schedule().employees[0]; return { ...new ArrangementNotification(worker).toObject(), docId: `operation_${worker.workerId}`, unknown: { retained: true } }; }
-
-for (const status of ["ARRANGED", "CONFIRMED", "ARRIVED", "LEAVED"]) test(`notification ${status} only owns status fields and retains installed transition semantics`, () => {
-  const raw = notification(), now = new Date("2026-09-01T10:00:00Z"), nanos = new Timestamp(1788200000, 123456789);
-  raw.arrivedAt = nanos;
-  const input = { expected: expectedNotificationState(raw), changes: { targetStatus: status, actualStartTime: "09:00", actualEndTime: "18:00", actualIsStartNextDay: false, actualBreakMinutes: 0, isQualified: false, isOjt: true } };
-  const patch = prepareNotificationState(raw, input, now), next = { ...raw, ...patch };
-  assert.ok(Object.keys(patch).every((field) => NOTIFICATION_STATE_PATCH.includes(field))); assert.equal(next.status, status); assert.strictEqual(next.unknown, raw.unknown);
-  assert.equal(next.actualStartTime, status === "LEAVED" ? "09:00" : "08:00"); assert.equal(next.actualBreakMinutes, status === "LEAVED" ? 0 : 60);
-  assert.equal(next.isQualified, false); assert.equal(next.isOjt, true); assert.equal(next.employeeId, raw.employeeId);
-  if (status === "LEAVED") { assert.strictEqual(next.arrivedAt, nanos); assert.deepEqual(next.leavedAt, now); }
-  if (status === "ARRANGED") assert.equal(next.confirmedAt, null);
-  assert.throws(() => prepareNotificationState({ ...raw, actualBreakMinutes: 40 }, input), { code: "aborted" });
-  assert.throws(() => prepareNotificationState(raw, { ...input, changes: { ...input.changes, employeeId: "forged" } }), { code: "invalid-argument" });
-});
 
 test("submission prompts only the terminated destination and blocks uncertain retry and stale-scope responses", async () => {
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, roles: ["controller"] }) });
@@ -159,52 +143,6 @@ test("Generator completes notify(false), rereads raw, waits for a server notific
   listeners[1].emit(snapshot(false, false), true); assert.equal(generator.notifications.value.length, 0); assert.equal(generator.ready.value, false); assert.equal(listeners[1].stopped, true); effect.stop();
 });
 
-async function notificationEditorHarness(options = {}) {
-  const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, roles: [] }) });
-  const raw = { ...notification(), actualStartTime: "08:00", actualEndTime: "17:00" }, writes = [], reads = [];
-  let transactions = 0;
-  const make = await factory("composables/application/operation/useNotificationEditor.js", "useNotificationEditor", {
-    ...Vue, ArrangementNotification, ...employeeContract, operationDateTime, ...contract, expectedNotificationState, prepareNotificationState,
-    useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }), doc: (_, path) => ({ path, id: path.split("/").at(-1) }), serverTimestamp: () => new Date(),
-    getDocFromServer: async (ref) => { reads.push(ref.id); if (transactions && options.postError) throw Object.assign(new Error(), { code: options.postError }); return { exists: () => true, data: () => raw }; },
-    runTransaction: async (_, callback) => {
-      transactions++; if (options.error) throw Object.assign(new Error(), { code: options.error });
-      const transaction = { get: async (ref) => options.get ? options.get(ref) : ({ exists: () => true, data: () => raw }), update: (ref, patch) => { writes.push([ref.id, patch]); } };
-      if (options.retry) { try { await callback(transaction); } catch { return callback(transaction); } }
-      return callback(transaction);
-    },
-  });
-  const effect = Vue.effectScope(); let editor; effect.run(() => { editor = make(); });
-  return { editor, auth, raw, reads, writes, effect, transactions: () => transactions };
-}
-
-test("notification reset while tx.get is pending prevents the old write and its transaction retry in the same scope", async () => {
-  let finish;
-  const state = await notificationEditorHarness({ retry: true, get: () => new Promise((resolve) => { finish = resolve; }) });
-  await state.editor.open(state.raw.docId); state.editor.update({ status: "LEAVED", actualStartTime: "09:00" });
-  const saving = state.editor.save(); await flush();
-  state.editor.reset(); await state.editor.open("other-notification"); state.editor.update({ actualStartTime: "10:00" });
-  finish({ exists: () => true, data: () => state.raw }); assert.equal(await saving, false);
-  assert.equal(state.writes.length, 0); assert.equal(state.editor.draft.value.actualStartTime, "10:00");
-  assert.deepEqual(state.reads, [state.raw.docId, "other-notification"], "old commit path must not begin a post-commit read"); state.effect.stop();
-});
-
-for (const postError of ["permission-denied", "unavailable"]) test(`notification committed save with ${postError} reload reports saved and never resends`, async () => {
-  const state = await notificationEditorHarness({ postError });
-  await state.editor.open(state.raw.docId); state.editor.update({ status: "LEAVED", actualStartTime: "09:00" });
-  assert.equal(await state.editor.save(), true); assert.equal(state.writes.length, 1);
-  assert.match(state.editor.message.value, /保存は完了/u); assert.equal(state.editor.conflict.value, false); assert.equal(state.editor.uncertain.value, false);
-  assert.equal(state.editor.draft.value, null); assert.equal(await state.editor.save(), false); assert.equal(state.transactions(), 1); state.effect.stop();
-});
-
-for (const error of ["permission-denied", "unavailable"]) test(`notification transaction ${error} retains independent draft, prevents blind retry, and clears on authority loss`, async () => {
-  const state = await notificationEditorHarness({ error });
-  await state.editor.open(state.raw.docId); state.editor.update({ status: "LEAVED", actualStartTime: "09:00" });
-  assert.equal(await state.editor.save(), false); assert.equal(state.writes.length, 0); assert.equal(state.editor.draft.value.actualStartTime, "09:00"); assert.equal(state.raw.actualStartTime, "08:00");
-  assert.equal(state.editor.uncertain.value, error === "unavailable"); await state.editor.save(); assert.equal(state.transactions(), 1);
-  state.auth.isSuperUserClaimValid = false; await flush(); assert.equal(state.editor.draft.value, null); assert.equal(state.editor.baseline.value, null); state.effect.stop();
-});
-
 for (const kind of ["schedule", "result"]) test(`${kind} duplicator keeps a raw source expectation and fixed destination IDs; uncertain responses cannot auto-resubmit`, async () => {
   const sourceRaw = kind === "schedule" ? schedule() : new OperationResult({ ...schedule(), isLocked: false }).toObject();
   const calls = []; let nextId = 0;
@@ -226,50 +164,6 @@ test("legacy result duplicate writer cannot invoke Class persistence", async () 
   assert.match(await source("components/OperationResult/Duplicator/index.vue"), /v-if="ui.error"/u);
 });
 
-async function personalHarness(options = {}) {
-  const state = await notificationEditorHarness(options);
-  const definition = Vue.ref({ ARRANGED: { next: { status: "CONFIRMED" } }, CONFIRMED: { next: { status: "ARRIVED" } }, ARRIVED: { next: { status: "LEAVED" } }, LEAVED: { next: null } });
-  const make = await factory("composables/application/operation/usePersonalNotification.js", "usePersonalNotification", {
-    ...Vue, ...employeeContract, operationDateTime, SiteOperationSchedule, useAuthStore: () => state.auth, useNuxtApp: () => ({ $firestore: {} }), useNotificationEditor: () => state.editor,
-    doc: (_, path) => ({ path }), getDocFromServer: options.scheduleRead || (async () => ({ exists: () => true, data: schedule })),
-  });
-  let personal; state.effect.run(() => { personal = make(definition); });
-  return { ...state, personal };
-}
-for (const status of ["ARRANGED", "CONFIRMED", "ARRIVED"]) test(`personal ${status} retains opening raw through next/save, with nanos and unknown intact`, async () => {
-  const state = await personalHarness(); state.raw.status = status; state.raw.createdAt = new Timestamp(1788200000, 123456789);
-  const before = employeeContract.encodeExpected(state.raw);
-  assert.equal(await state.personal.open(state.raw.docId), true); assert.strictEqual(state.editor.baseline.value, state.raw);
-  if (status === "ARRIVED") state.editor.update({ actualStartTime: "09:00", actualEndTime: "18:00", actualBreakMinutes: 0 });
-  assert.equal(await state.personal.saveNext(), true);
-  const patch = state.writes[0][1], saved = { ...state.raw, ...patch };
-  assert.equal(patch.status, { ARRANGED: "CONFIRMED", CONFIRMED: "ARRIVED", ARRIVED: "LEAVED" }[status]);
-  assert.equal(Object.hasOwn(patch, "createdAt"), false); assert.equal(Object.hasOwn(patch, "unknown"), false);
-  assert.equal(saved.createdAt.nanoseconds, 123456789); assert.deepEqual(employeeContract.encodeExpected(state.raw), before);
-  if (status === "ARRIVED") assert.equal(saved.actualBreakMinutes, 0); state.effect.stop();
-});
-for (const outcome of ["cancel", "missing", "error", "authority", "other"]) test(`personal schedule ${outcome} rejects the old delayed response and draft`, async () => {
-  const pending = [];
-  const state = await personalHarness({ scheduleRead: () => new Promise((resolve, reject) => pending.push({ resolve, reject })) });
-  const opening = state.personal.open(state.raw.docId); for (let index = 0; index < 8 && !pending.length; index++) await flush();
-  assert.equal(state.personal.disabled.value, true); assert.equal(await state.personal.saveNext(), false);
-  if (outcome === "cancel") state.personal.close();
-  if (outcome === "authority") { state.auth.isSuperUserClaimValid = false; await flush(); }
-  let other;
-  if (outcome === "other") { other = state.personal.open("other"); for (let index = 0; index < 8 && pending.length < 2; index++) await flush(); }
-  if (outcome === "error") pending[0].reject(new Error()); else pending[0].resolve({ exists: () => outcome !== "missing", data: schedule });
-  assert.equal(await opening, false); assert.equal(state.personal.schedule.value, null); assert.equal(state.writes.length, 0);
-  if (outcome === "other") { pending[1].resolve({ exists: () => true, data: schedule }); assert.equal(await other, true); }
-  else assert.equal(state.editor.draft.value, null); state.effect.stop();
-});
-for (const error of ["permission-denied", "unavailable"]) test(`personal ${error} retains leave input without repeating save`, async () => {
-  const state = await personalHarness({ error }); state.raw.status = "ARRIVED";
-  await state.personal.open(state.raw.docId); state.editor.update({ actualStartTime: "10:00" });
-  assert.equal(await state.personal.saveNext(), false); assert.equal(state.editor.draft.value.actualStartTime, "10:00");
-  assert.equal(await state.personal.saveNext(), false); assert.equal(state.transactions(), 1); assert.equal(state.raw.actualStartTime, "08:00");
-  state.personal.close(); assert.equal(state.editor.draft.value, null); state.effect.stop();
-});
-
 async function scheduleActionsHarness({ developer = false } = {}) {
   const loadingEvents = [], errors = [], transaction = { id: "transaction" };
   const Schedule = {
@@ -285,7 +179,6 @@ async function scheduleActionsHarness({ developer = false } = {}) {
   });
   return { actions: make(), errors, loadingEvents, transaction };
 }
-
 test("schedule actions call the model directly for update and notify", async () => {
   const events = [];
   const { actions, errors, loadingEvents } = await scheduleActionsHarness();
