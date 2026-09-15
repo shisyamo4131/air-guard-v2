@@ -20,7 +20,7 @@
 | Employee退職・訂正 | 高・Class契約の整理が必要 | 専用Auth lifecycleが業務状態を更新。標準Employee.beforeUpdateもACTIVE→RESIGNEDを拒否し、toTerminatedにはUser.deleteまで含まれる | 単純な接続替えは不可。Classの業務状態更新と認証処理、入口、Rulesの分離を一つの設計単位にする。package変更自体は未承認・未実施 |
 | 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | 高・要変更 | Operation専用ManagerとsaveOperationが残る。Rulesはlock中update・lock変更・articles/調整値変更を拒否。Callableにもrole認可が残る | OperationResultsを共有する画面、標準OperationResult/OperationBilling、Rules、正規callerの撤去とtestを同じ工程で整合。経理画面へのアクセス制限は維持 |
 | 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
-| Billings入金予定日 | SCR-01-06までLocal整合 | 詳細画面はManager/Classの標準update、Rulesはtenant共通の既存update、旧PaymentDateEditor・Callable・expected比較はLocal sourceから撤去済み。標準保存、listener再表示、日付条件・解除、背景writerとの併存をLocal確認済み | 01-07でremote旧Function撤去とDev受入れを行う |
+| Billings入金予定日 | SCR-01-07 Dev反映済み・受入れ待ち | 詳細画面はManager/Classの標準update、Rulesはtenant共通の既存update、旧PaymentDateEditor・Callable・expected比較はsourceとDevから撤去済み。標準保存、listener再表示、日付条件・解除、背景writerとの併存をLocal確認済み | Devの会社管理者画面で変更・解除・再表示を受け入れ、01-07を閉じる |
 | 請求確定・確定後の編集削除 | 中・未提供UIを含む | 顧客請求のC/U/D handlerがunsupported。詳細の編集入口は入金予定日。Billingにstatus/confirmはあるが確定画面・issuer snapshot保存経路は今回未確認 | 「既存確定ロックの撤去」と誤分類しない。提供UI・標準保存・Rulesを実装する単位。現在の入金予定日編集から分ける |
 | 予定から実績化 | 高・要変更 | Generator→useOperationGenerator→saveOperation。通知の期待値比較やserver側変換が存在。ClassにはsyncToOperationResultがあるがRules createは予定ID=null・作業員空等を要求 | Generatorとクラス標準実績化、OperationResults作成Rules、旧convert callerを同時に整合。通知の実勤務時間反映・予定との紐付けは維持 |
 | 配置通知作成 | 維持 | schedule.notifyでClassから通知documentを生成し予定側状態を同じtransactionで更新 | 後続通知生成と送信までclientへ移さない |
@@ -128,7 +128,15 @@
 - browserで実際のbackend停止は起こしていない。保存失敗時にdialogを閉じず編集値とloading/error状態を扱う経路は自動testで確認した。remote Function、Dev、Prod、実data、package、migrationは変更・確認していない。
 - user-local Emulator、server、Chromeは停止せず、Emulator dataもexportしていない。別途、loopback限定のCodex専用Emulator suiteを実行した。rollbackは01-03〜05のclient・Rules・旧Callableを整合した一組で戻す。
 
-親SCR-01はDev受入れまで0点を維持する。次は01-07で固定releaseをDevへ反映し、remoteの旧Function撤去と画面受入れを行う。
+Local工程の完了時点では、親SCR-01はDev受入れまで0点を維持し、01-07で固定releaseのDev反映、remote旧Function撤去、画面受入れを行う計画としていた。反映結果と残る受入れは次節を正とする。
+
+## SCR-01-07 Dev反映（2026-09-15、画面受入れ待ち）
+
+release commit `19e44c96141202f0a4ae0bde48f27ea4e74bf797`を`air-guard-v2-dev`へGitHub Actionsで反映した。selectorは`firestore,functions,hosting`を選び、Dev Hosting artifact生成、Firestore／Hostingのdry-runとdeploy、`asia-northeast1`の旧Callable `updateBillingPaymentDate`削除が成功した。反映後のread-only確認では47 Functionsが残り、撤去対象名は存在しなかった。Hosting rootもHTTP 200を返した。
+
+このreleaseにdata migration、既存documentの変更、backup、maintenanceはない。失敗時は既知の変更前source `048e44e9cfd4ca887ec328e7e835c291579e68af`を基準に、旧Function・source・Rules・Hostingを一組で復元する別承認のcorrective releaseを行う。data rollbackは不要である。一時的なFunction削除stepはcleanup commit `ed2887af3760af70017115fa79868157a08d2fe4`で通常workflowへ戻し、後続ActionsではFirebase対象なしとしてdeploy jobがskipされた。利用者LocalのChrome、Emulator、serverには触れていない。
+
+remote反映とpost-checkの詳細は[SCR-01 Dev release記録](../verification/scr-01-billing-payment-date-dev.md)を正とする。Dev画面での変更・解除・再表示・失敗時表示は未確認であり、SCR-01-07と親SCR-01は完了にしない。
 
 ## 2026-09-15仕様回答の反映と残作業
 

@@ -42,7 +42,7 @@ SCR番号は2026-09-15時点の改修優先順位に合わせて付番し直し�
 
 対象は顧客請求詳細で提供済みの「入金予定日を変更／未設定にする」。請求の新規作成・確定・削除、入金実績モデルの追加、User/Auth変更は含めない。各枝番は同じ改修の作業・確認単位であり、個別に製品へ公開できることを意味しない。親SCR-01の10点は全枝番の完了で加点し、途中の部分加点は行わない。
 
-01-03着手前は[詳細画面](../../pages/billings/customers/[id].vue)が[useCustomerBilling](../../composables/dataLayers/useCustomerBilling.js)でBilling instanceを購読し、旧`PaymentDateEditor`が別の専用composableで読取り・編集・Callable保存を行っていた。現在の詳細画面はlistener由来Billingを単数Managerへ接続済みで、[Rules](../../firestore.rules)も既存Billingの標準updateを許可する。旧component、composable、共有contract、`updateBillingPaymentDate`のAPI・module・exportは01-05でLocal sourceから撤去した。remote Functionの削除は01-07のrelease作業で行う。
+01-03着手前は[詳細画面](../../pages/billings/customers/[id].vue)が[useCustomerBilling](../../composables/dataLayers/useCustomerBilling.js)でBilling instanceを購読し、旧`PaymentDateEditor`が別の専用composableで読取り・編集・Callable保存を行っていた。現在の詳細画面はlistener由来Billingを単数Managerへ接続済みで、[Rules](../../firestore.rules)も既存Billingの標準updateを許可する。旧component、composable、共有contract、`updateBillingPaymentDate`のAPI・module・exportは01-05でLocal sourceから撤去し、remote Functionも01-07のDev releaseで撤去した。
 
 | 枝番 | 作業 | 具体的な改修・確認内容 | 完了の判断 | 状態 |
 |---|---|---|---|---|
@@ -52,13 +52,13 @@ SCR番号は2026-09-15時点の改修優先順位に合わせて付番し直し�
 | SCR-01-04 | Billings Rulesの整合 | client write全面拒否を見直し、今回の標準保存を認証・同一tenantの境界で成立させる。通常schema・日付業務条件をRulesへ複製しない。既存reader／背景writerとの境界を確認する | 同一tenantの正規保存が成功し、未認証・他tenantは拒否される。未提供の請求CRUD画面は追加されない | Completed（Rules・Local Emulator） |
 | SCR-01-05 | 旧専用経路の撤去 | PaymentDateEditorの旧実装、専用composable、updateBillingPaymentDateのAPI/export・本体、期待値比較等を参照確認して整理する。共有helperは利用元が残るものを削除しない | 正規画面から旧Callableへの到達がなく、不要な専用保存・競合stateと参照が残らない。公開済みFunctionの撤去対象も特定する | Completed（Local source） |
 | SCR-01-06 | 自動検証と独立レビュー | 設定・変更・nullへの解除、請求日との条件、日付の往復、標準保存内容、listener反映、取消・失敗、tenant境界、背景集計との併存を確認する。旧Callable前提のtestを新契約へ更新する | 影響classに応じた必須gateと独立reviewが完了。既存成功証拠の再利用と未検証範囲を明示する | Completed（Local検証） |
-| SCR-01-07 | Dev受入れ・文書とFGA反映 | 固定commitの対象client／Rulesを整合して反映し、必要な旧Function撤去を承認済み範囲で実施する。詳細画面で変更・解除・再表示・失敗時表示を受入れ、証拠と棚卸しを更新する | 対象範囲のDev受入れとGit closeoutが完了。SCR-01を完了とし、同じ証拠で満たしたFGAの範囲だけ反映する | Planned |
+| SCR-01-07 | Dev受入れ・文書とFGA反映 | 固定commitの対象client／Rulesを整合して反映し、必要な旧Function撤去を承認済み範囲で実施する。詳細画面で変更・解除・再表示・失敗時表示を受入れ、証拠と棚卸しを更新する | 対象範囲のDev受入れとGit closeoutが完了。SCR-01を完了とし、同じ証拠で満たしたFGAの範囲だけ反映する | Dev反映済み・受入れ待ち |
 
 標準保存は現在の3日付fieldのpatchからBilling全体の保存に変わる。01では`operationResults`、status、調整・備考、計算値・管理fieldの往復と、背景実績更新後も入金予定日が維持されるかを確認する。通常のdocument単位last-write-winsを前提とし、同時更新の完全保持を目的とする独自lock・期待値比較は追加しない。`paymentDueDate`・`paymentDueMonth`は標準クラスの派生値を利用する。
 
 SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路・Rules・旧経路を組み合わせた一つの変更として06で検証し、片側だけを先に公開しない。枝番ごとの調査・静的確認・直接対象testは進めるが、同じ回帰suiteを枝番ごとに重ねて実行しない。07の外部操作は既存のDev承認境界に従う。
 
-現在の検証入口は`test/domain/billing-payment-date.test.mjs`、`test/domain/customer-billing-manager.test.mjs`、`test/local/codex-local-harness.test.mjs`。旧client/server contractの同値比較testは01-05で対象実装とともに撤去した。01の保存契約・互換性・rollback・検証範囲は[調査結果](../implementation/operation-crud-simplification-inventory.md#scr-01-01-保存契約の調査結果2026-09-15)を参照する。02の部品実装と検証は[部品工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-02-単数managerと入力部品2026-09-15)、03の画面接続と直接testは[接続工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-03-標準保存と画面の接続2026-09-15完了)、04のRules境界は[Rules工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-04-billings-rulesの整合2026-09-15完了)、05の撤去範囲は[旧経路撤去の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-05-旧専用経路の撤去2026-09-15完了)、06のLocal統合検証は[検証工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-06-自動検証とlocal画面確認2026-09-15完了)を参照する。Dev受入れは未完了で、親SCR-01は0点を維持する。
+現在の検証入口は`test/domain/billing-payment-date.test.mjs`、`test/domain/customer-billing-manager.test.mjs`、`test/local/codex-local-harness.test.mjs`。旧client/server contractの同値比較testは01-05で対象実装とともに撤去した。01の保存契約・互換性・rollback・検証範囲は[調査結果](../implementation/operation-crud-simplification-inventory.md#scr-01-01-保存契約の調査結果2026-09-15)を参照する。02の部品実装と検証は[部品工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-02-単数managerと入力部品2026-09-15)、03の画面接続と直接testは[接続工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-03-標準保存と画面の接続2026-09-15完了)、04のRules境界は[Rules工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-04-billings-rulesの整合2026-09-15完了)、05の撤去範囲は[旧経路撤去の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-05-旧専用経路の撤去2026-09-15完了)、06のLocal統合検証は[検証工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-06-自動検証とlocal画面確認2026-09-15完了)を参照する。01-07のDev反映と旧Function撤去は[release記録](../verification/scr-01-billing-payment-date-dev.md)を参照する。Dev画面受入れは未完了で、親SCR-01は0点を維持する。
 
 ## 影響確認から次の1件を選ぶ
 
@@ -127,4 +127,4 @@ code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-
 
 ## 次の作業
 
-次はSCR-01-07のDev受入れとGit closeout。01-06でLocalの標準保存、保存内容、listener再表示、日付条件・解除、背景集計との併存、tenant境界を確認した。固定releaseでclient／Rulesを整合して反映し、remoteの`updateBillingPaymentDate`を承認済み範囲で撤去して、Dev画面を受け入れる。
+次はSCR-01-07のDev画面受入れとGit closeout。固定releaseでclient／Rules／HostingをDevへ反映し、remoteの`updateBillingPaymentDate`も撤去済みである。会社管理者で入金予定日の変更・解除・再表示と既存表示を確認する。受入れ完了まではSCR-01を完了にせず、0点を維持する。
