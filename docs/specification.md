@@ -81,7 +81,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 #### 編集dialogの幅
 
-- 通常のdata編集dialogは`max-width: 480px`を既定とする。項目の可読性、複数列・表・複数step、またはresponsive・accessibility上の必要性が確認できる場合だけ、component固有の理由をもってより広い幅へ上書きできる。確認専用dialog、viewer、selector等の非編集UIはこの既定の対象外とする。archive・復旧・物理削除等の確認dialog幅は480pxへ自動拘束せず、操作固有の安全な確認内容、可読性、responsive・accessibilityを基準に決める。
+- 通常のdata編集dialogは`max-width: 480px`を既定とする。これは原則値であり、各画面の項目量、可読性、複数列・表・複数step、responsive・accessibilityに合わせて、componentごとに狭い幅または広い幅へ上書きできる。確認専用dialog、viewer、selector等の非編集UIはこの既定の対象外とする。archive・復旧・物理削除等の確認dialog幅は480pxへ自動拘束せず、操作固有の安全な確認内容、可読性、responsive・accessibilityを基準に決める。
 
 - 「Pageとcomponentの構成」をManager構成・入力・保存経路・dialog幅の詳細仕様の正本とする。変更・段階移行時の進め方は[Development and data rules](project-rules/development-and-data.md#実装原則)、page・fetch・従属参照の判断理由は[ADR 0067](decisions/0067-component-fetch-and-dependent-reference-boundary.md)、Managerとdialog規約の判断理由は[ADR 0069](decisions/0069-domain-manager-editable-state-ownership.md)を参照する。
 

@@ -19,6 +19,7 @@ import {
   getDoc,
   getDocs,
   GeoPoint,
+  onSnapshot,
   query,
   runTransaction,
   serverTimestamp,
@@ -53,7 +54,6 @@ import { createSiteCustomerProjection } from "../../utils/site/siteCustomerProje
 import { encodeExpected } from "../../functions/shared/employeeContract.js";
 import { expectedForOperation, notificationExpectation } from "../../functions/shared/operationWriteContract.js";
 import { prepareNotificationState, expectedNotificationState } from "../../functions/shared/notificationStateContract.js";
-import { paymentExpected } from "../../functions/shared/billingPaymentContract.js";
 import {
   inspectStripeMigrationRepositoryPreconditions,
   planCompanyLegacyStripeMigration,
@@ -340,20 +340,22 @@ async function emp05CustomerOrdering(order) {
   }
 }
 
-test("EMP05-C HTTP payment date and background aggregates preserve raw references and deny direct client writes", async () => {
+test("EMP05-C background aggregates preserve raw references and protected client writes", async () => {
   const actor = await seedSiteLifecycleTransportActor({ uid: "emp05-c-payment-user", roles: [], isAdmin: false });
   const { companyId } = actor, admin = getAdminFirestore(), root = `Companies/${companyId}`;
   const { OperationResult, Customer } = await import("@shisyamo4131/air-guard-v2-schemas");
   const { operationDateTime } = await import("../../functions/shared/operationDateTime.js");
-  const { parseDate } = await import("../../functions/shared/employeeContract.js");
+  const { parseDate, rawForClass } = await import("../../functions/shared/employeeContract.js");
   const { syncOperationResultToDailyAttendances } = await import("../../functions/modules/dailyAttendances/index.js");
   const { syncOperationResultToDailyOperationsByEmployee } = await import("../../functions/modules/dailyOperationsByEmployee/index.js");
-  const { addOperationResultToBilling } = await loadBillingServerWriters();
+  const { addOperationResultToBilling, syncOperationResultToBilling } = await loadBillingServerWriters();
   const { rebuildHistory } = await import("../../functions/modules/siteEmployeeHistories/rebuildHistory.js");
   const employeeId = "emp05-c-worker", siteId = "emp05-c-site", customerId = "emp05-c-customer", resultId = "emp05-c-result";
   const billingId = `${customerId}_${siteId}_2028-02-29`, dayId = `${employeeId}_2028-02-29`, historyId = `${siteId}_${employeeId}`;
   const destinations = [["DailyAttendances", dayId], ["DailyOperationsByEmployee", dayId], ["Billings", billingId], ["SiteEmployeeHistories", historyId]];
   const cleanup = [...destinations, ["OperationResults", resultId], ["Employees", employeeId], ["Sites", siteId], ["Customers", customerId]];
+  let stopBillingListener = () => {};
+  let billingListenerTimeout = null;
   try {
     await admin.doc(`${root}/Customers/${customerId}`).set(new Customer({ docId: customerId }).toObject());
     await admin.doc(`${root}/Sites/${siteId}`).set({ docId: siteId });
@@ -380,25 +382,112 @@ test("EMP05-C HTTP payment date and background aggregates preserve raw reference
     assert.equal((await admin.doc(`${root}/SiteEmployeeHistories/${historyId}`).get()).data().firstDateAt.toDate().toISOString(), "2028-02-28T15:00:00.000Z");
     const billingRef = admin.doc(`${root}/Billings/${billingId}`), before = (await billingRef.get()).data();
     assert.equal(before.subtotal, 10000);
-    const call = (paymentDueDate, expected) => callSiteLifecycleTransport({ actor, functionName: "updateBillingPaymentDate", data: { documentId: billingId, paymentDueDate, expected } });
-    let response = await call("2028-03-01", paymentExpected(before)); assert.equal(response.response.status, 200, JSON.stringify(response.payload));
-    let saved = (await billingRef.get()).data(); assert.equal(saved.paymentDueDate, "2028-03-01"); assert.equal(saved.paymentDueMonth, "2028-03");
-    for (const [key, value] of Object.entries(before)) if (!["paymentDueDateAt", "paymentDueDate", "paymentDueMonth", "uid", "updatedAt"].includes(key)) assert.deepEqual(encodeExpected(saved[key]), encodeExpected(value), key);
-    response = await call("2028-03-02", paymentExpected(before)); assert.equal(response.payload.error.status, "ABORTED");
-    response = await call(null, paymentExpected(saved)); assert.equal(response.response.status, 200, JSON.stringify(response.payload));
-    saved = (await billingRef.get()).data(); for (const field of ["paymentDueDateAt", "paymentDueDate", "paymentDueMonth"]) assert.equal(saved[field], null);
     const client = authenticatedFirestore(actor.uid, { isSuperUser: false });
     for (const [collectionName, id] of destinations) {
       const target = doc(client, "Companies", companyId, collectionName, id);
-      await assertSucceeds(getDoc(target)); await assertFails(updateDoc(target, { employeeIds: [] })); await assertFails(deleteDoc(target));
+      await assertSucceeds(getDoc(target));
+      if (collectionName === "Billings") {
+        await assertSucceeds(updateDoc(target, {
+          employeeIds: [],
+          uid: actor.uid,
+          updatedAt: serverTimestamp(),
+        }));
+      } else {
+        await assertFails(updateDoc(target, { employeeIds: [] }));
+      }
+      await assertFails(deleteDoc(target));
       const newId = `${id}-forged`; cleanup.push([collectionName, newId]);
       await assertFails(setDoc(doc(client, "Companies", companyId, collectionName, newId), { docId: newId, employeeIds: [] }));
       const nested = doc(client, "Companies", companyId, collectionName, id, "Nested", "bypass");
       await assertFails(getDoc(nested)); await assertFails(setDoc(nested, { employeeIds: [] }));
     }
-    await assertFails(updateDoc(doc(client, "Companies", companyId, "Billings", billingId), { paymentDueDate: "2028-03-04" }));
+    const billing = doc(client, "Companies", companyId, "Billings", billingId);
+    const listenerResult = new Promise((resolve, reject) => {
+      billingListenerTimeout = setTimeout(
+        () => reject(new Error("Billing listener did not receive the standard update")),
+        5000,
+      );
+      stopBillingListener = onSnapshot(
+        billing,
+        (snapshot) => {
+          if (snapshot.data()?.paymentDueDate === "2028-04-30") resolve(snapshot.data());
+        },
+        reject,
+      );
+    });
+    const firstManual = {
+      ...rawForClass(before),
+      paymentDueDateAt: new Date("2028-03-30T15:00:00.000Z"),
+      paymentDueDate: "2028-03-31",
+      paymentDueMonth: "2028-03",
+      status: "CONFIRMED",
+      adjustment: { amount: 500, description: "manual adjustment" },
+      remarks: "manual due date",
+      uid: actor.uid,
+      updatedAt: serverTimestamp(),
+    };
+    await assertSucceeds(setDoc(billing, firstManual));
+    const firstSaved = (await getDoc(billing)).data();
+    assert.equal(firstSaved.paymentDueDate, "2028-03-31");
+    assert.equal(firstSaved.paymentDueMonth, "2028-03");
+    assert.equal(firstSaved.status, "CONFIRMED");
+    assert.deepEqual(firstSaved.adjustment, firstManual.adjustment);
+    assert.equal(firstSaved.remarks, firstManual.remarks);
+    assert.equal(firstSaved.uid, actor.uid);
+    assert.ok(firstSaved.updatedAt);
+    assert.equal(firstSaved.createdAt.toMillis(), before.createdAt.toMillis());
+    assert.deepEqual(
+      firstSaved.operationResults.map(({ docId }) => docId),
+      before.operationResults.map(({ docId }) => docId),
+    );
+
+    await assertSucceeds(setDoc(billing, {
+      ...rawForClass(firstSaved),
+      paymentDueDateAt: new Date("2028-04-29T15:00:00.000Z"),
+      paymentDueDate: "2028-04-30",
+      paymentDueMonth: "2028-04",
+      uid: actor.uid,
+      updatedAt: serverTimestamp(),
+    }));
+    const listenerSaved = await listenerResult;
+    clearTimeout(billingListenerTimeout);
+    billingListenerTimeout = null;
+    stopBillingListener();
+    stopBillingListener = () => {};
+    assert.equal(listenerSaved.paymentDueMonth, "2028-04");
+
+    const changedRaw = { ...raw, remarks: "background recalculation" };
+    await syncOperationResultToBilling({ companyId, before: raw, after: changedRaw });
+    const afterBackground = (await getDoc(billing)).data();
+    assert.equal(
+      afterBackground.paymentDueDateAt.toDate().toISOString(),
+      "2028-04-29T15:00:00.000Z",
+    );
+    assert.equal(afterBackground.paymentDueDate, "2028-04-30");
+    assert.equal(afterBackground.paymentDueMonth, "2028-04");
+    assert.equal(afterBackground.status, "CONFIRMED");
+    assert.deepEqual(afterBackground.adjustment, firstManual.adjustment);
+    assert.equal(afterBackground.remarks, firstManual.remarks);
+    assert.equal(afterBackground.operationResults[0].remarks, changedRaw.remarks);
+
+    await assertSucceeds(setDoc(billing, {
+      ...rawForClass(afterBackground),
+      paymentDueDateAt: null,
+      paymentDueDate: null,
+      paymentDueMonth: null,
+      uid: actor.uid,
+      updatedAt: serverTimestamp(),
+    }));
+    const cleared = (await getDoc(billing)).data();
+    assert.equal(cleared.paymentDueDateAt, null);
+    assert.equal(cleared.paymentDueDate, null);
+    assert.equal(cleared.paymentDueMonth, null);
     await resultRef.delete(); await rebuildHistory(companyId, siteId, employeeId); assert.equal((await admin.doc(`${root}/SiteEmployeeHistories/${historyId}`).get()).exists, false);
-  } finally { await Promise.all(cleanup.map(([collectionName, id]) => admin.doc(`${root}/${collectionName}/${id}`).delete())); }
+  } finally {
+    if (billingListenerTimeout !== null) clearTimeout(billingListenerTimeout);
+    stopBillingListener();
+    await Promise.all(cleanup.map(([collectionName, id]) => admin.doc(`${root}/${collectionName}/${id}`).delete()));
+  }
 });
 
 test("EMP05-B HTTP operation writers preserve references, notification confirmation, billing locks and raw duplicate data", async () => {
@@ -4452,26 +4541,170 @@ test("OperationResult client update preserves lock, article, billing, and lifecy
   await assertFails(deleteDoc(result));
 });
 
-test("EMP05-C Billing reference arrays cannot bypass the background writer even for accountants", async () => {
+test("SCR-01-04 Billing permits role-independent same-tenant updates without parent checks", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const uid = "site-lifecycle-accountant-billing";
-  const customerId = "site-lifecycle-accountant-billing-customer";
-  const billingId = "site-lifecycle-accountant-billing";
-  await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: ["accountant"] });
+  const billingId = "scr-01-04-billing";
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const firestore = context.firestore();
-    await setDoc(doc(firestore, "Companies", companyId, "Customers", customerId), {
-      docId: customerId,
-    });
-    await setDoc(doc(firestore, "Companies", companyId, "Billings", billingId), {
-      docId: billingId, customerId, operationResults: [],
+    await setDoc(doc(context.firestore(), "Companies", companyId, "Billings", billingId), {
+      docId: billingId,
+      customerId: "scr-01-04-missing-customer",
+      siteId: "scr-01-04-missing-site",
+      billingDate: "2026-09-30",
+      paymentDueDate: "2026-10-31",
+      status: "DRAFT",
+      operationResults: [],
+      remarks: "before",
+      uid: "server-writer",
+      createdAt: ClientTimestamp.fromDate(new Date("2026-09-01T00:00:00.000Z")),
+      updatedAt: ClientTimestamp.fromDate(new Date("2026-09-01T00:00:00.000Z")),
     });
   });
-  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
-  const billing = doc(firestore, "Companies", companyId, "Billings", billingId);
-  const operationResults = [{ docId: "result-a", amount: 1000 }];
-  await assertFails(updateDoc(billing, { operationResults }));
-  assert.deepEqual((await getDoc(billing)).data().operationResults, []);
+
+  const allowedActors = [
+    { uid: "scr-01-04-user", isAdmin: false, roles: [] },
+    { uid: "scr-01-04-admin", isAdmin: true, roles: [] },
+    { uid: "scr-01-04-accountant", isAdmin: false, roles: ["accountant"] },
+    { uid: "scr-01-04-super", isAdmin: false, roles: [], isSuperUser: true },
+  ];
+  for (const actor of allowedActors) {
+    await seedRegisteredUser({
+      uid: actor.uid,
+      companyId,
+      isAdmin: actor.isAdmin,
+      roles: actor.roles,
+    });
+    const firestore = authenticatedFirestore(actor.uid, {
+      isSuperUser: actor.isSuperUser ?? false,
+    });
+    const billing = doc(firestore, "Companies", companyId, "Billings", billingId);
+    await assertSucceeds(updateDoc(billing, {
+      remarks: actor.uid,
+      uid: actor.uid,
+      updatedAt: serverTimestamp(),
+    }));
+    assert.equal((await getDoc(billing)).data().remarks, actor.uid);
+  }
+
+  const finalActor = allowedActors.at(-1);
+  const finalFirestore = authenticatedFirestore(finalActor.uid, { isSuperUser: true });
+  const billing = doc(finalFirestore, "Companies", companyId, "Billings", billingId);
+  await assertSucceeds(updateDoc(billing, {
+    paymentDueDate: "before-billing-is-an-application-error",
+    operationResults: [{ docId: "rules-do-not-own-schema" }],
+    rulesProbe: { parentDocuments: "not-required" },
+    uid: finalActor.uid,
+    updatedAt: serverTimestamp(),
+  }));
+  assert.deepEqual((await getDoc(billing)).data().rulesProbe, {
+    parentDocuments: "not-required",
+  });
+});
+
+test("SCR-01-04 Billing rejects invalid actors, forged metadata, create, delete and nested access", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  const billingId = "scr-01-04-denied-billing";
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId, "Billings", billingId), {
+      docId: billingId,
+      uid: "server-writer",
+      remarks: "unchanged",
+    });
+  });
+
+  const validUid = "scr-01-04-valid";
+  await seedRegisteredUser({ uid: validUid, companyId });
+  const validFirestore = authenticatedFirestore(validUid, { isSuperUser: false });
+  const billing = doc(validFirestore, "Companies", companyId, "Billings", billingId);
+  await assertFails(updateDoc(billing, { uid: "another-user" }));
+  await assertFails(updateDoc(billing, { uid: deleteField() }));
+  await assertFails(setDoc(
+    doc(validFirestore, "Companies", companyId, "Billings", `${billingId}-new`),
+    { docId: `${billingId}-new`, uid: validUid },
+  ));
+  await assertFails(deleteDoc(billing));
+
+  const deniedUsers = [
+    { uid: "scr-01-04-temporary", user: { isTemporary: true } },
+    { uid: "scr-01-04-disabled", user: { disabled: true } },
+    { uid: "scr-01-04-invalid-temporary", user: { isTemporary: "false" } },
+    { uid: "scr-01-04-invalid-disabled", user: { disabled: "false" } },
+    { uid: "scr-01-04-missing-temporary", user: { omit: ["isTemporary"] } },
+    { uid: "scr-01-04-missing-disabled", user: { omit: ["disabled"] } },
+    { uid: "scr-01-04-mismatched-user-company", user: { companyId: otherCompanyId } },
+  ];
+  for (const actor of deniedUsers) {
+    await seedRegisteredUser({ uid: actor.uid, pathCompanyId: companyId, ...actor.user });
+    const firestore = authenticatedFirestore(actor.uid, { isSuperUser: false });
+    await assertFails(updateDoc(
+      doc(firestore, "Companies", companyId, "Billings", billingId),
+      { remarks: actor.uid, uid: actor.uid },
+    ));
+  }
+
+  const missingUserUid = "scr-01-04-missing-user";
+  const invalidContexts = [
+    testEnvironment.unauthenticatedContext().firestore(),
+    testEnvironment.authenticatedContext(missingUserUid, {
+      email_verified: true,
+      companyId,
+    }).firestore(),
+    testEnvironment.authenticatedContext(validUid, {
+      email_verified: false,
+      companyId,
+    }).firestore(),
+    testEnvironment.authenticatedContext(validUid, {
+      companyId,
+    }).firestore(),
+    testEnvironment.authenticatedContext(validUid, {
+      email_verified: true,
+    }).firestore(),
+    testEnvironment.authenticatedContext(validUid, {
+      email_verified: true,
+      companyId: 123,
+    }).firestore(),
+    testEnvironment.authenticatedContext(validUid, {
+      email_verified: true,
+      companyId: null,
+    }).firestore(),
+    testEnvironment.authenticatedContext(validUid, {
+      email_verified: true,
+      companyId: "",
+    }).firestore(),
+  ];
+  for (const firestore of invalidContexts) {
+    const target = doc(firestore, "Companies", companyId, "Billings", billingId);
+    await assertFails(getDoc(target));
+    await assertFails(updateDoc(target, { remarks: "denied", uid: validUid }));
+  }
+
+  const otherUid = "scr-01-04-other-tenant";
+  await seedRegisteredUser({
+    uid: otherUid,
+    pathCompanyId: otherCompanyId,
+    companyId: otherCompanyId,
+  });
+  const otherFirestore = testEnvironment.authenticatedContext(otherUid, {
+    email_verified: true,
+    companyId: otherCompanyId,
+    isSuperUser: true,
+  }).firestore();
+  await assertFails(updateDoc(
+    doc(otherFirestore, "Companies", companyId, "Billings", billingId),
+    { remarks: "cross-tenant", uid: otherUid },
+  ));
+
+  const nested = doc(
+    validFirestore,
+    "Companies",
+    companyId,
+    "Billings",
+    billingId,
+    "Nested",
+    "blocked",
+  );
+  await assertFails(getDoc(nested));
+  await assertFails(setDoc(nested, { uid: validUid }));
 });
 
 test("SITE-04 Site lifecycle metadata and cross-tenant schedule writes remain server-only", async () => {

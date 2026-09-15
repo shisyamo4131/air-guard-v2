@@ -20,7 +20,7 @@
 | Employee退職・訂正 | 高・Class契約の整理が必要 | 専用Auth lifecycleが業務状態を更新。標準Employee.beforeUpdateもACTIVE→RESIGNEDを拒否し、toTerminatedにはUser.deleteまで含まれる | 単純な接続替えは不可。Classの業務状態更新と認証処理、入口、Rulesの分離を一つの設計単位にする。package変更自体は未承認・未実施 |
 | 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | 高・要変更 | Operation専用ManagerとsaveOperationが残る。Rulesはlock中update・lock変更・articles/調整値変更を拒否。Callableにもrole認可が残る | OperationResultsを共有する画面、標準OperationResult/OperationBilling、Rules、正規callerの撤去とtestを同じ工程で整合。経理画面へのアクセス制限は維持 |
 | 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
-| Billings入金予定日 | 中〜高・要変更 | 専用PaymentDateEditor→Callable、expected比較とfield限定保存。Billings Rulesはclient write全面拒否 | 提供済み入金予定日編集をManager/Classへ移す。Rulesと旧比較testを同時に整合。server actorは既にtenant中心でありrole撤去を重複計上しない |
+| Billings入金予定日 | SCR-01-06までLocal整合 | 詳細画面はManager/Classの標準update、Rulesはtenant共通の既存update、旧PaymentDateEditor・Callable・expected比較はLocal sourceから撤去済み。標準保存、listener再表示、日付条件・解除、背景writerとの併存をLocal確認済み | 01-07でremote旧Function撤去とDev受入れを行う |
 | 請求確定・確定後の編集削除 | 中・未提供UIを含む | 顧客請求のC/U/D handlerがunsupported。詳細の編集入口は入金予定日。Billingにstatus/confirmはあるが確定画面・issuer snapshot保存経路は今回未確認 | 「既存確定ロックの撤去」と誤分類しない。提供UI・標準保存・Rulesを実装する単位。現在の入金予定日編集から分ける |
 | 予定から実績化 | 高・要変更 | Generator→useOperationGenerator→saveOperation。通知の期待値比較やserver側変換が存在。ClassにはsyncToOperationResultがあるがRules createは予定ID=null・作業員空等を要求 | Generatorとクラス標準実績化、OperationResults作成Rules、旧convert callerを同時に整合。通知の実勤務時間反映・予定との紐付けは維持 |
 | 配置通知作成 | 維持 | schedule.notifyでClassから通知documentを生成し予定側状態を同じtransactionで更新 | 後続通知生成と送信までclientへ移さない |
@@ -32,7 +32,7 @@
 - Master通常保存: `components/Customer/Manager/index.vue`、`components/Site/Manager/index.vue`、`components/Employee/Manager/index.vue`、`components/Outsourcer/Manager/index.vue`と各複数形Manager。専用archiveは[Customer](../../functions/modules/customer/archiveCustomer.js)、[Site](../../functions/modules/sites/archiveSite.js)、[Employee](../../functions/modules/employees/archiveEmployee.js)。[Rules](../../firestore.rules)のCustomers/Employees/Sitesおよびarchive matchを照合した。
 - Site状態更新: [useSiteActions](../../composables/application/site/useSiteActions.js)のterminate/reactivate、[server lifecycle](../../functions/modules/sites/lifecycle.js)。Employeeの専用入口は[LifecycleActions](../../components/Employee/LifecycleActions.vue)。installed Schemasの`src/Employee.js`のbeforeUpdate/toTerminatedは、状態更新拒否とUser削除を含む。
 - 請求・lock: [OperationBilling Manager](../../components/OperationBilling/Manager/index.vue)、[useOperationSubmission](../../composables/application/operation/useOperationSubmission.js)、[operationWriteContract](../../functions/shared/operationWriteContract.js)、[Rules](../../firestore.rules)のisValidOperationResultClientCreate/Update/Delete。installed Schemasの`src/OperationBilling.js`の_shouldCheckLock/delete/toggleLockと`src/OperationResult.js`のhookを照合した。
-- 顧客請求: [customerBillingHandlers](../../handlers/customerBillingHandlers.js)、[入金予定日server処理](../../functions/modules/billings/updateBillingPaymentDate.js)、RulesのBillings match。installed Schemasの`src/Billing.js`に確定後update/deleteを一律拒否するhookは今回見つからない。
+- 顧客請求: [customerBillingHandlers](../../handlers/customerBillingHandlers.js)、01-05で撤去した旧`updateBillingPaymentDate`のGit履歴、RulesのBillings match。installed Schemasの`src/Billing.js`に確定後update/deleteを一律拒否するhookは今回見つからない。
 - 実績化: [useOperationGenerator](../../composables/application/operation/useOperationGenerator.js)、[saveOperation](../../functions/modules/operations/saveOperation.js)。installed Schemasの`src/SiteOperationSchedule.js`のsyncToOperationResultは同ID実績作成と予定更新を同じtransactionで行う。
 - 通知: [標準作成への入口](../../composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js)、[独自通知editor](../../composables/application/operation/useNotificationEditor.js)、[本人向け操作](../../composables/application/operation/usePersonalNotification.js)、[配置通知Trigger](../../functions/triggers/arrangementNotification.js)、[送信・結果記録](../../functions/modules/utils/notifications.js)。
 - 実績の後続反映: [OperationResult Trigger](../../functions/triggers/operationResult.js)、[projection同期](../../functions/modules/operations/syncOperationResultProjections.js)。一つのprojectionの失敗で残りを実行せず終える構造ではなく、個別実行後に失敗を集約する。
@@ -59,7 +59,7 @@
 
 合成dataによる `node --input-type=module -e …` のメモリ内診断は各exit 0。請求日前とnullがBilling.validateを通ること、nullの派生日付がnullになること、代表的なstatus・adjustment・remarks・管理fieldがtoObjectに残ることを確認した。OperationResultの生成する66個のfield名はBilling内の往復で欠落しなかったが、全値一致・実Firestore保存・画面受入れは未検証である。schema外のunknown fieldは除去された。coordinatorは「未知field保持のためpackage改修必須」という初回判断を、合成例を要件に拡張したものとして差し戻し、必須ではないとの訂正を確認した。
 
-一次根拠は[旧日付contract](../../composables/domain/customerBilling/billingPaymentContract.js)、[背景Billing同期](../../functions/modules/billings/billingReferencePlan.js)、[背景保存](../../functions/modules/employees/backgroundReferencePlan.js)、installed Billing classとclient-adapterのupdate。現行仕様と食い違うCONF-0036の旧発行後制限は現行標準CRUDへ整合し、再導入しない。remote・実dataは未確認、製品testは未実施。調査・記録はproject-guidance-metadataとしてproject-docsとdiff-checkで検証し、製品suite・環境検証は製品変更がないため対象外とする。要件自体・schema・操作手順は変えないため、仕様version・ADR・manual・運用runbookは更新しない。
+一次根拠は01-05で撤去した旧日付contractのGit履歴、[背景Billing同期](../../functions/modules/billings/billingReferencePlan.js)、[背景保存](../../functions/modules/employees/backgroundReferencePlan.js)、installed Billing classとclient-adapterのupdate。現行仕様と食い違うCONF-0036の旧発行後制限は現行標準CRUDへ整合し、再導入しない。remote・実dataは未確認、製品testは未実施。調査・記録はproject-guidance-metadataとしてproject-docsとdiff-checkで検証し、製品suite・環境検証は製品変更がないため対象外とする。要件自体・schema・操作手順は変えないため、仕様version・ADR・manual・運用runbookは更新しない。
 記録差分の独立reviewでは、01の証拠限界と02の部品scopeが妥当と確認された。入金model未決の参照先をCONF-0035へ訂正した。02はbeforeEditとhandlerでCREATE/DELETEを拒否し、schema由来componentAttrsを使用する。親SCR-01の製品完了とは区別する。
 
 ## SCR-01-02 単数Managerと入力部品（2026-09-15）
@@ -83,6 +83,52 @@
 - 最終source/testに対するcoordinator実行: node --test test/domain/*.test.mjs は1,478/1,478、exit 0。初回実装時の旧証拠を最終判定へ再利用しない。
 - 独立reviewにblocking指摘なし。attrsの同名event転送、基底のresolver解決、明示props優先のuseDefaults、同constructorによるcloneとBilling getter保持を静的確認した。実Vuetify defaults injection・event伝播のmount、browser/date picker、実保存・listener・Devは未検証。直接testのuseDefaultsはstubであり、そのruntime保証とはしない。
 - 01-02を部品・Localとして閉じる。親SCR-01は0点、次は01-03。FUT-0191〜0193はCustomerBillingでの対応を反映し、他箇所の調査・改修を残す。仕様・ADR・manual・CHANGELOG・運用・data contractは提供画面・要件・保存形式を変更しないため更新しない。検証class・省略gate・rollbackは上記の部品工程条件を維持する。
+
+## SCR-01-03 標準保存と画面の接続（2026-09-15、完了）
+
+利用者が[請求詳細page](../../pages/billings/customers/[id].vue)、[CustomerBillingManager](../../components/CustomerBilling/Manager/index.vue)、[CustomInput](../../components/CustomerBilling/CustomInput.vue)の接続と表示を実装し、Codexがreview、日付消去条件、route ID、直接test、文書を整合した。
+
+- listener由来Billing instanceを単数Managerへ渡し、通常更新は検証後に`draft.update()`へ委譲する。詳細pageの従属Customer／Site参照はpage rootの`useFetch("CustomerBillingDetail", true)`へ接続した。
+- 単一動的routeのdocument IDは`route.params.id`から直接取得する。現在は請求詳細から別の請求詳細へ直接遷移する画面導線がなく、URL直入力ではpage全体が再読込みされるため、将来の経路だけを想定したpage再生成指定は設けない。実際に詳細間遷移を追加して不具合が生じた場合に、その時点の構成に合わせて解消する。
+- 入金予定日の未設定化はdate inputの標準`clearable`を使う。この画面の編集dialogは利用者確認により360pxとし、480pxは全画面固定ではなく原則値として仕様・ADRを訂正した。
+- 直接testは`customer-billing-manager.test.mjs` 12/12、`billing-payment-date.test.mjs` 28/28、いずれもexit 0。最終影響範囲の`node --test test/domain/*.test.mjs`は1,477/1,477、project docs checkは323 Markdown・74 ADR・13 roadmap・8 TOMLでexit 0。`git diff --check`もexit 0。
+- 01-03の完了範囲は、詳細pageからlistener由来Billingを単数Managerへ接続し、日付変更・null解除を標準draft updateへ渡す製品codeと直接testまでとする。Rules境界は01-04で整合済み。標準adapterによる実保存、listenerによる保存後再表示、browserの日付変更・消去は01-06で確認する。旧専用component・Callable等は01-05の撤去対象として残り、親SCR-01は未完了である。
+
+## SCR-01-04 Billings Rulesの整合（2026-09-15、完了）
+
+[Billings Rules](../../firestore.rules)のclient write全面拒否を、既存documentのupdateだけを許可する境界へ変更した。
+
+- 許可条件は、認証済みで、確認済みメールと会社IDを持ち、その会社に存在する有効な本登録Userであること、保存後の`uid`が操作した本人であること。会社管理者、一般User、role、super-userの区分では分けない。
+- createとdeleteはSCR-01の提供範囲外なので拒否を維持する。Billings配下のnested documentも許可せず、既存のCompanies fallback除外を維持する。
+- 親Customer／Site／Employeeの存在、日付の前後、status、operationResults、field一覧・型・長さはRulesで検査しない。通常schemaと業務条件はBilling classとManagerの保存境界が担う。背景FunctionsはAdmin SDKを使うためRulesの対象外であり、既存writerは変更していない。
+- Local Emulatorでは、役割なし・会社管理者・経理role・super-userの同一tenant update、親Customer／Site不存在、Rulesが通常schemaを検査しないことを確認した。未認証、メール未確認・claim不正、User不存在・不完全、仮登録・disabled、User所属不一致、他tenant、更新者ID偽装、create、delete、nested accessは拒否された。`npm run test:local`は初回に旧全面拒否期待1件を検出し、期待値を新契約へ直した再実行で180/180、exit 0。
+- 静的Rules contract testは、明示update条件とcreate/delete拒否、親・schema・日付検査を持たないことを確認した。独立security reviewにblocking指摘はない。同一tenantの有効UserがSDKから通常fieldを変更できることは、通常業務dataをclassで検証する承認済み境界として受容する。
+- data shapeと既存dataは変更せず、migrationは不要。rollbackはBillings matchと対応testをclient write全面拒否へ戻し、01-03のclient接続と片側だけを公開しない。実画面からのadapter保存・listener再表示、旧Callable撤去、Dev反映は01-05〜07で確認するため、親SCR-01は未完了である。
+
+## SCR-01-05 旧専用経路の撤去（2026-09-15、完了）
+
+正規詳細画面から到達しなくなった旧入金予定日専用経路を、参照元と公開exportを確認してLocal sourceから撤去した。
+
+- 撤去した製品sourceは旧`PaymentDateEditor`、`useBillingPaymentDate`、client/serverの`billingPaymentContract`、`updateBillingPaymentDate`のAPIとmodule。`functions/apis/index.js`のexportも削除し、Codex用Functions entrypointの公開期待から外した。
+- 旧専用経路だけを検証していたclient/server contract同値比較test、transaction・expected比較・独自再読込・競合stateのtestを撤去した。`billing-payment-date.test.mjs`には現行pageがlistener由来Billingを標準Managerへ接続するcompile/source確認を残した。
+- Local harnessのEMP05-Cは、旧Callableによる期日変更、stale expected拒否、null保存だけを外した。OperationResultから請求・勤怠・勤務回数・履歴を作る背景処理、raw値保持、Billingsを含むRulesの許可・拒否確認は維持した。背景Billing writer、PDF、日付validation、現行Manager／入力、Rulesは変更していない。
+- 残存参照は、現在も使用する`paymentDueDateAt` field、背景集計、PDF、現行Manager testのほか、旧経路を時点付きで説明する履歴文書である。削除対象sourceへの現行Markdown linkは本書とroadmapから除いた。
+- remoteのFunction実在状態と削除は未確認・未実施。Devへ以前公開済みと記録された`updateBillingPaymentDate`を01-07の撤去対象とし、固定releaseでclient／Rulesと合わせて扱う。data shape、schema、package、実data、migration、deployは変更していない。
+- rollbackは、撤去したcomponent、composable、contract、API、module、exportと対応testを同じGit差分から復元する。公開済み構成へ戻す場合は01-03のManager接続と01-04のRulesも整合した単位で判断し、旧経路だけを正規pageへ部分的に戻さない。
+- 変更classはapplication-logicとproject-guidance-metadata。直接testと最終completion gateは実行結果をcheckpoint報告へ記録する。標準adapterの実保存、listener再表示、失敗表示、背景writerとの統合、独立reviewは01-06、remote撤去とDev受入れは01-07の未検証範囲である。
+
+## SCR-01-06 自動検証とLocal画面確認（2026-09-15、完了）
+
+01-02〜05を組み合わせたLocal実装について、会社管理者で実画面を操作し、自動testで保存内容・Rules・背景writerを確認した。
+
+- 利用者が起動したimport-only Emulator、local server、Chromeをそのまま使用した。請求詳細で編集dialogの表示、取消時に変更がないこと、入金予定日の変更後にlistenerで自動反映されること、再読込後も値が残ることを確認した。
+- 請求日より前の日付は選択不可、請求日当日は選択・保存可能だった。日付を消去して`未設定`へ保存し、再読込後も維持されることを確認した。確認後は元の入金予定日へ戻し、再読込後の復元を確認した。請求額等の他の値と稼働実績行は操作前後で変わらなかった。
+- `customer-billing-manager.test.mjs`、`billing-payment-date.test.mjs`、`codex-local-harness.test.mjs`を現行契約へ揃え、Billing全体のserialization、日付と派生年月、listener反映、取消・失敗・loading、背景集計後の日付保持、認証・tenant境界を覆った。対象domain testは15/15、構文確認はexit 0。Local Emulator suiteは180/180、exit 0。
+- Local Emulator suiteの初回実行では、新しい許可確認fixtureが標準保存で必須の`uid`と`updatedAt`を含まず1件失敗した。製品不具合ではなくtest入力の不足であり、標準adapter相当の管理fieldを含めて再実行した。
+- browserで実際のbackend停止は起こしていない。保存失敗時にdialogを閉じず編集値とloading/error状態を扱う経路は自動testで確認した。remote Function、Dev、Prod、実data、package、migrationは変更・確認していない。
+- user-local Emulator、server、Chromeは停止せず、Emulator dataもexportしていない。別途、loopback限定のCodex専用Emulator suiteを実行した。rollbackは01-03〜05のclient・Rules・旧Callableを整合した一組で戻す。
+
+親SCR-01はDev受入れまで0点を維持する。次は01-07で固定releaseをDevへ反映し、remoteの旧Function撤去と画面受入れを行う。
 
 ## 2026-09-15仕様回答の反映と残作業
 

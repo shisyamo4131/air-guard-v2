@@ -135,8 +135,16 @@ jobs:
       - name: Confirm Firebase CLI version
         run: npx -y firebase-tools@15.29.0 --version
 
+      - name: Verify SCR-01-07 deployment targets
+        shell: bash
+        run: |
+          [[ "$DEPLOY_TARGETS" == "firestore,functions,hosting" ]]
+
       - name: Firebase deployment dry run
-        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --dry-run --non-interactive
+        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "firestore,hosting" --dry-run --non-interactive
 
       - name: Deploy selected services
-        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --non-interactive
+        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "firestore,hosting" --non-interactive
+
+      - name: Remove retired payment-date Function
+        run: npx -y firebase-tools@15.29.0 functions:delete updateBillingPaymentDate --project "$FIREBASE_PROJECT_ID" --region asia-northeast1 --force

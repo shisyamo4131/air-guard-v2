@@ -11,7 +11,7 @@ import { formatNumber } from "../../utils/formats/util.js";
 import { employeeReadLabel } from "../../composables/domain/employee/employeeReadLabel.js";
 
 const source = (file) => readFile(new URL(`../../${file}`, import.meta.url), "utf8");
-const dialogs = ["Employee/Certifications/Manager/index.vue", "Insurance/Transition/Manager.vue", "Operation/Editor.vue", "ArrangementNotifications/Manager/index.vue", "ArrangementNotification/Manager/toLeaved.vue", "Employee/ArchiveDialog.vue", "CustomerBilling/PaymentDateEditor.vue"];
+const dialogs = ["Employee/Certifications/Manager/index.vue", "Insurance/Transition/Manager.vue", "Operation/Editor.vue", "ArrangementNotifications/Manager/index.vue", "ArrangementNotification/Manager/toLeaved.vue", "Employee/ArchiveDialog.vue"];
 async function setup(file, supplied, returns) {
   const { descriptor } = parse(await source(file));
   const code = descriptor.scriptSetup.content.replace(/import[\s\S]*?;\s*/gu, "");

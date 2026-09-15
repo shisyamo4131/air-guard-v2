@@ -395,10 +395,14 @@ service cloud.firestore {
     }
 
     // --- Rules for 'Billings' subcollection under 'Companies' ---
-    // 埋込み参照は背景transaction、入金予定日は専用Callableが保存する。
+    // 読取りと提供済みの通常更新は、同一tenantの有効な本登録Userへ許可する。
+    // schema・日付条件はapplicationの保存境界が担い、create/deleteは提供しない。
     match /Companies/{companyId}/Billings/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow write: if false;
+      allow create, delete: if false;
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && request.resource.data.uid == request.auth.uid;
     }
 
     // --- Rules for 'Customers' subcollection under 'Companies' ---

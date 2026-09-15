@@ -59,6 +59,10 @@ test("Rules validate result identifiers without requiring live parent masters", 
     }
     else if (collectionName === "ArrangementNotifications") {
       assert.match(block, /allow read, write: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+    } else if (collectionName === "Billings") {
+      assert.match(block, /allow create, delete: if false;/u);
+      assert.match(block, /allow update:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid;/u);
+      assert.doesNotMatch(block, /exists\(|get\(|customerExists|siteExists|employeeExists/u);
     } else {
       assert.match(block, /allow write: if false;/u);
     }

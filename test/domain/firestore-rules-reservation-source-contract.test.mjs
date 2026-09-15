@@ -88,25 +88,22 @@ test("Site-reference collections use explicit guards and cannot fall through ten
   }
 });
 
-test("Customer reference collections use explicit guarded matches outside the fallback", async () => {
+test("Billing uses an explicit tenant update boundary outside the fallback", async () => {
   const source = await readFile(rulesUrl, "utf8");
-  const contracts = [
-    {
-      collectionName: "Billings",
-    },
-  ];
-
-  for (const { collectionName } of contracts) {
-    const escapedCollectionName = collectionName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-    const body = source.match(
-      new RegExp(
-        `match /Companies/\\{companyId\\}/${escapedCollectionName}/\\{docId\\} \\{([\\s\\S]*?)\\n    \\}`,
-        "u",
-      ),
-    )?.[1];
-    assert.ok(body, `${collectionName} must have an explicit document match`);
-    assert.match(body, /allow write: if false;/u);
-  }
+  const body = source.match(
+    /match \/Companies\/\{companyId\}\/Billings\/\{docId\} \{([\s\S]*?)\n    \}/u,
+  )?.[1];
+  assert.ok(body, "Billings must have an explicit document match");
+  assert.match(body, /allow read: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+  assert.match(body, /allow create, delete: if false;/u);
+  assert.match(
+    body,
+    /allow update: if isAuthenticated\(\)[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid;/u,
+  );
+  assert.doesNotMatch(
+    body,
+    /exists\(|get\(|customerExists|siteExists|employeeExists|affectedKeys|paymentDue|billingDate|status|operationResults/u,
+  );
 
   const operationResultBody = source.match(
     /match \/Companies\/\{companyId\}\/OperationResults\/\{docId\} \{([\s\S]*?)\n    \}/u,

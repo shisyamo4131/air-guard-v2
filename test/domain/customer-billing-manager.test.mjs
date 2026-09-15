@@ -48,47 +48,6 @@ async function loadManagerHarness({ beforeEdit = () => true } = {}) {
   };
 }
 
-async function loadCustomInputHarness({
-  item = billing(),
-  disabled = false,
-  editMode = "UPDATE",
-  updateProperties,
-} = {}) {
-  const source = await readFile(
-    new URL("../../components/CustomerBilling/CustomInput.vue", import.meta.url),
-    "utf8",
-  );
-  const { descriptor } = parse(source, { filename: "CustomerBillingCustomInput" });
-  const setupSource = descriptor.scriptSetup.content.replace(
-    /import[\s\S]*?;\s*/gu,
-    "",
-  );
-  const updates = [];
-  globalThis.__customerBillingInputHarness = {
-    useDefaults: (props) => props,
-    defineProps: () => ({
-      componentAttrs: {},
-      disabled,
-      editMode,
-      item,
-      updateProperties: updateProperties ?? ((value) => updates.push(value)),
-    }),
-  };
-  const moduleSource = `
-    const { useDefaults, defineProps } = globalThis.__customerBillingInputHarness;
-    ${setupSource}
-    export { props, clearPaymentDueDate };
-  `;
-  const module = await import(
-    `data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}#${Date.now()}-${Math.random()}`,
-  );
-  return {
-    module,
-    updates,
-    cleanup: () => delete globalThis.__customerBillingInputHarness,
-  };
-}
-
 function useEditModes() {
   const editMode = Vue.ref("CREATE");
   return {
@@ -174,6 +133,46 @@ test("payment due date accepts Firestore Timestamp-compatible dates at the JST d
   assert.doesNotThrow(() => assertPaymentDueDate({ billingDateAt, paymentDueDateAt }));
 });
 
+test("Billing standard serialization keeps the whole document and derives payment date fields", () => {
+  const createdAt = new Date("2026-09-01T00:00:00.000Z");
+  const updatedAt = new Date("2026-09-02T00:00:00.000Z");
+  const item = new Billing({
+    docId: "billing-standard-update",
+    uid: "original-writer",
+    createdAt,
+    updatedAt,
+    customerId: "customer-1",
+    siteId: "site-1",
+    billingDateAt: new Date("2026-09-29T15:00:00.000Z"),
+    paymentDueDateAt: new Date("2026-10-30T15:00:00.000Z"),
+    status: Billing.STATUS.CONFIRMED,
+    operationResults: [{ docId: "operation-1", remarks: "kept operation" }],
+    adjustment: { amount: 1234, description: "manual adjustment" },
+    remarks: "kept billing remarks",
+  });
+
+  const serialized = item.toObject();
+  assert.equal(serialized.status, Billing.STATUS.CONFIRMED);
+  assert.deepEqual(serialized.adjustment, {
+    amount: 1234,
+    description: "manual adjustment",
+  });
+  assert.equal(serialized.remarks, "kept billing remarks");
+  assert.equal(serialized.operationResults.length, 1);
+  assert.equal(serialized.operationResults[0].docId, "operation-1");
+  assert.equal(serialized.operationResults[0].remarks, "kept operation");
+  assert.deepEqual(serialized.createdAt, createdAt);
+  assert.deepEqual(serialized.updatedAt, updatedAt);
+  assert.equal(serialized.paymentDueDate, "2026-10-31");
+  assert.equal(serialized.paymentDueMonth, "2026-10");
+
+  item.paymentDueDateAt = null;
+  const cleared = item.toObject();
+  assert.equal(cleared.paymentDueDateAt, null);
+  assert.equal(cleared.paymentDueDate, null);
+  assert.equal(cleared.paymentDueMonth, null);
+});
+
 for (const [name, item] of [
   ["missing billing date", { paymentDueDateAt: parseDate("2026-09-30") }],
   ["missing payment due date", { ...billing(), paymentDueDateAt: undefined }],
@@ -238,16 +237,6 @@ test("CustomerBillingManager delegates valid updates and propagates validation o
   }
 });
 
-test("CustomerBillingCustomInput clears the date with the base updateProperties contract", async () => {
-  const mounted = await loadCustomInputHarness();
-  try {
-    mounted.module.clearPaymentDueDate();
-    assert.deepEqual(mounted.updates, [{ paymentDueDateAt: null }]);
-  } finally {
-    mounted.cleanup();
-  }
-});
-
 test("base manager connection keeps a cancelled draft isolated and applies date changes or null clears", async () => {
   const model = {
     ...billing(parseDate("2026-10-15")),
@@ -285,15 +274,19 @@ test("base manager connection keeps a cancelled draft isolated and applies date 
 
     await manager.toUpdate();
     assert.equal(dateInput(manager.item.value.paymentDueDateAt), "2026-10-15", "cancelled edit never changed the model");
-    const input = await loadCustomInputHarness({
+    const inputProps = Vue.reactive({
       item: manager.item.value,
-      updateProperties: manager.updateProperties,
+      componentAttrs: {
+        paymentDueDateAt: {
+          modelValue: manager.item.value.paymentDueDateAt,
+          "onUpdate:modelValue": (value) => manager.updateProperties({ paymentDueDateAt: value }),
+        },
+      },
+      disabled: false,
+      editMode: "UPDATE",
     });
-    try {
-      input.module.clearPaymentDueDate();
-    } finally {
-      input.cleanup();
-    }
+    const dateProps = await renderInputDateProps(inputProps);
+    dateProps["onUpdate:modelValue"](null);
     assert.equal(manager.item.value.paymentDueDateAt, null);
     assert.equal(model.paymentDueDateAt === null, false, "draft clearing remains local before submit");
     assert.equal(events.some(([name]) => name === "update:modelValue"), false);
@@ -372,7 +365,7 @@ test("CustomerBillingManager keeps the base editor contract and exposes UPDATE o
   assert.match(manager, /:handle-create="rejectUnsupportedOperation"/u);
   assert.match(manager, /:handle-delete="rejectUnsupportedOperation"/u);
   assert.match(manager, /assertPaymentDueDate\(draft\);\s*return await draft\.update\(\);/u);
-  assert.match(manager, /maxWidth: 480/u);
+  assert.match(manager, /maxWidth: 360/u);
   assert.match(manager, /#activator="slotProps"/u);
   assert.match(input, /componentAttrs.*item.*updateProperties.*disabled.*editMode/su);
   assert.match(input, /componentAttrs\.paymentDueDateAt/u);
@@ -382,7 +375,7 @@ test("CustomerBillingManager keeps the base editor contract and exposes UPDATE o
   assert.match(manager, /v-bind="\{ \.\.\.\$attrs, \.\.\.attrs \}"/u);
   assert.doesNotMatch(manager, /defineEmits\s*\(/u);
   assert.match(input, /:disabled="props\.disabled \|\| props\.editMode !== 'UPDATE'"/u);
-  assert.match(input, /paymentDueDateAt: null/u);
+  assert.match(input, /\sclearable(?:\s|\/>)/u);
 });
 
 // Evaluate the compiled input template in memory; Vuetify defaults and widgets
@@ -409,7 +402,7 @@ async function renderInputDateProps(props) {
     ...Vue,
     resolveComponent: (name) => name,
   });
-  const root = render({}, [], {}, { props, clearPaymentDueDate: () => {} });
+  const root = render({}, [], {}, { props });
   function findDate(vnode) {
     if (vnode.type === "air-date-input") return vnode.props;
     const children = Array.isArray(vnode.children)
@@ -429,6 +422,7 @@ test("input minimum follows the Billing getter when the reactive date or item ch
     disabled: false,
     editMode: "UPDATE",
   });
+  assert.equal((await renderInputDateProps(props)).clearable, "");
   assert.equal((await renderInputDateProps(props)).min, "2026-09-30");
   item.billingDateAt = new Date("2026-09-30T15:00:00.000Z");
   assert.equal((await renderInputDateProps(props)).min, "2026-10-01");

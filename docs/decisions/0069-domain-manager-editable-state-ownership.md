@@ -53,7 +53,7 @@ ADR 0068は、単一documentの詳細・編集を単数Manager、collection・�
 
 ### 維持する境界
 
-- 通常data編集dialogは`max-width: 480px`を既定とし、可読性、複数列・表・複数step、responsive・accessibility上の確認済み理由がある場合だけ広げる。確認専用dialog、viewer、selectorは対象外とし、archive等の例外operationは操作固有に幅を決める。
+- 通常data編集dialogは`max-width: 480px`を原則値とし、各画面の項目量、可読性、複数列・表・複数step、responsive・accessibilityに合わせてcomponentごとに狭くも広くもできる。確認専用dialog、viewer、selectorは対象外とし、archive等の例外operationは操作固有に幅を決める。
 - マスタdataのarchive・復旧・物理削除、Authentication・Company・User、機微・機密情報、Stripe・請求確定、順序依存状態遷移は通常CRUDの例外である。generic deleteを開放せず、専用UI・Callable、actor、従属検査、transaction・precondition、idempotency、監査を維持する。transaction dataにはarchiveを設けず、製品が提供する物理削除はADR 0072に従ってDomain Manager／FireModel／ClientAdapterのclient deleteへ接続し、関連data連携をFirestore Triggerへ委ねる。
 - ManagerはUIとoperation orchestrationの責務であり、認証・認可・tenant、Firestore Rules、server validationの境界にしない。document形状、Rules、Functions、schema、data、Company・Userのwriterは本ADRでは変更しない。
 
@@ -92,7 +92,7 @@ editable stateの所有単位を基準にすると、base Managerの実装責務
 - Create成功時は割当済みdocument IDを含むcommit確定結果だけを選択し、失敗・結果不明時に選択しないことを確認する。
 - listener由来instanceをManagerへ直接接続し、編集中のlistener更新でdraftが最新document全体へ置き換わること、固定snapshot・入力消失警告・競合拒否を設けないことを確認する。保存後の主対象もlistenerへ収束し、従属補完以外で`useFetch` cacheを変更可能documentの正本にしない。
 - base Managerの既定editor、validation、loading、submit、mode管理を使い、`customInput`がfieldと順序を所有することを確認する。Customerの暫定`includedKeys`はSchema順依存を受容し、activator callerがoperation別methodを選ぶことを確認する。
-- 480px、archive専用境界、generic delete拒否、schema・Rules・data非変更を維持する。
+- 480pxを原則値として画面固有の幅を認めること、archive専用境界、generic delete拒否、schema・Rules・data非変更を維持する。
 
 ## 再検討条件
 

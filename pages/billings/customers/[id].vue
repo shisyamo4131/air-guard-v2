@@ -1,27 +1,43 @@
 <script setup>
 import dayjs from "dayjs";
-import { computed, watch } from "vue";
-import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { watch } from "vue";
 import { useCustomerBilling } from "@/composables/dataLayers/useCustomerBilling";
-import PaymentDateEditor from "@/components/CustomerBilling/PaymentDateEditor.vue";
+import { useFetch } from "@/composables/fetch/useFetch";
+
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
+defineOptions({ name: "CustomerBillingDetail", inheritAttrs: false });
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
 // Router for getting route params
 const route = useRoute();
-definePageMeta({ key: (route) => route.fullPath });
-const docId = computed(() => typeof route.params.id === "string" ? route.params.id : "");
+const docId = route.params.id;
 
-// Fetch composables
-const fetchCustomerComposable = useFetchCustomer();
-const fetchSiteComposable = useFetchSite();
+// DATA LAYER
+const { doc } = useCustomerBilling({ docId });
 
-const { doc } = useCustomerBilling({ docId: docId.value });
-const { cachedCustomers, fetchCustomer } = fetchCustomerComposable;
-const { cachedSites, fetchSite } = fetchSiteComposable;
-watch(() => [doc.customerId, doc.siteId], ([customerId, siteId]) => { fetchCustomer(customerId); fetchSite(siteId); }, { immediate: true });
+// FETCH COMPOSABLES
+const { fetchCustomerComposable, fetchSiteComposable } = useFetch(
+  "CustomerBillingDetail",
+  true,
+);
+const { fetchCustomer, cachedCustomers } = fetchCustomerComposable;
+const { fetchSite, cachedSites } = fetchSiteComposable;
+
+/*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
+watch(
+  () => [doc.customerId, doc.siteId],
+  ([customerId, siteId]) => {
+    fetchCustomer(customerId);
+    fetchSite(siteId);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -38,7 +54,9 @@ watch(() => [doc.customerId, doc.siteId], ([customerId, siteId]) => { fetchCusto
         </tr>
         <tr>
           <td>請求日</td>
-          <td>{{ dayjs(doc.billingDateAt).tz().format("YYYY年MM月DD日(ddd)") }}</td>
+          <td>
+            {{ dayjs(doc.billingDateAt).tz().format("YYYY年MM月DD日(ddd)") }}
+          </td>
         </tr>
         <tr>
           <td>売上金額</td>
@@ -55,8 +73,26 @@ watch(() => [doc.customerId, doc.siteId], ([customerId, siteId]) => { fetchCusto
         <tr>
           <td>入金予定日</td>
           <td>
-            {{ doc.paymentDueDateAt ? dayjs(doc.paymentDueDateAt).tz().format("YYYY年MM月DD日(ddd)") : '未設定' }}
-            <PaymentDateEditor :document-id="docId" />
+            <CustomerBillingManager :model-value="doc">
+              <template #activator="{ toUpdate }">
+                {{
+                  doc.paymentDueDate
+                    ? dayjs(doc.paymentDueDate)
+                        .tz()
+                        .format("YYYY年MM月DD日(ddd)")
+                    : "未設定"
+                }}
+                <v-btn
+                  class="ml-2"
+                  color="secondary"
+                  prepend-icon="mdi-pencil"
+                  size="small"
+                  text="変更"
+                  aria-label="入金予定日を変更"
+                  @click="() => toUpdate()"
+                />
+              </template>
+            </CustomerBillingManager>
           </td>
         </tr>
         <tr>
@@ -77,7 +113,9 @@ watch(() => [doc.customerId, doc.siteId], ([customerId, siteId]) => { fetchCusto
                   :key="index"
                 >
                   <td>
-                    {{ dayjs(operation.dateAt).tz().format("YYYY年MM月DD日(ddd)") }}
+                    {{
+                      dayjs(operation.dateAt).tz().format("YYYY年MM月DD日(ddd)")
+                    }}
                   </td>
                   <td>
                     {{ operation.statistics.base.quantity.toLocaleString() }}

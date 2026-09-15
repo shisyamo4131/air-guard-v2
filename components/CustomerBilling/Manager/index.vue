@@ -69,7 +69,7 @@ async function handleUpdate(draft) {
     v-bind="{ ...$attrs, ...attrs }"
     :model-value="props.modelValue"
     :dialog-props="{
-      maxWidth: 480,
+      maxWidth: 360,
       persistent: true,
       scrollable: true,
       'aria-label': $attrs.label,

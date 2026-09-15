@@ -30,7 +30,6 @@ export { updateCompanyBilling } from "./updateCompanyBilling.js";
 export { updateCompanyOperations } from "./updateCompanyOperations.js";
 export { updateCompanyProfile } from "./updateCompanyProfile.js";
 export { saveOperation } from "./saveOperation.js";
-export { updateBillingPaymentDate } from "./updateBillingPaymentDate.js";
 export {
   updateOwnUserProfile,
   updateUserNotificationSettings,

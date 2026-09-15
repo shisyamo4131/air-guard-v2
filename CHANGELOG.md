@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 通常data編集dialogの480pxは固定値ではなく原則値であり、画面ごとの内容に応じて狭い幅・広い幅のどちらも選べることを仕様へ明記した。CustomerBillingの入金予定日編集は360pxを採用し、標準Manager接続に合わせて画面・直接testを更新した。document IDは単一動的routeのparamから直接取得し、現在存在しない詳細間遷移だけに備えるpage再生成指定は追加しない。Billings Rulesは既存documentの通常更新だけを同じ会社の有効な本登録Userへ開き、更新者IDを確認する。新規作成・削除は閉じたまま、親Customer／Siteの存在、日付、通常schemaの検査はRulesへ追加していない。正規画面から到達しない旧入金予定日editor、専用composable、期待値比較contract、`updateBillingPaymentDate`のAPI・module・exportをLocal sourceから撤去した。背景Billing writer、data、deployは変更しておらず、remoteの旧Function撤去はDev release時に行う。
+
 - 質疑応答で確定した業務状態変更・請求確定後の編集削除・実績化・配置通知の標準CRUD化と、実績ロックの画面別制約を[現行仕様](docs/specification.md#標準crudと後続処理)へ反映した。認証account操作は専用処理、通知送信と実績から請求・勤怠等への反映は既存Functionsトリガーへ維持する。今回は文書のみで、製品実装・Rules・data・deployは未変更。
 
 - マスタdataのarchive・restoreを当面client-adapterの標準処理へ揃える方針を定義し、削除機能全体の将来見直しをFUT-0146へ記録した。今回は文書のみで、専用Callable・Rules・既存archive形式・復旧UIの切替えは未実施。[共通仕様](docs/specification.md#ドキュメントのアーカイブと物理削除)と[ADR 0060改訂](docs/decisions/0060-common-archive-purge-and-address-contract.md)を参照。
