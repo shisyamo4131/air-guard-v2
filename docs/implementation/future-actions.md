@@ -16,6 +16,10 @@ Local completed、Resolved、Superseded等は記録された限定条件のま�
 
 ### Open
 
+[FUT-0195](#fut-0195-取引先請求一覧の指定年月データの表示遅延を改善する)
+
+[FUT-0194](#fut-0194-uiアプリ処理のドメインテストを影響範囲に限定する)
+
 [FUT-0193](#fut-0193-schemaクラスが提供する日付プロパティの再変換を整理する)
 
 [FUT-0192](#fut-0192-custominputの型判定と関数呼出しを基底managerへ委譲する)
@@ -245,6 +249,16 @@ SPEC-DEEP-040追加根拠: application auth actionのsign-outはstore session cl
 - ユーザー判断が必要な事項: 通知未準備のUI、登録retry回数、定期orphan token検査の間隔・保持期限。
 
 SPEC-DEEP-039b追加根拠: client token登録はgetToken/FcmToken createを含む全errorをcatchしてrethrowせず、認証初期化callerは登録失敗を成功完了と区別できない。
+
+### 2026-09-15 Dev配置管理画面でのFCM購読エラー（利用者報告・要改修）
+
+- 発生環境・操作: Dev環境で配置管理画面を開いたまましばらく経過した場合、または画面を初めて立ち上げて何かを更新した場合などに、以下のメッセージがSnackbarへ表示されるとの利用者報告。経過時間、具体的な更新操作、発生頻度、ブラウザ、再ログインによる変化は未確認。
+- 報告されたエラー: `Messaging: A problem occurred while subscribing the user to FCM: Request is missing required authentication credential. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project. (messaging/token-subscribe-failed).`
+- 原因・影響の確認状態: 利用者は過去の改修による回帰を疑っているが、原因commit・発生元・再現条件は未特定。配置の更新自体の成否、通知登録・配送への影響、認証状態との関係も未確認。今回CodexによるDev再現や通信・log調査は行っていない。
+- 対応事項: 本FUTのFCM登録失敗に関する具体的な不具合として調査・修正する。起動直後と長時間経過後の登録呼出し、Snackbarへのエラー伝播、認証・通知初期化の順序を追跡し、関連変更履歴と照合する。原因を特定せず認証情報の追加、設定変更、再試行、エラーの非表示だけで解消した扱いにしない。
+- 関連と区別: [FUT-0027](#fut-0027-上下番確定の通知更新とoperationresult作成を再開可能にする)の過去Dev観測にはFcmTokens登録403とSnackbarの記録があるが、今回のmessaging/token-subscribe-failedと同一原因とは未確認。FCM登録処理と配置更新の成否を分けて確認する。
+- 追加する検証条件: 起動直後の更新と画面を開いたまま時間が経過した後の操作で再現条件を固定し、FCM購読の成功・失敗とSnackbar表示を確認する。配置更新と通知登録・配送の結果を個別に確認し、修正後に対象範囲のDev受入れを行う。調査証拠へtoken・認証情報・実利用者dataを転記しない。
+- 今回の範囲: 要改修事項の記録のみ。既存FUT-0008へ追記し、原因が未確定の段階で同種の台帳項目を重複作成しない。実装・Dev操作・優先順位変更は今回行わない。
 
 ## FUT-0009 tokenとUser情報をログへ出さない
 
@@ -2808,3 +2822,27 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 完了条件・test: Managerから渡るitemのクラスとgetter保持を確認し、請求日変更時のmin追従、日本時間の日付境界、未設定時の扱い、入金予定日の入力・解除を維持する。従来のcatchとgetterで不正値の扱いは同一と未確認のため、クラス契約と照合する。
 - 互換性・rollback: 保存形式・CRUD・Schemaパッケージを変更せず、入力側の重複を整理する。必要時は対象componentと対応testを対で復元する。
 - 実施時期・承認境界: SCRの完了条件へ追加せず、後発の独立改修として記録する。今回は文書のみ。利用者編集中のcodeを含め、製品code・test・packageは変更しない。
+
+## FUT-0194 UI・アプリ処理のドメインテストを影響範囲に限定する
+
+- 状態: Open（後続改修）
+- 優先度: 高め（2026-09-15の利用者指示）。
+- 実施時期: 現在のbranch `codex/standard-crud-alignment`による改修完了後、適切なタイミングで独立したcheckpointとして対応する。SCRの途中へ追加せず、着手時にbranch境界と変更範囲を確定する。
+- 利用者の意図: UI・アプリ処理の変更では、変更対象と影響するcomponent・composable・呼出側・接続部分のドメインテストを実施する。影響範囲を限定できない場合や全体へ波及する場合は全ドメインテストへ戻す。共通部品という理由だけで一律に全件実行しない。
+- 確認済み事実（2026-09-15）: [verification policy](../../governance/verification-policy.json)のui-css-layoutとapplication-logicは、targetedRegressionGateIdsとcompletionGateIdsでdomain-fullを要求する。一方、[検証規則](../project-rules/documentation-and-verification.md#verification)は不足・失効した範囲だけの検証を求め、明示必須gateの独断省略を禁止している。
+- 事前に報告した整合事項: (1) policyと[operationsの生成表](../operations.md#verification-matrix)の同期が必要。(2) 対象限定gateの実行方法、選定根拠、対象test、終了コード、証拠の失効条件を定義する。(3) 現在のunknownImpactGateIdsにはdomain-fullが含まれないため、製品影響不明時の全件fallbackを整合する。(4) project rules・関連ADR・検証器との整合を確認する。追加の不整合が判明した場合も修正前に報告する。
+- 改修範囲案: UI・アプリ処理の2分類を対象とし、Rules・schema・releaseや個別ADRで別途要求される検証は維持する。混合変更では分類の和集合を適用する。過去の全件成功記録を新方針の証拠へ書き換えず、画面・保存・通知等の別の証明事項をドメインテストだけで充足したと扱わない。
+- 完了条件・検証: 影響が限定された変更、共通処理の変更、影響不明、混合変更について、対象選定・全件fallback・証拠再利用の判断が一貫し、policy・生成表・規則が一致する。実際のgovernance改修時は、その時点のgovernance-permissions-agents必須gateと独立reviewを実施する。
+- 互換性・rollback: 製品挙動・data契約を変更しない。問題時は当該checkpointのpolicy・規則・生成表・関連変更を整合した組で戻す。managed artifactは正規sync以外で直接編集しない。
+- 今回の承認範囲: 後続事項の記録のみ。現行policyの変更・必須gateの免除・現在branchの製品改修への追加は行わない。着手まで現行の検証規定を適用する。
+
+## FUT-0195 取引先請求一覧の指定年月データの表示遅延を改善する
+
+- 状態: Open（要改修）
+- 報告日: 2026-09-15、利用者報告。
+- 報告された現象: 取引先請求一覧画面で、指定年月の請求データが表示されるまでに時間がかかりすぎる。
+- 確認状態: Codexによる再現・計測・原因調査は未実施。直前のDev環境についての報告に続く指摘だが、本件の環境は個別には明示されていない。対象年月、請求件数、実際の待ち時間、初回表示と年月切替の差、ブラウザ・通信条件は未確認。過去の改修による回帰とも断定しない。
+- 調査・改修方針: 対象画面の取得開始から表示完了までを測り、データ取得、従属参照、加工・集計、描画のどこで待ち時間が生じるかを切り分ける。重複取得や不要な待機の有無を実装と計測から確認し、原因に対応する範囲を改修する。計測前に特定の保存構造変更・cache追加等を解決策として確定しない。
+- 完了条件・検証: 同じ年月・件数・環境条件で改修前後の表示時間を比較し、初回表示と年月切替を確認する。表示対象年月、一覧内容・金額の正確性、0件、取得失敗、年月を続けて切り替えた場合の表示整合を維持する。許容する待ち時間は現状計測後に合意し、未計測の改善率や目標秒数を作らない。
+- 既存項目との関係: 請求稼働一覧の作成・集約問題を扱うFUT-0033とは対象現象を分けて記録する。同一原因が確認された場合に統合・相互参照を判断する。
+- 今回の範囲: 要改修事項の記録のみ。優先順位・着手時期は未指定。実装、実データ取得、Dev操作は行わず、着手時に対象・計測条件・検証・復旧方法を具体化する。
