@@ -64,6 +64,25 @@ function Test-NonBlankStringArray {
     return $true
 }
 
+function Get-LiteralPowerShellScriptReferences {
+    param([Parameter(Mandatory = $true)][string]$Command)
+
+    $parseErrors = $null
+    $tokens = [Management.Automation.PSParser]::Tokenize($Command, [ref]$parseErrors)
+    $references = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($token in @($tokens)) {
+        if (@('Command', 'CommandArgument', 'String') -notcontains [string]$token.Type) {
+            continue
+        }
+        $candidate = ([string]$token.Content).Trim()
+        if ($candidate -notmatch '(?i)\.ps1$' -or $candidate.IndexOfAny([char[]]'$*?') -ge 0) {
+            continue
+        }
+        [void]$references.Add($candidate)
+    }
+    return @($references)
+}
+
 function Format-VerificationSummaryValue {
     param([AllowNull()][object]$Value)
     if ($null -eq $Value) { return '' }
@@ -192,6 +211,7 @@ foreach ($requiredVerificationText in @('## Verification Matrix', 'Gate Catalog 
 $gateCatalog = @{}
 $gateStages = @{}
 $commandOwners = @{}
+$verificationScriptReferences = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 $allowedStages = @('iteration', 'targeted', 'completion', 'release')
 foreach ($gate in @($verificationPolicy.gates)) {
     Assert-ObjectProperties -Object $gate -Names @('id', 'command', 'stages', 'includes', 'invalidatedBy', 'evidenceDestination') -Context 'Verification gate'
@@ -213,6 +233,20 @@ foreach ($gate in @($verificationPolicy.gates)) {
     }
     if ($commandOwners.ContainsKey($command)) {
         throw "Duplicate verification command for gate IDs $($commandOwners[$command]) and ${gateId}: $command"
+    }
+    foreach ($scriptReference in @(Get-LiteralPowerShellScriptReferences -Command $command)) {
+        if ([IO.Path]::GetFileName($scriptReference).Equals('check-project-governance.ps1', [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Verification gate $gateId references the retired validator script name: $scriptReference; use scripts/check-governance.ps1"
+        }
+        $scriptPath = if ([IO.Path]::IsPathRooted($scriptReference)) {
+            [IO.Path]::GetFullPath($scriptReference)
+        } else {
+            [IO.Path]::GetFullPath((Join-Path $resolvedProject $scriptReference))
+        }
+        if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+            throw "Verification gate $gateId references a missing script file: $scriptReference"
+        }
+        [void]$verificationScriptReferences.Add($scriptPath)
     }
     foreach ($stage in $stages) {
         if ($allowedStages -notcontains $stage) {
@@ -391,6 +425,8 @@ if ($agentsBytes -gt $MaxAgentsBytes) {
     project_rules_present = $true
     verification_policy_present = $true
     verification_gate_count = $gateCatalog.Count
+    verification_script_reference_count = $verificationScriptReferences.Count
+    managed_validator_path = 'scripts/check-governance.ps1'
     verification_class_count = $classCatalog.Count
     runtime_profile_count = $runtimeProfileIds.Count
     required_runtime_profile_count = $requiredRuntimeProfileCount
