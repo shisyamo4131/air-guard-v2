@@ -7,7 +7,7 @@
 - GitHub Actions: [Dev deployment 34916877308](https://github.com/shisyamo4131/air-guard-v2/actions/runs/34916877308)
 - cleanup commit: `ed2887af3760af70017115fa79868157a08d2fe4`
 - cleanup Actions: [Dev deployment 34917197567](https://github.com/shisyamo4131/air-guard-v2/actions/runs/34917197567)
-- 状態: Dev反映と旧Function撤去完了、Dev画面受入れ待ち
+- 状態: Completed（Dev反映・旧Function撤去・画面受入れ完了）
 
 ## Release境界と結果
 
@@ -28,9 +28,13 @@
 
 release前のLocal検証は[SCR-01-06の実装記録](../implementation/operation-crud-simplification-inventory.md#scr-01-06-自動検証とlocal画面確認2026-09-15完了)を参照する。Actionsは固定Dev設定、鍵なし認証、Firebase CLI `15.29.0`、Hosting artifact生成、dry-runを成功させた。
 
-## 未確認事項と次の受入れ
+## Dev画面受入れ
 
-Devの会社管理者画面で、入金予定日の変更、未設定への解除、listener反映、再読込後の表示、既存請求値・明細の維持をまだ確認していない。実際のbackend停止を伴う失敗時表示も未確認である。これらの受入れとGit closeoutが終わるまでSCR-01-07および親SCR-01を完了としない。
+2026-09-15にDevの会社管理者画面で、入金予定日の変更、listenerによる自動反映、再読込後の維持、未設定への解除と再読込後の維持を確認した。確認後は元の入金予定日へ戻し、再読込後の復元も確認した。請求額等の他の表示値は変わらず、画面崩れと画面上のエラーはなかった。
+
+請求日より前の日付を入力した操作では、入力部品の最小日付により請求日へ補正され、保存後も請求日より前にならなかった。保存処理側でも請求日前を拒否する自動testが成功しており、業務条件は維持されている。エラー表示を必須とする要件はないため、この補正動作を不具合とは扱わない。
+
+実際のbackend停止を伴う画面確認は実施していない。保存失敗時にdialogを閉じず、編集値とloading／error状態を扱う経路は[SCR-01-06の自動test](../implementation/operation-crud-simplification-inventory.md#scr-01-06-自動検証とlocal画面確認2026-09-15完了)で成功している。利用者はこの自動testを失敗経路の受入証拠として採用し、backend停止時の失敗表示を完了条件から外した。以上によりSCR-01-07と親SCR-01を完了する。
 
 ## Rollback
 

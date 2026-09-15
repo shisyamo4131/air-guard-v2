@@ -2,11 +2,11 @@
 
 - 状態: In progress
 - 開始日: 2026-09-15
-- 現在の進捗: 0%
+- 現在の進捗: 10%
 - 目的: [棚卸し](../implementation/operation-crud-simplification-inventory.md#2026-09-15の実装棚卸し)で確認した専用保存経路・Rules・クラス契約の差を、一つずつ承認済み仕様へ揃える。
 - 開始基準: local main `048e44e9cfd4ca887ec328e7e835c291579e68af`と、同基準で調査した2026-09-15の棚卸し。
 - 作業branch: `codex/standard-crud-alignment`。本書の棚卸し解消を範囲とし、checkpointごとに差分・検証・Git統合を閉じる。
-- 成果範囲: SCR-01-01〜05の実装・整理に加え、SCR-01-06で標準adapterによる画面からの実保存・再表示、日付条件、解除、背景writerとの併存、tenant境界をLocal確認済み。remoteの旧Function撤去、package変更、deploy、Dev・実data操作は未実施。
+- 成果範囲: SCR-01を完了。入金予定日を標準Manager／Class保存へ移し、Rulesを整合して旧専用経路とremote Functionを撤去した。Local自動検証と画面確認、GitHub ActionsによるDev反映、会社管理者によるDev受入れまで完了した。package変更、data migration、既存documentの一括操作は行っていない。
 - 要件の正本: [標準CRUDと後続処理](../specification.md#標準crudと後続処理)、[画面別lock](../specification.md#稼働実績ロックと画面別操作)、[archive・restore](../specification.md#ドキュメントのアーカイブと物理削除)。本書で新しい機能要件を追加しない。
 
 ## 既存計画との関係
@@ -25,7 +25,7 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 
 | マイルストーン | 重み | 得点 | 状態 | 完了条件・対象となる確認 |
 |---|---:|---:|---|---|
-| SCR-01 Billings入金予定日 | 10 | 0 | In progress | 提供済み編集をManager／Classへ接続し、Rulesと旧比較testを整合。保存・再表示・失敗、tenant境界を検証する |
+| SCR-01 Billings入金予定日 | 10 | 10 | Completed | 提供済み編集をManager／Classへ接続し、Rulesと旧比較testを整合。保存・再表示・失敗、tenant境界を検証する |
 | SCR-02 配置通知の状態更新・編集 | 10 | 0 | Planned | Managerと本人向け確認・上番・下番を標準クラスへ接続し、独自期待値比較・patch transactionを整理。時刻・実勤務値・表示収束と既存通知生成条件を検証する |
 | SCR-03 Site手動終了・再開 | 10 | 0 | Planned | 終了・再開の既存業務条件と標準クラスを照合し、入口・保存・Rulesを整合。自動終了system処理と終了後の通常編集条件を維持する |
 | SCR-04 予定から実績化 | 10 | 0 | Planned | Generatorを標準syncToOperationResultへ接続し、同ID実績作成・予定更新・通知実勤務値反映・作成Rulesを整合。旧convert callerを撤去し、既存実績作成を回帰確認する |
@@ -52,13 +52,13 @@ SCR番号は2026-09-15時点の改修優先順位に合わせて付番し直し�
 | SCR-01-04 | Billings Rulesの整合 | client write全面拒否を見直し、今回の標準保存を認証・同一tenantの境界で成立させる。通常schema・日付業務条件をRulesへ複製しない。既存reader／背景writerとの境界を確認する | 同一tenantの正規保存が成功し、未認証・他tenantは拒否される。未提供の請求CRUD画面は追加されない | Completed（Rules・Local Emulator） |
 | SCR-01-05 | 旧専用経路の撤去 | PaymentDateEditorの旧実装、専用composable、updateBillingPaymentDateのAPI/export・本体、期待値比較等を参照確認して整理する。共有helperは利用元が残るものを削除しない | 正規画面から旧Callableへの到達がなく、不要な専用保存・競合stateと参照が残らない。公開済みFunctionの撤去対象も特定する | Completed（Local source） |
 | SCR-01-06 | 自動検証と独立レビュー | 設定・変更・nullへの解除、請求日との条件、日付の往復、標準保存内容、listener反映、取消・失敗、tenant境界、背景集計との併存を確認する。旧Callable前提のtestを新契約へ更新する | 影響classに応じた必須gateと独立reviewが完了。既存成功証拠の再利用と未検証範囲を明示する | Completed（Local検証） |
-| SCR-01-07 | Dev受入れ・文書とFGA反映 | 固定commitの対象client／Rulesを整合して反映し、必要な旧Function撤去を承認済み範囲で実施する。詳細画面で変更・解除・再表示・失敗時表示を受入れ、証拠と棚卸しを更新する | 対象範囲のDev受入れとGit closeoutが完了。SCR-01を完了とし、同じ証拠で満たしたFGAの範囲だけ反映する | Dev反映済み・受入れ待ち |
+| SCR-01-07 | Dev受入れ・文書とFGA反映 | 固定commitの対象client／Rulesを整合して反映し、必要な旧Function撤去を承認済み範囲で実施する。詳細画面で変更・解除・再表示と既存表示の維持を受け入れ、失敗経路は自動testで確認して証拠と棚卸しを更新する | 対象範囲のDev受入れとGit closeoutが完了。SCR-01を完了とし、同じ証拠で満たしたFGAの範囲だけ反映する | Completed（Dev受入れ） |
 
 標準保存は現在の3日付fieldのpatchからBilling全体の保存に変わる。01では`operationResults`、status、調整・備考、計算値・管理fieldの往復と、背景実績更新後も入金予定日が維持されるかを確認する。通常のdocument単位last-write-winsを前提とし、同時更新の完全保持を目的とする独自lock・期待値比較は追加しない。`paymentDueDate`・`paymentDueMonth`は標準クラスの派生値を利用する。
 
 SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路・Rules・旧経路を組み合わせた一つの変更として06で検証し、片側だけを先に公開しない。枝番ごとの調査・静的確認・直接対象testは進めるが、同じ回帰suiteを枝番ごとに重ねて実行しない。07の外部操作は既存のDev承認境界に従う。
 
-現在の検証入口は`test/domain/billing-payment-date.test.mjs`、`test/domain/customer-billing-manager.test.mjs`、`test/local/codex-local-harness.test.mjs`。旧client/server contractの同値比較testは01-05で対象実装とともに撤去した。01の保存契約・互換性・rollback・検証範囲は[調査結果](../implementation/operation-crud-simplification-inventory.md#scr-01-01-保存契約の調査結果2026-09-15)を参照する。02の部品実装と検証は[部品工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-02-単数managerと入力部品2026-09-15)、03の画面接続と直接testは[接続工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-03-標準保存と画面の接続2026-09-15完了)、04のRules境界は[Rules工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-04-billings-rulesの整合2026-09-15完了)、05の撤去範囲は[旧経路撤去の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-05-旧専用経路の撤去2026-09-15完了)、06のLocal統合検証は[検証工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-06-自動検証とlocal画面確認2026-09-15完了)を参照する。01-07のDev反映と旧Function撤去は[release記録](../verification/scr-01-billing-payment-date-dev.md)を参照する。Dev画面受入れは未完了で、親SCR-01は0点を維持する。
+現在の検証入口は`test/domain/billing-payment-date.test.mjs`、`test/domain/customer-billing-manager.test.mjs`、`test/local/codex-local-harness.test.mjs`。旧client/server contractの同値比較testは01-05で対象実装とともに撤去した。01の保存契約・互換性・rollback・検証範囲は[調査結果](../implementation/operation-crud-simplification-inventory.md#scr-01-01-保存契約の調査結果2026-09-15)を参照する。02の部品実装と検証は[部品工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-02-単数managerと入力部品2026-09-15)、03の画面接続と直接testは[接続工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-03-標準保存と画面の接続2026-09-15完了)、04のRules境界は[Rules工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-04-billings-rulesの整合2026-09-15完了)、05の撤去範囲は[旧経路撤去の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-05-旧専用経路の撤去2026-09-15完了)、06のLocal統合検証は[検証工程の記録](../implementation/operation-crud-simplification-inventory.md#scr-01-06-自動検証とlocal画面確認2026-09-15完了)を参照する。01-07のDev反映・旧Function撤去・会社管理者による画面受入れは[release記録](../verification/scr-01-billing-payment-date-dev.md)を参照する。backend停止時の画面確認は利用者判断により完了条件から外し、既存の自動test成功を失敗経路の証拠として採用した。これにより全枝番と親SCR-01を完了し、10点を加点する。
 
 ## 影響確認から次の1件を選ぶ
 
@@ -123,8 +123,8 @@ SCR-09では接続変更の前に、業務状態だけを変更する範囲とUs
 
 code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-coordination.md#git統合)と対象の既存runbookに従う。保存形式や実dataが変わる工程ではcodeのrevertだけで戻せるとせず、当該checkpointの互換性・復旧確認に含める。
 
-完了時は各行から実装差分と検証receiptへリンクし、command・exit・review findingと解消・未確認事項を確認可能にする。棚卸しには変更後の実装事実を反映する。本書作成時点では製品検証証拠は未取得。
+完了時は各行から実装差分と検証receiptへリンクし、command・exit・review findingと解消・未確認事項を確認可能にする。棚卸しには変更後の実装事実を反映する。SCR-01の製品検証証拠は実装記録とDev release記録へ保存した。
 
 ## 次の作業
 
-次はSCR-01-07のDev画面受入れとGit closeout。固定releaseでclient／Rules／HostingをDevへ反映し、remoteの`updateBillingPaymentDate`も撤去済みである。会社管理者で入金予定日の変更・解除・再表示と既存表示を確認する。受入れ完了まではSCR-01を完了にせず、0点を維持する。
+次はSCR-02 配置通知の状態更新・編集について、現行画面・保存経路・通知生成への影響を調査し、最小の改修単位と検証範囲を提示する。SCR-01の製品code・Rules・Dev反映と受入れは完了している。
