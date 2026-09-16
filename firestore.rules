@@ -377,21 +377,37 @@ service cloud.firestore {
     // 有効な認証済み本登録Userへ、同一tenant内の通常業務CRUDを許可する。
     // schemaと業務validationは保存境界で担い、Rulesではactorのuidを検証する。
     // 作成時は同ID archive不存在を維持する。
-    // 削除はclientへ許可しない。
+    // archiveは同一transaction内のraw copy + live deleteだけを許可する。
     match /Companies/{companyId}/Customers/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if isAuthenticated()
                     && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
                     && request.resource.data.uid == request.auth.uid
                     && !exists(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId));
       allow update: if isAuthenticated()
                     && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
                     && request.resource.data.uid == request.auth.uid;
-      allow delete: if false;
+      allow delete: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
+                    && existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId))
+                    && getAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId)).data == resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(docId));
     }
 
     // --- Rules for 'Customers_archive' subcollection under 'Companies' ---
-    // archiveはroot documentとnested pathを含めclientへ公開しない。
+    // archiveのread/update/deleteは拒否し、raw archiveの同時createだけを許可する。
+    match /Companies/{companyId}/Customers_archive/{docId} {
+      allow read, update, delete: if false;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
+                    && exists(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(docId))
+                    && get(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(docId)).data == request.resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(docId));
+    }
     match /Companies/{companyId}/Customers_archive/{document=**} {
       allow read, write: if false;
     }

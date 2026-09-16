@@ -3,7 +3,6 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const PUBLIC_CALLABLES = [
-  "archiveCustomer",
   "archiveEmployee",
   "archiveSite",
   "changeAdminUser",

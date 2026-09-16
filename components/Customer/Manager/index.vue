@@ -20,14 +20,7 @@ const emit = defineEmits(["created"]);
 
 const { attrs } = useBaseManager("CustomerManager");
 
-function rejectUnsupportedOperation() {
-  throw new Error("この画面では指定された取引先操作を実行できません。");
-}
-
 function beforeEdit(editMode) {
-  if (editMode === "DELETE") {
-    return rejectUnsupportedOperation();
-  }
   return true;
 }
 
@@ -37,6 +30,10 @@ async function handleUpdate(draft) {
 
 async function handleCreate(draft) {
   return await draft.create();
+}
+
+async function handleDelete(draft) {
+  return await draft.delete();
 }
 </script>
 
@@ -51,11 +48,9 @@ async function handleCreate(draft) {
       'aria-label': $attrs.label,
     }"
     :before-edit="beforeEdit"
-    disable-delete
-    hide-delete-btn
     :handle-create="handleCreate"
     :handle-update="handleUpdate"
-    :handle-delete="rejectUnsupportedOperation"
+    :handle-delete="handleDelete"
     @create="emit('created', $event)"
   >
     <template #activator="slotProps">

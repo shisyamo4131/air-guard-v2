@@ -2,11 +2,11 @@
 
 > 2026-09-14現行訂正: CAS-03で実装したOperationResults／Billingsの参照確認とlive Customer存在barrierは[ADR 0074](../decisions/0074-transaction-parent-reference-independence.md)で撤去した。Customerからlive Siteへのマスター間確認は維持する。下記の工程得点は当時の完了履歴である。
 
-- 状態: Completed
+- 状態: Historical／SCR-06で方式置換
 - 開始日: 2026-09-04
-- 現在の進捗: 100%
+- 現在の進捗: CAS-01〜05の履歴のみ。現行標準archiveの適用状況は[標準CRUD整合ロードマップ](standard-crud-alignment.md#scr-06-customerアーカイブの目的と完了条件)を正とする
 - 部分加点: なし
-- 完了条件: 誤登録・重複Customerを参照なしの場合だけ監査付きでarchiveでき、同時・後続参照と同ID再作成を拒否し、通常Userのrestore・archive閲覧・物理deleteを提供せず、local実装・自動test・Codex専用local UI・独立review・文書・Git統合・別途承認するDev反映と受入れを完了する。
+- 完了条件: （履歴）旧専用Callable方式の完了条件。現行の標準archive移行条件は[SCR-06](standard-crud-alignment.md#scr-06-customerアーカイブの目的と完了条件)に従う。
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[実装設計](../implementation/customer-archive-safety.md)
 
 ## 承認境界
