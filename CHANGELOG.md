@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- 2026-09-16 Employee archiveをCallable事前検証後のブラウザ標準保存とし、検証から保存までの稀な競合を受容する方針を記録した。誤退職訂正完了の履歴だけでは拒否せず、User連携・退職状態等は検査する。server-adapter改修と将来の無効化→archive→物理削除は後続事項で、製品変更は未実施。
+
+- 2026-09-16 Employee退職・誤退職訂正を標準CRUD化の例外として明確化し、User連携の有無を内部で検証する既存Callable経路を維持する方針へ仕様・ADR・SCR-09を整合した。既存の保護・操作履歴・再開処理を維持し、有効な証拠と照合して不足だけを対応する。文書変更のみで、製品動作・Rules・dataは変更していない。
+
 - 2026-09-16 SCR-02の最終確定中に`confirming`ダイアログを表示し、別予定の選択・再読込・再submit・作業員鉛筆編集を抑止するようにした。確定対象と通知mapを固定し、成功時は同一対象だけ選択解除、失敗時は選択保持、成功・失敗とも処理終了時に状態を解除する。Local/Dev検証はユーザーcode review後のため未実行。
 - 2026-09-16 SCR-02の追加修正として、GeneratorをSchemas標準syncへ接続し、最終確定時はArrangementNotificationを変更せず既存通知のactual値だけを実績へ反映する経路へ整合した。旧convert・通知expectation比較を撤去し、targeted domain testは実行済み。ユーザーcode review待ちで、Local Emulator/UI・domain-full・build・Dev受入れは未実行。SCR-04とは重複計上しない。
 - SCR-02として、rootアプリとCloud Functionsへ公開Schemas exact `3.0.0-dev.3`を導入し、PostAdoptionでname/version/resolved/integrityの一致を確認した。配置通知生成のsaveOperation notify分岐へSchemasの`actualIsStartNextDay` parity（`worker.isStartNextDay`）を反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21が成功した。GitHub ActionsによるDevのHosting/Functions反映と、会社管理者によるDev UIの表示確認は成功した。DEV read-only確認では配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した。writeは0件で、未確定dataが0件のため確定操作のDev受入れは未完了である。Prod、FCM実配信、backend日付算術、dashboard本人表示は未検証で、SCR-02は得点0、状態はDev補正反映済み・Dev再受入れ待ちを維持する。[Local検証記録](docs/verification/scr-02-arrangement-notification-local.md)を参照。

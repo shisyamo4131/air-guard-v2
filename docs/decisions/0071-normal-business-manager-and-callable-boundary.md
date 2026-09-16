@@ -8,6 +8,14 @@
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
 - 既存判断との関係: [ADR 0065](0065-tenant-trust-normal-business-authorization.md)の通常業務認可とclient／Callable境界を具体化し、[ADR 0069](0069-domain-manager-editable-state-ownership.md)のDomain Manager適用範囲を通常のmaster dataから通常業務data全般へ拡張する。0069のeditable state所有、Manager非入れ子、入力契約は維持する
 
+## 2026-09-16改訂：Employee退職・誤退職訂正の例外
+
+Employeeの退職・誤退職訂正は、2026-09-15の標準更新への統一対象から除外し、既存Callableの単一経路を維持する。User連携のない退職もserver内で予約と実Userの不在を保存時に検証するため、client標準更新へ分岐しない。訂正は最新の完了済み退職、User連携なし、処理中lock等を同じ保存境界で検証する。既存経路を残す理由はCallableが存在すること自体ではなく、認証accountとの紐づき・処理履歴・途中失敗との整合性を一か所で担保するためである。
+
+本改訂は両操作の標準CRUD化・認証処理との経路分離を求める判断を置換する。既存actorと対象guard、必要なRules、操作履歴、User/Auth非復元を維持し、通常CRUD全般へ専用処理を拡張しない。詳細要件は[現行仕様](../specification.md#テナントと認証)、証拠の照合と不足だけの対応は[SCR-09](../roadmaps/standard-crud-alignment.md#scr-09-employee退職誤退職訂正の目的と完了条件)を正とする。
+
+今回は文書の整合のみで、製品code・Rules・data・deployの変更やmigrationはない。既存製品動作と互換性を維持し、文書rollbackは今回の所有差分だけを戻す。文書・差分検査と独立reviewを行い、製品の完了判断は有効な既存検証・受入れ証拠の照合後とする。
+
 ## 2026-09-15改訂：業務CRUDと後続処理の分担
 
 利用者は質疑応答で、マスターの業務状態変更、確定後を含む請求の編集・削除、予定からの実績化、配置通知の作成・状態変更をManagerとSchemasクラスの標準処理へ統一すると決定した。認証account変更部分は厳密な専用処理へ分離し、Notifications生成・FCM送信・結果記録と、実績から請求・勤怠等への反映は既存Functionsトリガーが担う。詳細の正本は[標準CRUDと後続処理](../specification.md#標準crudと後続処理)と[ロックの画面別操作](../specification.md#稼働実績ロックと画面別操作)とする。

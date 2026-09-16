@@ -8,6 +8,12 @@
 - 一部置換: [ADR 0057](0057-employee-hard-delete-and-archive-deferral.md)の直接物理削除・archive延期、[ADR 0058](0058-employee-full-read-and-geocoding-scope.md)の従属writer変更禁止。全項目read・通常編集・退職・保険のactorと状態条件は維持する。
 - 適用計画: [Employeeロードマップ](../roadmaps/employee.md)。本判断の採用時はEMP-01の設計・review・文書保存までとし、後続の実装開始承認と進捗はroadmapで管理する。
 
+## 2026-09-16改訂：Employeeの事前検証とブラウザ保存
+
+EmployeeはCallableでUser連携・予約・退職状態・処理中と履歴の整合性を事前検証し、許可後にブラウザのSchema標準archiveへ接続する。検証後から保存までにUser連携等が生じる可能性を利用者が低いと判断して受容したため、検証と保存のatomicityを完了条件にしない。専用Callable内で標準archiveまで完結させる案は採用しない。正規退職の保持、User連携あり拒否、訂正完了の履歴のみでは拒否しない条件は[現行仕様](../specification.md#employeeの操作権限と保持)を正とする。
+
+server-adapterにはhasManyの項目名不一致とtransaction外読取りがあり、改修はFUT-0144で後続とする。復元画面・旧形式対応もSCR-10の後続とし、稀な競合を受容することを自動復旧の提供済み保証に読み替えない。既存User/Auth操作の認可は維持する。今回は仕様と計画・将来課題の記録だけで、code・Rules・data・packageを変更しない。実装時は事前検証の許可／拒否、標準保存、失敗、tenant境界、履歴保持を確認し、文書rollbackは今回所有差分だけを戻す。
+
 ## 2026-09-15改訂：標準archive・restoreの採用
 
 利用者は、当面client-adapterが提供する論理削除とrestoreを使い、マスタdataの削除機能全体を将来見直すと決定した。詳細の正本は[共通仕様](../specification.md#ドキュメントのアーカイブと物理削除)、将来判断は[FUT-0146](../implementation/future-actions.md#fut-0146-archive-audit-metadataretentionpurgerulesを共通設計する)とする。

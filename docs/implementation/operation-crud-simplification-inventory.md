@@ -15,11 +15,11 @@
 | 対象 | 判定 | 現在の実装と仕様との差 | 最小の改修単位・維持条件 |
 |---|---|---|---|
 | Customer通常CRUD・取引状態／Outsourcer通常CRUD・取引状態 | 維持 | 単数・複数ManagerがClass.create/updateへ接続済み | 既存の標準保存を作り直さない。Outsourcerで未提供のarchive/restoreを自動追加しない |
-| Site・Employee通常CRUD | 大筋一致 | 標準Manager/Class保存は存在するが、状態変更を拒否するRulesが残る | 下記の状態変更工程で必要なRulesだけを合わせる。退職後の通常情報編集禁止など残した業務条件は一括解除しない |
+| Site・Employee通常CRUD | 大筋一致 | 標準Manager/Class保存は存在するが、状態変更を拒否するRulesが残る | Siteは状態変更工程で必要なRulesを合わせる。Employee退職・訂正の専用保護と退職後の通常情報編集禁止は維持する |
 | Customer／Site／Employee archive | 高・要変更 | 専用Callableが独自envelopeを書いて原本をraw delete。標準Class.deleteを迂回し、原本delete・archive writeをRulesで拒否 | 各masterごとに入口、Classの従属検査、Rules、旧archive形式の互換性をまとめる。旧envelopeを標準restoreへ直接渡さない |
 | Restore | 提供範囲確認・archiveと同時検討 | client-adapterに標準restoreはあるが、対象masterの通常復旧入口は今回の検索で見つからない | 基盤の存在と製品UI提供を区別する。既存dataの有無・変換要否は未確認で、自動migrationしない |
 | Site手動終了・再開 | 高・要変更 | 専用editor→useSiteActions→Callable→server transaction。Rulesにもstatus変更拒否が残る | 手動入口・標準保存・Rulesを一体で整合。Classにはterminateが存在するが再開条件の完全一致は未確認。自動終了のsystem処理は維持 |
-| Employee退職・訂正 | 高・Class契約の整理が必要 | 専用Auth lifecycleが業務状態を更新。標準Employee.beforeUpdateもACTIVE→RESIGNEDを拒否し、toTerminatedにはUser.deleteまで含まれる | 単純な接続替えは不可。Classの業務状態更新と認証処理、入口、Rulesの分離を一つの設計単位にする。package変更自体は未承認・未実施 |
+| Employee退職・訂正 | 標準CRUD化の例外・既存Callable維持 | 2026-09-16コード確認: 退職Callableは予約と実Userを照合してUserなし／本登録を分岐し、仮登録・不整合を拒否する。訂正Callableは最新の完了済み退職・User連携なし・lockを検証する | [SCR-09の個別完了条件](../roadmaps/standard-crud-alignment.md#scr-09-employee退職誤退職訂正の目的と完了条件)に従い、既存証拠と不足を照合する。標準toTerminatedへの置換、Userなしの別保存経路、package改修を前提にしない |
 | 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | 高・要変更 | Operation専用ManagerとsaveOperationが残る。Rulesはlock中update・lock変更・articles/調整値変更を拒否。Callableにもrole認可が残る | OperationResultsを共有する画面、標準OperationResult/OperationBilling、Rules、正規callerの撤去とtestを同じ工程で整合。経理画面へのアクセス制限は維持 |
 | 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
 | Billings入金予定日 | SCR-01 Completed | 詳細画面はManager/Classの標準update、Rulesはtenant共通の既存update、旧PaymentDateEditor・Callable・expected比較はsourceとDevから撤去済み。標準保存、listener再表示、日付条件・解除、背景writerとの併存をLocal確認し、Devの会社管理者画面で変更・解除・再表示・既存表示維持を受け入れた | 残作業なし。失敗経路は自動test成功を受入証拠とし、backend停止時の画面確認は完了条件外 |
@@ -158,7 +158,7 @@ remote反映とpost-checkの詳細は[SCR-01 Dev release記録](../verification/
 - 実績lockの画面別制約と、現在のRules・クラスhook・Managerの一律拒否条件を照合し、経理側の編集が標準CRUDで成立するよう対象実装工程で揃える。
 - 配置通知は既存schedule.notify()でdocumentを作成し、作成・状態変更TriggerがNotificationsを生成、別TriggerがFCM送信と結果記録を行う。標準クラスへの接続整理で後段を撤去しない。
 - 実績の作成・更新・削除から請求・勤怠等への既存Triggerを維持し、保存成功と後続処理完了を分けて検証する。
-- 業務状態更新とAuth変更を併合した旧master経路は、各master工程で分離方法を確認する。今回の仕様承認をAuth処理の削除や実装着手・外部操作の承認へ拡張しない。
+- 2026-09-16訂正: Employee退職・誤退職訂正は既存Callableを維持する例外とし、業務状態更新とAuth変更の別経路化を要求しない。その他のmaster経路は各工程の合意済み範囲で確認する。今回の仕様承認をAuth処理の削除や実装着手・外部操作の承認へ拡張しない。
 
 ## 確認済み実装事実（2026-09-14の記録）
 
