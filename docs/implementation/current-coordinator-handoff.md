@@ -5,7 +5,7 @@
 ## 現在の作業
 
 - 棚卸し解消の継続先は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)。解消順、状態、次checkpointは同roadmapを正とし、既存phaseとの関係も同書から確認します。
-- SCR-01「Billings入金予定日」は標準Manager／Class保存、Rules整合、旧Function撤去、Local自動検証、Dev反映・受入れまで完了し、同ロードマップで10点を加点済みです。SCR-02「配置通知の状態更新・編集」は標準Manager／Class接続を完了し、Schemas `3.0.0-dev.3`をroot/Functionsへ導入しました。PostAdoption、直接対象test、TESTERのLocal UI確認、ユーザー本人の遷移確認、domain-full 1433/1433、Local Emulator 180/180、最終Local T21は成功しました。GitHub ActionsによるDevのHosting/Functions反映と会社管理者によるDev UI表示も成功し、DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認してmigration/repair不要と判断しました。未確定dataが0件のため確定操作のDev受入れは未完了です。Generatorのscroll補正とsource regression test（TESTER最終39/39、review finding 0件）は完了し、Local UIも利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格としました。Dev再反映・Dev再受入れは未実施です。現在はLocal補正確認済み・Dev反映待ち、得点0です。[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)と[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)を参照してください。
+- SCR-01「Billings入金予定日」は標準Manager／Class保存、Rules整合、旧Function撤去、Local自動検証、Dev反映・受入れまで完了し、同ロードマップで10点を加点済みです。SCR-02「配置通知の状態更新・編集」は標準Manager／Class接続を完了し、Schemas `3.0.0-dev.3`をroot/Functionsへ導入しました。PostAdoption、直接対象test、TESTERのLocal UI確認、ユーザー本人の遷移確認、domain-full 1433/1433、Local Emulator 180/180、最終Local T21は成功しました。GitHub ActionsによるDevのHosting/Functions反映と会社管理者によるDev UI表示も成功し、DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認してmigration/repair不要と判断しました。未確定dataが0件のため確定操作のDev受入れは未完了です。Generatorのscroll補正とsource regression test（TESTER最終39/39、review finding 0件）は完了し、Local UIも利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格としました。release merge commit `05600c5dd8f7a5f55afae94832dd8f7b246fa531`のGitHub Actions run `35046048154`はsuccessとなり、HostingのみをDevへ反映しました。Dev URLはHTTP 200・final URI一致・no-store/must-revalidate/no-cacheで、会社管理者Chromeの対象3画面表示を確認しました。未確定現場稼働は0件のため今回のscroll補正のDev再受入れは未完了です。現在はDev補正反映済み・Dev再受入れ待ち、得点0です。[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)と[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)を参照してください。
 - 製品全体の残作業は[正式運用ロードマップ](../roadmaps/airguard-v2.md)、確認済み要件は[現行仕様](../specification.md)、実行証拠は[検証索引](../verification/README.md)を参照します。
 
 ## 未決事項と承認
@@ -18,7 +18,7 @@
 
 ## 次の作業
 
-次は[標準CRUD整合ロードマップの受入れ前UI補正checkpoint](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)に従い、補正をDevへ再反映して会社管理者受入れを行う。既存のDev反映とDev UI表示は成功済みだが、今回の補正は未反映で、未確定dataが0件のため確定操作のDev受入れも未完了である。Local UIでは利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格としたため、Dev反映後に同範囲を確認する。得点加点はDev受入れまで行わない。Prod、FCM実配信、backend日付算術、dashboard本人表示は未実施または未検証であり、Rules、実data、package publishは別の承認境界に残す。
+次は[標準CRUD整合ロードマップの受入れ前UI補正checkpoint](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)に従い、対象dataを用意できた後、会社管理者で同範囲を再受入れする。既存のDev反映とDev UI表示、今回の補正反映は成功済みだが、未確定dataが0件のため確定操作のDev受入れは未完了である。Local UIでは利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格としたため、対象dataを用意できた後に同範囲を確認する。得点加点はDev受入れまで行わない。Prod、FCM実配信、backend日付算術、dashboard本人表示は未実施または未検証であり、Rules、実data、package publishは別の承認境界に残す。
 
 ### 既存FGA工程の参照（2026-09-15時点）
 
