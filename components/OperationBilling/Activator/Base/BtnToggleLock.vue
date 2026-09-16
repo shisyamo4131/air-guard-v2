@@ -1,24 +1,19 @@
 <script setup>
 import { OperationBilling } from "@/schemas";
-import { useOperationSubmission } from "@/composables/application/operation/useOperationSubmission";
-import { expectedForOperation } from "@/composables/domain/operation/operationCommandContract";
 defineOptions({ name: "OperationBillingActivatorBaseBtnToggleLock", inheritAttrs: false });
 const props = defineProps({ item: { type: Object, required: true, validator: (value) => value instanceof OperationBilling } });
-const submission = useOperationSubmission({ billing: true });
-watch(() => props.item.docId, submission.reset);
+const busy = ref(false), message = ref("");
 async function toggleLock() {
-  if (submission.busy.value || submission.uncertain.value || !submission.allowed.value) return;
-  const id = props.item.docId, desiredLocked = !props.item.isLocked;
+  if (busy.value || !props.item.docId) return;
+  busy.value = true; message.value = "";
   try {
-    const raw = await submission.read("OperationResults", id);
-    if (!raw || props.item.docId !== id) return;
-    const command = { kind: "billing", action: "lock", documentId: id, changes: { desiredLocked } };
-    command.expected = expectedForOperation(raw, command);
-    await submission.submit([command]);
-  } catch { submission.message.value = "ロック状態を確認できません。最新情報を読み直してください。"; }
+    const draft = props.item.clone();
+    await draft.toggleLock(!draft.isLocked);
+  } catch { message.value = "ロック状態を保存できません。最新情報を確認してください。"; }
+  finally { busy.value = false; }
 }
 </script>
 <template>
-  <v-alert v-if="submission.message.value" type="warning">{{ submission.message.value }}</v-alert>
-  <v-btn v-bind="$attrs" class="mb-4" block :color="item.isLocked ? 'error' : 'primary'" :prepend-icon="item.isLocked ? 'mdi-lock-open' : 'mdi-lock'" :text="item.isLocked ? 'この稼働情報のロックを解除' : 'この稼働情報をロック'" :disabled="submission.busy.value || submission.uncertain.value || !submission.allowed.value" :loading="submission.busy.value" variant="flat" @click="toggleLock" />
+  <v-alert v-if="message" type="warning">{{ message }}</v-alert>
+  <v-btn v-bind="$attrs" class="mb-4" block :color="item.isLocked ? 'error' : 'primary'" :prepend-icon="item.isLocked ? 'mdi-lock-open' : 'mdi-lock'" :text="item.isLocked ? 'この稼働情報のロックを解除' : 'この稼働情報をロック'" :disabled="busy || !item.docId" :loading="busy" variant="flat" @click="toggleLock" />
 </template>

@@ -37,20 +37,18 @@ test("duplicate accepts an absent Employee master but rejects locked or missing 
   await assert.rejects(state.save(copy), { code: "not-found" }); assert.equal(state.writes.length, 0);
 });
 
-test("result duplicate rejects billing aliases of source/destination in either order and permits independent billing", async () => {
+test("result duplicate remains available while removed billing aliases are rejected atomically", async () => {
   const raw = operation("result");
-  for (const action of ["lock", "adjusted"]) for (const target of ["operation", "copy"]) for (const reversed of [false, true]) {
+  for (const action of ["lock", "adjusted", "articles", "agreement", "overview"]) {
     const state = harness(raw, { kind: "result", actor: { isAdmin: true } });
-    const duplicate = command(raw, "duplicate", { dateAt: "2026-09-02" }, { kind: "result", documentId: "copy", sourceId: "operation" });
-    const billing = command(raw, action, action === "lock" ? { desiredLocked: true } : { useAdjusted: true, adjustedQuantityBase: 4 }, { kind: "billing", documentId: target });
-    await assert.rejects(state.save(...(reversed ? [billing, duplicate] : [duplicate, billing])), { code: "invalid-argument" });
-    assert.equal(state.writes.length, 0); assert.equal(state.records.has(path("result", "copy")), false);
+    const payload = action === "lock" ? { desiredLocked: true } : action === "adjusted" ? { useAdjusted: true, adjustedQuantityBase: 4 } : {};
+    await assert.rejects(state.save(command(raw, action, payload, { kind: "billing", documentId: "operation" })), { code: "invalid-argument" });
+    assert.equal(state.writes.length, 0);
+    assert.equal(state.records.has(path("result", "copy")), false);
   }
   const state = harness(raw, { kind: "result", actor: { isAdmin: true } });
-  const other = { ...raw, docId: "other" }; state.records.set(path("result", "other"), other);
-  await state.save(command(raw, "duplicate", { dateAt: "2026-09-02" }, { kind: "result", documentId: "copy", sourceId: "operation" }), command(other, "lock", { desiredLocked: true }, { kind: "billing" }));
-  assert.equal(state.records.get(path("result", "other")).isLocked, true);
-  assert.equal(state.records.get(path("result", "copy")).isLocked, false);
+  await state.save(command(raw, "duplicate", { dateAt: "2026-09-02" }, { kind: "result", documentId: "copy", sourceId: "operation" }));
+  assert.equal(state.records.get(path("result", "copy")).date, "2026-09-02");
   assert.strictEqual(state.records.get(path("result")), raw);
 });
 
@@ -253,29 +251,23 @@ test("result create, overview, workers, and delete are rejected at the Callable 
   }
 });
 
-test("billing edits may run locked but result worker edits remain lock-protected; lock is desired-state with raw expected", async () => {
+test("removed billing Callable edits are rejected while result worker edits remain lock-protected", async () => {
   const raw = { ...operation("result"), isLocked: true }, state = harness(raw, { kind: "result", actor: { roles: ["accountant"] } });
-  await state.save(command(raw, "adjusted", { useAdjusted: true, adjustedQuantityBase: 7 }, { kind: "billing" }));
+  await assert.rejects(state.save(command(raw, "adjusted", { useAdjusted: true, adjustedQuantityBase: 7 }, { kind: "billing" })), { code: "invalid-argument" });
+  assert.equal(state.writes.length, 0);
   const adjusted = state.records.get(path("result"));
-  assert.deepEqual(adjusted.employees, raw.employees); assert.equal(adjusted.isLocked, true); assert.equal(adjusted.adjustedQuantityBase, 7);
+  assert.deepEqual(adjusted.employees, raw.employees); assert.equal(adjusted.isLocked, true);
   await assert.rejects(state.save(command(adjusted, "workers", {}, { kind: "result", rowAction: "remove", array: "employees", position: 0 })), { code: "invalid-argument" });
-  const unlock = command(adjusted, "lock", { desiredLocked: false }, { kind: "billing" });
-  await state.save(unlock);
-  await assert.rejects(state.save(unlock), { code: "aborted" });
-  assert.equal(state.records.get(path("result")).isLocked, false);
   assert.equal(state.employeesRead().length, 0);
   const controller = harness(raw, { kind: "result" });
   await assert.rejects(controller.save(command(raw, "overview", { remarks: "edit" }, { kind: "result" })), { code: "invalid-argument" });
 });
 
-test("nonempty article operations patch only articles and their billing calculations", async () => {
+test("legacy billing article Callable command is rejected atomically", async () => {
   const raw = operation("result"), state = harness(raw, { kind: "result", actor: { roles: ["accountant"] } });
-  await state.save(command(raw, "articles", { articleId: "article", price: 300, quantity: 2 }, { kind: "billing", rowAction: "add", array: "articles", position: 0 }));
-  const saved = state.records.get(path("result"));
-  assert.deepEqual(saved.articles, [{ articleId: "article", price: 300, quantity: 2 }]);
-  assert.equal(saved.salesArticles, 600);
-  assert.deepEqual(saved.employees, raw.employees);
-  assert.equal(state.employeesRead().length, 0);
+  await assert.rejects(state.save(command(raw, "articles", { articleId: "article", price: 300, quantity: 2 }, { kind: "billing", rowAction: "add", array: "articles", position: 0 })), { code: "invalid-argument" });
+  assert.equal(state.writes.length, 0);
+  assert.strictEqual(state.records.get(path("result")), raw);
 });
 
 test("schedule create and moved date retain Site status, Customer reference and revision protection", async () => {
@@ -336,30 +328,15 @@ test("normal result create is not accepted by the Callable writer", async () => 
   assert.equal(state.records.has(path("result")), false);
 });
 
-for (const array of ["articles"]) for (const sequence of ["remove-update", "move-remove", "add-update"]) {
-  test(`multiple ${array} operations ${sequence} retain original positions`, async () => {
-    const raw = operation("result", ["employee-a", "employee-b", "employee-c"]);
+for (const sequence of ["remove-update", "move-remove", "add-update"]) {
+  test(`legacy result article operations ${sequence} reject atomically`, async () => {
+    const raw = operation("result");
     raw.articles = ["article-a", "article-b", "article-c"].map((articleId) => ({ articleId, price: 10, quantity: 1 }));
     const state = harness(raw, { kind: "result" });
-    state.records.set(`${root}/Employees/new-employee`, { employmentStatus: "RESIGNED" });
-    const action = array === "employees" ? "workers" : "articles";
-    const row = (rowAction, position, changes = {}, extra = {}) => command(raw, action, changes, { kind: "result", array, rowAction, position, ...extra });
-    const correction = array === "employees" ? { startTime: "10:00" } : { price: 80 };
-    const added = array === "employees" ? { id: "new-employee", startTime: "09:00" } : { articleId: "new-article", price: 20, quantity: 1 };
-    if (sequence === "remove-update") {
-      await state.save(row("remove", 0), row("update", 1, correction));
-      const saved = state.records.get(path("result"))[array];
-      assert.equal(saved[0][array === "employees" ? "id" : "articleId"], array === "employees" ? "employee-b" : "article-b");
-      assert.equal(saved[0][array === "employees" ? "startTime" : "price"], array === "employees" ? "10:00" : 80);
-    } else if (sequence === "move-remove") {
-      await state.save(row("move", 0, {}, { destination: 2 }), row("remove", 1));
-      assert.deepEqual(state.records.get(path("result"))[array].map((value) => value[array === "employees" ? "id" : "articleId"]), array === "employees" ? ["employee-c", "employee-a"] : ["article-c", "article-a"]);
-    } else {
-      await state.save(row("add", 0, added), row("update", 0, correction));
-      const saved = state.records.get(path("result"))[array];
-      assert.equal(saved[0][array === "employees" ? "startTime" : "price"], array === "employees" ? "09:00" : 20);
-      assert.equal(saved[1][array === "employees" ? "startTime" : "price"], array === "employees" ? "10:00" : 80);
-    }
+    const row = command(raw, "articles", { articleId: "article", price: 20, quantity: 1 }, { kind: "result", array: "articles", rowAction: "add", position: 0 });
+    await assert.rejects(state.save(row), { code: "invalid-argument" });
+    assert.equal(state.writes.length, 0);
+    assert.deepEqual(state.records.get(path("result")).articles, raw.articles);
   });
 }
 

@@ -27,7 +27,7 @@
 - 未完了: testerによる直接test、security review、Rulesの実行時構文確認、Local Emulator／UI／Dev受入れは未実施。schemaの予定確認は標準client update前の非atomicな事前検査であり、同時変更を完全に防止するものではない。
 - 影響: package／lock／node_modules、Firestore data shape、migration、remote data、外部環境、deployは変更していない。Rules差分はsecurity review承認前のprototypeであり、承認なしにrelease・deployしてはならない。
 | Employee退職・訂正 | 標準CRUD化の例外・既存Callable維持 | 2026-09-16コード確認: 退職Callableは予約と実Userを照合してUserなし／本登録を分岐し、仮登録・不整合を拒否する。訂正Callableは最新の完了済み退職・User連携なし・lockを検証する | [SCR-09の個別完了条件](../roadmaps/standard-crud-alignment.md#scr-09-employee退職誤退職訂正の目的と完了条件)に従い、既存証拠と不足を照合する。標準toTerminatedへの置換、Userなしの別保存経路、package改修を前提にしない |
-| 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | 高・要変更 | Operation専用ManagerとsaveOperationが残る。Rulesはlock中update・lock変更・articles/調整値変更を拒否。Callableにもrole認可が残る | OperationResultsを共有する画面、標準OperationResult/OperationBilling、Rules、正規callerの撤去とtestを同じ工程で整合。経理画面へのアクセス制限は維持 |
+| 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | SCR-05 prelocal実装・検証待ち | 標準OperationBillingManager／ArticleDetailsManagerとroot OperationBilling schemaへ移行。旧Operation専用Manager、result/articles Callable経路、請求専用Functions分岐を撤去。Rulesはlock中updateを許可し、updateのisLocked型を要求 | operation direct test、SFC runtime、Rules Emulator、Local／Dev受入れ、live Site agreement検証を確認。経理画面アクセス制限とOperationResult／OperationBillingのlock差を維持 |
 | 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
 | Billings入金予定日 | SCR-01 Completed | 詳細画面はManager/Classの標準update、Rulesはtenant共通の既存update、旧PaymentDateEditor・Callable・expected比較はsourceとDevから撤去済み。標準保存、listener再表示、日付条件・解除、背景writerとの併存をLocal確認し、Devの会社管理者画面で変更・解除・再表示・既存表示維持を受け入れた | 残作業なし。失敗経路は自動test成功を受入証拠とし、backend停止時の画面確認は完了条件外 |
 | 請求確定・確定後の編集削除 | 中・未提供UIを含む | 顧客請求のC/U/D handlerがunsupported。詳細の編集入口は入金予定日。Billingにstatus/confirmはあるが確定画面・issuer snapshot保存経路は今回未確認 | 「既存確定ロックの撤去」と誤分類しない。提供UI・標準保存・Rulesを実装する単位。現在の入金予定日編集から分ける |
@@ -170,10 +170,10 @@ remote反映とpost-checkの詳細は[SCR-01 Dev release記録](../verification/
 ## 確認済み実装事実（2026-09-14の記録）
 
 1. 現場稼働予定の単数・複数Managerは09で`AirItemManager`／`AirArrayManager`へ戻し、`SiteOperationSchedule` modelの作成・更新・削除を使う。請求には`OperationManager`／`OperationArrayManager`と`saveOperation`が残る。
-2. 予定の配置作業員は09で親`SiteOperationSchedule` modelの追加・変更・削除と`update()`へ戻した。実績詳細の作業員は07で通常client保存へ移行済みだが、稼働外売上は表示・操作・Callable経路を変更していない。
+2. 予定の配置作業員は09で親`SiteOperationSchedule` modelの追加・変更・削除と`update()`へ戻した。実績詳細の作業員は07で通常client保存へ移行済みである。稼働外売上はSCR-05で標準`ArticleDetailsManager`へ接続した。
 3. 過去実装では作業員配列を`WorkersManager`／`AirArrayManager`の`v-model`で編集し、submit完了時に親`OperationResult.update()`を実行していた。直近実装で追加された`useOperationResultWriter`とEmployee存在確認transactionはこの復元経路に不要であり、FGA-06-RESULT-CALLABLE-RESTORE-07で撤去した。
-4. `functions/shared/operationWriteContract.js`が`create`、`duplicate`、`overview`、`workers`、`articles`、`order`、`delete`、`notify`、`convert`、`agreement`、`adjusted`、`lock`を一つのcommand契約へ集約する。
-5. `functions/modules/operations/saveOperation.js`には予定commandとSite `scheduleRevision`処理が互換用に残るが、09の正規予定画面からは到達しない。予定から実績への確定と請求の取極め・調整・lockは引き続きserver入口を使う。
+4. （履歴）`functions/shared/operationWriteContract.js`は旧時点で`agreement`、`adjusted`、`lock`等を含む一つのcommand契約へ集約していた。SCR-05後の現行Functions契約は`schedule`／`result`の標準操作と通知の残存経路に限定し、稼働請求専用actionは受け付けない。
+5. `functions/modules/operations/saveOperation.js`には予定commandとSite `scheduleRevision`処理が互換用に残るが、09の正規予定画面からは到達しない。SCR-05後は稼働請求の取極め・調整・lockをこのserver入口へ接続しない。
 6. Firestore Rulesは`SiteOperationSchedules`と`ArrangementNotifications`を同一tenantの有効な本登録Userによる通常read/writeへ開き、Site revision、maintenance、live Site、通常field形状を重複検査しない。未認証、User不在、仮登録、無効User、claim不正、他tenantは拒否する。`OperationResults`の個別境界は08までの実装を維持する。
 7. `saveOperation`の実績`create`・`overview`・`workers`・`delete`は正規画面から到達しない旧互換経路であり、入力契約で拒否する。予定の旧分岐は正規画面から外れた互換codeとして残す。実績複製、稼働外売上、請求、予定から実績への確定は変更せず、従来経路を維持する。
 
@@ -255,6 +255,15 @@ checkpointは後続07と同じDev release・受入れで完了した。schema変
 - 予定から実績への確定、請求、実績複製、稼働外売上、schema package、data shape、migration、Dev・Prodは変更しない。
 - Dev受入れで、上下番確定の左一覧と右詳細・日報写真が表示されず、外枠のManagerだけが表示される不具合を確認した。原因は予定Managerの明示的な`table`表示口と汎用転送の同名表示口の重複であり、汎用転送から`table`を除外するLocal補正と回帰testを追加した。
 - 対象test 36/36件、全domain 1,434/1,434件、buildはexit status 0。補正版commit `12f05e5a`をGitHub ActionsでHostingへDev再反映した。配置管理・上下番確定処理そのものの再受入れは未実施であり、エラー解消済みとは扱わない。
+
+## SCR-05 稼働請求・実績lock・稼働外売上 prelocal実装（2026-09-16）
+
+- 稼働請求詳細の基本情報・取極め・請求明細は標準`OperationBillingManager`へ接続し、稼働外売上は標準`ArticleDetailsManager`を使う`OperationArticlesManager`へ移行した。子配列の追加・更新・削除は親documentのcloneへ反映して`OperationBilling`／`OperationResult.update()`で保存する。
+- `OperationResult`はlock中のUI編集を拒否し、`OperationBilling`はlock中も請求編集を許可する。稼働請求の作成・削除は引き続きUIで提供しない。article行の`ArticleDetail`／`articleId`形状と既存の表示・入力・取消・保存失敗時の入力保持を維持する前提である。
+- 旧`OperationManager`、`OperationArrayManager`、`OperationRowsManager`、`OperationEditor`、`useOperationEditor`は正規callerがなくなったため撤去した。`saveOperation`のFunctions契約・dispatchから稼働請求専用の`overview`／`articles`／`agreement`／`adjusted`／`lock`経路と、正規callerのない実績`articles`経路を外し、予定・実績の残存操作と複製・通知経路は維持した。`saveOperation`本体とentrypointは、残存する予定・実績commandのため維持する。
+- RulesはOperationResultsの同一tenant境界と、OperationBillingのlock中updateを妨げない境界へ整合した。OperationResultのlock拒否はSchema／UI側で維持する。
+- OperationBillingの標準updateは、installed ClientAdapterの実在する`runTransaction`／`fetchDoc({ transaction })`／`update({ transaction })` APIを使い、Siteのlive agreement readとOperationResults writeを同一transactionへ渡す。OperationResultの通常更新は既存の標準update経路を維持する。runtime／Emulatorでの同時変更受入れは未確認である。
+- 状態はprelocal実装・検証待ち。schema、data shape、migration、既存data一括変更、remote、Local Emulator、build、Dev／Prodは未確認であり、SCR-05の得点は0のままとする。
 
 ## 未確認事項
 

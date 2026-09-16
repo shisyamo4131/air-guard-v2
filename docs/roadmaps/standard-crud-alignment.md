@@ -43,7 +43,7 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 | SCR-02 配置通知の状態更新・編集 | 10 | 0 | Pending（Dev反映済み・2026-09-17以降の会社管理者受入れ待ち） | 通知個別編集と最終確定を標準Manager／Schemasへ整合し、最終確定で通知を変更せず、既存通知のactual値を実績へ反映する。旧convert経路を撤去済み。LocalとDev反映は成功し、対象data発生後の上下番確定・再表示を残す |
 | SCR-03 Site手動終了・再開 | 10 | 0 | Implementation（prelocal・検証待ち） | [個別完了条件](#scr-03-site手動終了再開の目的と完了条件)に従い、Air Manager／Schema標準更新への委譲、不要経路撤去、Rules簡素化、現行業務条件の維持を確認する。security review、test、Dev受入れ完了までは得点0を維持する |
 | SCR-04 予定から実績化 | 10 | 0 | Planned | [個別完了条件](#scr-04-予定から実績化の目的と完了条件)に従い、SCR-02の成果を5つの目的と照合し、残る差分だけを解消する。未対応部分がなければ追加改修せず、必要な検証・受入れ証拠の充足を確認して完了判断する |
-| SCR-05 稼働請求・実績lock・稼働外売上 | 10 | 0 | Planned | [個別完了条件](#scr-05-稼働請求実績lock稼働外売上の目的と完了条件)に従い、提供済み操作をAir Manager／Schemaへ委譲する。現行の入力・計算・画面別操作制限を維持し、不要経路撤去・Rules簡素化・後続反映を確認する |
+| SCR-05 稼働請求・実績lock・稼働外売上 | 10 | 0 | Implementation（prelocal・検証待ち） | [個別完了条件](#scr-05-稼働請求実績lock稼働外売上の目的と完了条件)に従い、提供済み操作をAir Manager／Schemaへ委譲する。現行の入力・計算・画面別操作制限を維持し、不要経路撤去・Rules簡素化・後続反映を確認する |
 | SCR-06 Customer archive整合 | 10 | 0 | Planned | [個別完了条件](#scr-06-customerアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、不要経路撤去・Rules簡素化・通常CRUD維持を確認する。既存archiveは変換せず保持し、復元画面と旧形式の復元対応は後続とする |
 | SCR-07 Site archive整合 | 10 | 0 | Planned | [個別完了条件](#scr-07-siteアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、不要経路撤去・Rules簡素化・通常CRUDと終了再開の維持を確認する。既存archiveは保持し、復元対応は後続とする |
 | SCR-08 提供済み請求操作の標準CRUD整合 | 10 | 0 | Planned | [個別完了条件](#scr-08-提供済み請求操作の目的と完了条件)に従い、SCR-01等の成果を再利用し、残る提供済み操作だけを標準化する。未対応がなければ追加改修せず証拠を照合する。未提供の確定・編集・削除画面は後続とする |

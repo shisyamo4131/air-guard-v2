@@ -1,15 +1,14 @@
 import { operationDateTime } from "./operationDateTime.js";
-import { SiteOperationSchedule, OperationResult, ArticleDetail } from "@shisyamo4131/air-guard-v2-schemas";
+import { SiteOperationSchedule, OperationResult } from "@shisyamo4131/air-guard-v2-schemas";
 import { EMPLOYEE_ROLES, plain, identifier, equal, encodeExpected, expectedFields, parseDate, rawForClass } from "./employeeContract.js";
 import { OperationWriteError, operationEmployeeReferences } from "./operationReferences.js";
 
 export const OVERVIEW_FIELDS = Object.freeze(["siteId", "securityType", "dateAt", "dayType", "shiftType", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes", "requiredPersonnel", "qualificationRequired", "workDescription", "remarks"]);
 export const WORKER_FIELDS = Object.freeze(["id", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes", "isQualified", "isOjt"]);
-export const ADJUSTED_FIELDS = Object.freeze(["useAdjusted", "adjustedQuantityBase", "adjustedOvertimeMinutesBase", "adjustedQuantityQualified", "adjustedOvertimeMinutesQualified", "adjustedUnitPriceBase", "adjustedOvertimeUnitPriceBase", "adjustedUnitPriceQualified", "adjustedOvertimeUnitPriceQualified"]);
 export const WORKER_PARENT_FIELDS = Object.freeze(["siteId", "dateAt", "shiftType", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes"]);
-const BOOL_FIELDS = new Set(["isStartNextDay", "qualificationRequired", "isQualified", "isOjt", "useAdjusted", "desiredLocked"]);
-const NUMBER_FIELDS = new Set(["breakMinutes", "regulationWorkMinutes", "requiredPersonnel", "price", "quantity", "displayOrder", ...ADJUSTED_FIELDS.slice(1)]);
-const ACTIONS = new Set(["create", "duplicate", "overview", "workers", "articles", "order", "delete", "notify", "agreement", "adjusted", "lock"]);
+const BOOL_FIELDS = new Set(["isStartNextDay", "qualificationRequired", "isQualified", "isOjt"]);
+const NUMBER_FIELDS = new Set(["breakMinutes", "regulationWorkMinutes", "requiredPersonnel", "price", "quantity", "displayOrder"]);
+const ACTIONS = new Set(["create", "duplicate", "overview", "workers", "order", "delete", "notify"]);
 const SCHEDULE_CUD_ACTIONS = new Set(["create", "duplicate", "overview", "workers", "order", "delete"]);
 export function rejectInput() { throw new OperationWriteError("invalid-argument"); }
 export function exactKeys(value, keys) { if (!plain(value) || Object.keys(value).some((key) => !keys.includes(key))) rejectInput(); }
@@ -19,26 +18,21 @@ export function operationAllowed(identity, user, command) {
   if (command?.kind === "result" && ["create", "overview", "workers", "delete"].includes(command.action)) return false;
   if (user.isAdmin || (command?.kind === "schedule" && SCHEDULE_CUD_ACTIONS.has(command.action))) return true;
   return identity.isSuperUser === false && Array.isArray(user.roles) && user.roles.length <= EMPLOYEE_ROLES.length
-    && user.roles.every((role) => EMPLOYEE_ROLES.includes(role)) && user.roles.some((role) => (command?.kind === "billing" ? ["manager", "accountant"] : ["manager", "controller"]).includes(role));
+    && user.roles.every((role) => EMPLOYEE_ROLES.includes(role)) && user.roles.some((role) => ["manager", "controller"].includes(role));
 }
 
 export function parseOperationCommand(input) {
   exactKeys(input, ["kind", "action", "documentId", "changes", "expected", "sourceId", "rowAction", "array", "position", "destination", "notifications", "siteStatuses"]);
-  if (!["schedule", "result", "billing"].includes(input.kind) || !ACTIONS.has(input.action) || !identifier(input.documentId) || !plain(input.changes) || !plain(input.expected)) rejectInput();
+  if (!["schedule", "result"].includes(input.kind) || !ACTIONS.has(input.action) || !identifier(input.documentId) || !plain(input.changes) || !plain(input.expected)) rejectInput();
   const { kind, action } = input;
   // Transaction document deletion is a client/Rules/Trigger operation.
   // Keep schedule deletion here until its own migration checkpoint.
   if (kind === "result" && ["create", "overview", "workers", "delete"].includes(action)) rejectInput();
   if (action === "duplicate" ? !identifier(input.sourceId) || input.sourceId === input.documentId || !Object.hasOwn(input.changes, "dateAt") : Object.hasOwn(input, "sourceId")) rejectInput();
-  if ((kind !== "schedule" && ["notify", "order"].includes(action)) || (kind !== "billing" && ["agreement", "adjusted", "lock"].includes(action))
-    || (kind === "billing" && !["overview", "articles", "agreement", "adjusted", "lock"].includes(action)) || (kind === "schedule" && action === "articles")) rejectInput();
+  if (kind !== "schedule" && ["notify", "order"].includes(action)) rejectInput();
   let fields = [];
-  if (["create", "overview"].includes(action)) fields = kind === "billing" ? OVERVIEW_FIELDS.filter((key) => key !== "securityType") : OVERVIEW_FIELDS;
+  if (["create", "overview"].includes(action)) fields = OVERVIEW_FIELDS;
   if (action === "workers") fields = WORKER_FIELDS;
-  if (action === "articles") fields = ["articleId", "price", "quantity"];
-  if (action === "adjusted") fields = ADJUSTED_FIELDS;
-  if (action === "agreement") fields = ["agreementKey", "billingDateAt"];
-  if (action === "lock") fields = ["desiredLocked"];
   if (action === "order") fields = ["displayOrder"];
   if (action === "notify") fields = ["shouldNotify"];
   if (action === "duplicate") fields = ["dateAt"];
@@ -52,16 +46,15 @@ export function parseOperationCommand(input) {
     else if (value !== null && typeof value !== "string") rejectInput();
     changes[key] = value;
   }
-  const row = ["workers", "articles"].includes(action);
+  const row = action === "workers";
   if (row) {
     if (!["add", "update", "remove", "move"].includes(input.rowAction)) rejectInput();
-    if (action === "workers" ? !["employees", "outsourcers"].includes(input.array) : input.array !== "articles") rejectInput();
+    if (!["employees", "outsourcers"].includes(input.array)) rejectInput();
     if (!Number.isSafeInteger(input.position) || input.position < 0) rejectInput();
     if (input.rowAction === "move" ? !Number.isSafeInteger(input.destination) || input.destination < 0 : Object.hasOwn(input, "destination")) rejectInput();
     if (["remove", "move"].includes(input.rowAction) && Object.keys(changes).length) rejectInput();
   } else if (["rowAction", "array", "position", "destination"].some((key) => Object.hasOwn(input, key))) rejectInput();
   if (action === "notify" && typeof changes.shouldNotify !== "boolean") rejectInput();
-  if (action === "lock" && typeof changes.desiredLocked !== "boolean") rejectInput();
   if (Object.hasOwn(input, "notifications")) rejectInput();
   if (Object.hasOwn(input, "siteStatuses")) {
     if (kind !== "schedule" || !["create", "duplicate", "overview"].includes(action) || !plain(input.siteStatuses)
@@ -74,10 +67,6 @@ export function operationExpectedKeys(command) {
   const { action, changes } = command;
   if (action === "create") return [];
   if (["workers", "notify"].includes(action)) return ["operationResultId", "siteId", "dateAt", "employees", "outsourcers"];
-  if (action === "articles") return ["articles"];
-  if (action === "adjusted") return [...ADJUSTED_FIELDS];
-  if (action === "agreement") return ["siteId", "dateAt", "shiftType", "agreement", "billingDateAt"];
-  if (action === "lock") return ["isLocked"];
   if (action === "order") return ["siteId", "dateAt", "shiftType", "displayOrder", "operationResultId"];
   if (action === "delete") return ["siteId", "employees", "outsourcers", "articles", "operationResultId", "siteOperationScheduleId", "updatedAt"];
   const fields = new Set(Object.keys(changes));
@@ -124,9 +113,8 @@ export function applyOperationCommand(raw, command) {
   if (kind !== "schedule" && typeof raw.isLocked !== "boolean") throw new OperationWriteError("failed-precondition");
   if (kind === "result" && raw.isLocked) throw new OperationWriteError("failed-precondition", "編集ロック中の実績は編集できません。");
   if (action === "delete") return null;
-  if (action === "lock") return { ...raw, isLocked: changes.desiredLocked };
-  if (["notify", "agreement"].includes(action)) return raw;
-  if (!["workers", "articles"].includes(action)) return calculateOperation(raw, kind, (model) => Object.assign(model, changes)).value;
+  if (action === "notify") return raw;
+  if (action !== "workers") return calculateOperation(raw, kind, (model) => Object.assign(model, changes)).value;
   const array = raw[command.array];
   if (!Array.isArray(array)) throw new OperationWriteError("failed-precondition");
   if (command.position > array.length || (command.rowAction !== "add" && command.position === array.length)) rejectInput();
@@ -136,7 +124,7 @@ export function applyOperationCommand(raw, command) {
     if (command.destination >= array.length) rejectInput();
     next.splice(command.destination, 0, next.splice(command.position, 1)[0]);
   } else {
-    const Schema = action === "articles" ? ArticleDetail : (kind === "schedule" ? SiteOperationSchedule : OperationResult).classProps[command.array].customClass;
+    const Schema = (kind === "schedule" ? SiteOperationSchedule : OperationResult).classProps[command.array].customClass;
     let previous = array[command.position];
     if (command.rowAction === "add") {
       if (action === "workers") {

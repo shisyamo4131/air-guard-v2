@@ -153,7 +153,7 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
         // refer to the same original snapshot, while patches accumulate on latest.
         assertOperationExpected(target.before ?? raw, command);
         let rowCommand = command, positions = null;
-        if (["workers", "articles"].includes(action)) {
+        if (action === "workers") {
           if (target.before === null) {
             // A newly created target has no original rows. Only explicit adds
             // against the immediately preceding create/add candidate are valid.
@@ -195,17 +195,6 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
           for (const id of new Set([raw.siteId, after.siteId])) await guardScheduleSite(id, command.siteStatuses?.[id]);
         }
         if (kind !== "schedule" && after !== null && ["siteId", "dateAt", "shiftType"].some((field) => !equal(raw[field], after[field]))) after = await applySiteAgreement(after, kind);
-        if (kind === "billing" && action === "agreement") {
-          const siteRaw = await requireSite(raw.siteId);
-          if (!Array.isArray(siteRaw.agreementsV2)) fail();
-          const site = new Site(rawForClass(siteRaw));
-          const selected = changes.agreementKey === null ? [] : site.agreementsV2.filter((item) => item.key === changes.agreementKey);
-          if (Object.hasOwn(changes, "agreementKey") && changes.agreementKey !== null && selected.length !== 1) fail("failed-precondition", "取極めを選び直してください。");
-          after = calculateOperation(raw, kind, (model) => {
-            if (Object.hasOwn(changes, "agreementKey")) model.agreement = changes.agreementKey === null ? null : selected[0];
-            if (Object.hasOwn(changes, "billingDateAt")) model.billingDateAt = changes.billingDateAt;
-          }).value;
-        }
         if (kind === "schedule" && action !== "notify") after = await cancelNotifications(documentId, raw, after);
         if (kind === "schedule" && action === "notify") {
           const workers = [...raw.employees, ...raw.outsourcers];

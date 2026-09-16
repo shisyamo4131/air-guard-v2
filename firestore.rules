@@ -434,7 +434,24 @@ service cloud.firestore {
     // --- Rules for 'OperationResults' subcollection under 'Companies' ---
     // 同一tenantの有効な本登録Userによる通常CRUDを許可する。
     match /Companies/{companyId}/OperationResults/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if isAuthenticated()
+        && userCompanyId() == companyId
+        && request.resource.data.docId == docId
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.isLocked is bool
+        && request.resource.data.isLocked == false;
+      allow update: if isAuthenticated()
+        && userCompanyId() == companyId
+        && resource.data.docId == docId
+        && request.resource.data.docId == docId
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.isLocked is bool;
+      allow delete: if isAuthenticated()
+        && userCompanyId() == companyId
+        && resource.data.docId == docId
+        && resource.data.isLocked is bool
+        && resource.data.isLocked == false;
     }
 
     // --- Rules for 'SecurityReportIndexes' subcollection under 'Companies' ---

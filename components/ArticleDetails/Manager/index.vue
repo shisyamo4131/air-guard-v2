@@ -21,6 +21,8 @@ defineOptions({ name: "ArticleDetailsManager", inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({
   customInput: { type: Object, default: () => CustomInput },
+  itemKey: { type: [String, Function], default: "articleId" },
+  schema: { type: Function, default: () => ArticleDetail },
   tableProps: { type: Object, default: () => ({}) },
 });
 const props = useDefaults(_props, "ArticleDetailsManager");
@@ -34,8 +36,8 @@ const { attrs } = useBaseManager("ArticleDetailsManager");
 <template>
   <air-array-manager
     v-bind="{ ...$attrs, ...attrs }"
-    :schema="ArticleDetail"
-    item-key="articleId"
+    :schema="props.schema"
+    :item-key="props.itemKey"
     :table-props="{ ...props.tableProps, hideSearch: true }"
     :custom-input="props.customInput"
   >
