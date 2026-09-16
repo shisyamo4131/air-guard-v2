@@ -8,25 +8,25 @@
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
 - 現在の承認境界: SITE-09まで完了した。初回bounded Dev反映後に確認したRules評価上限を補正し、補正版RulesだけをDevへ反映したうえで、会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchiveと、経理accountの閲覧・作成導線非表示を確認した。利用者は見た目・操作感の追加改善を後続phaseへ送った。
 - SITE-09受入れ時点の環境記録: 補正済みRulesはDevへ反映済みである。Hosting・Functions・Indexesは補正時に再反映せず、Prod・migration・既存data補完は変更していない。合成Siteは承認済みarchive経路で通常一覧から除外し、合成CustomerはDevに残している。
-- 後続phase: SITE-01〜09は当時のstrict actor契約による履歴証拠として100%を維持する。現在のFGA-03では通常作成・基本情報・Customer・Agreement・手動終了・再有効化をtenant-trust認可へ置換し、archiveだけをstrict例外として維持する。現在地と完了条件は[根本ガバナンス整合phase](foundational-governance-alignment.md)を正とする。
+- 後続phase: SITE-01〜09は当時のstrict actor契約による履歴証拠として100%を維持する。現在のFGA-03では通常作成・基本情報・Customer・Agreement・手動終了・再有効化をtenant-trust認可へ置換し、SCR-07ではarchiveも同一tenantの有効な本登録Userによる標準delete境界へ移行した。現在地と完了条件は[根本ガバナンス整合phase](foundational-governance-alignment.md)を正とする。
 
 ## 現行仕様と適用状態の参照
 
 通常保存・認可の現行要件は[仕様](../specification.md#取引先現場取極め)、FGA-03後の適用状態・後続作業は[FGAロードマップ](foundational-governance-alignment.md)、実装経路は[Site実装記録](../implementation/site-master.md)を正とする。[FGA-03 Dev受入れ記録](../verification/fga-03-site-manager-lww-dev.md)に後続反映と受入れを記録済みであり、以下の通常保存をLocal候補・Dev未受入れとは扱わない。
 
-SITE-01〜09の工程・検証・rollbackは当時の契約と達成証拠として保持する。得点を変更せず、旧actor・専用writer・競合拒否を通常保存へ再適用しない。終了・再有効化・archiveの専用境界、自動終了公開・実data補完・Prod等の別承認は維持する。
+SITE-01〜09の工程・検証・rollbackは当時の契約と達成証拠として保持する。得点を変更せず、旧actor・専用writer・競合拒否を通常保存へ再適用しない。終了・再有効化は専用状態操作、archiveは詳細画面の標準delete操作として維持する。自動終了公開・実data補完・Prod等の別承認も維持する。
 
 ## 現状確認
 
 ### 確認済み事実
 
 - `/sites`、`/sites/[id]`、`/sites/terminated`は`sites:read`で到達する。SITE-02では通常writeをstrict `sites:write`へ限定したが、FGA-03で作成、基本情報・Customer・取極め更新、手動終了、再有効化のclient／server認可を同一tenantの有効な本登録Userへ置換した。role差は現行route・menu等のUXとして残り得る。
-- FGA-03では、Site masterの作成、基本情報、Customer、取極めをSite modelの標準`create()`／`update()`へ統一し、document単位last-write-winsとする。取極めも専用Callable、baseline比較、同一field競合を使わず、listener由来Siteへ編集後の配列を重ねて通常保存する。数値・重複・0円確認と失敗時の入力保持は維持する。終了・再有効化はSITE-04、archiveはSITE-05の専用Callableへ分離した。
+- FGA-03では、Site masterの作成、基本情報、Customer、取極めをSite modelの標準`create()`／`update()`へ統一し、document単位last-write-winsとする。取極めも専用Callable、baseline比較、同一field競合を使わず、listener由来Siteへ編集後の配列を重ねて通常保存する。数値・重複・0円確認と失敗時の入力保持は維持する。終了・再有効化はSITE-04の専用状態操作、archiveはSCR-07の標準`Site.delete()`へ接続した。
 - Firestore Rulesは同一tenant readを維持し、通常Site create/updateを確認済みemail、canonical User ID、tenant一致、有効・本登録Userへ許可する。role、permission、会社管理者、super-user区分はallow条件にしない。FGA-03では通常fieldと`agreementsV2`のschema・業務検査を正規application writerへ集約し、Rulesにはtenant・identity、maintenance、ACTIVE、schedule・lifecycle、live Customer、client delete、archive CUD・tombstoneの保護を残した。SITE-03／06／08の専用writer、exact field、競合検査は当時の履歴証拠として扱う。
 - Customer未定の仮Siteを作成できる。Customer設定後のunsetは拒否し、同じ会社に存在する別Customerへの変更は許可する。SiteのCustomer変更だけでは既存OperationResult・BillingのcustomerIdを変更しない。
 - ACTIVE一覧は会社配下のACTIVEだけをSite専用listenerでlive購読し、空検索では取引先・警備種別の絞込み後に`updatedAt`が新しい最大20件を取得する。文字列入力時は同じ絞込みと正規化済み`tokenMap`検索を使う。TERMINATED一覧も空検索では`updatedAt`が新しい最大20件、文字列入力時は正規化済み`tokenMap`検索を取得し、古い応答を破棄する。Site Autocompleteはstatusを限定せずACTIVEを先に表示し、TERMINATEDは明示確認後も終了状態のまま選択する。
 - SITE-04着手前は、手動終了の予定確認とstatus更新が一つのatomic boundaryでなくUI入口を停止し、日次自動終了にも将来予定や同時更新の保護がなかった。SITE-04で終了・再有効化・自動終了を専用処理へ置き換え、現在の保護条件は24行目の完了事実を正とする。
-- generic archive/deleteのSite UI入口は除去し、managerからのdeleteも拒否する。SITE-05では誤登録・重複だけを対象とする専用archive、exact 5 collectionの直接参照確認、live Site writer barrier、冪等性を実装した。`Sites_archive`へのclient writeと同ID Site再作成をRulesで拒否する。共通adapter自体のgeneric restoreは残るが、Site UIからは到達しない。
+- 旧SITE-05ではgeneric archive/deleteのSite UI入口を除去し、専用archive、exact 5 collection確認、strict actor、監査・冪等性を実装した。これはHistoricalであり、SCR-07では詳細画面の標準`Site.delete()`へ移行した。`Sites_archive`は同一transactionのraw copy + live deleteだけを許可し、restore・物理削除は提供しない。
 - Customer更新triggerは同じcustomerIdを持つSiteへexact 6-field Customer projectionだけを複数batchで更新し、欠損・型不正・path ID不一致はquery前にfail closedとする。複数batch全体のatomicity、event順序、再収束は保証しない。
 - Site detailはSite masterと同じ画面からSiteOperationSchedule、SiteEmployeeHistoryを扱う。SITE-04では終了競合を防ぐため、予定の作成・site/date変更・実績化参照だけをSite revisionと整合するtransaction/Rulesへ変更した。予定のworker・通知等、OperationResult/Billingのoperation別field・lock、その他のtransaction契約は別課題である。
 - SITE-04では終了・再有効化Callable、通常編集制限、確認付き単発予定、JST工期終了90日後の自動終了、maintenance、予定競合guard、派生状態表示を固定した。SITE-05ではarchive競合、SITE-06では当時の取極め権限・専用保存・競合と、現在も維持する数値・0円確認を固定した。取極めのactor・保存・競合契約はFGA-03で置換した。SITE-07では仮Site表示、検索race、読込状態、郵便番号race、JST工期、20件表示、到達可能な操作のaccessible nameを固定した。
@@ -41,7 +41,7 @@ SITE-01〜09の工程・検証・rollbackは当時の契約と達成証拠とし
 
 ### 未確認・未決事項
 
-- CONF-0049は回答済み。通常終了は`TERMINATED`としてlive Siteを保持し、誤登録・重複だけを全参照確認と並行writer barrierを備えた専用Callableでarchiveできる。generic delete／restoreと物理deleteは使用せず、通常restoreは提供しない。[ADR 0051](../decisions/0051-site-mistaken-registration-archive-boundary.md)を正とする。
+- CONF-0049は旧SITE-05の回答済み履歴。現行SCR-07では通常終了は`TERMINATED`としてlive Siteを保持し、標準`Site.delete()`がSchema hasMany確認後にarchiveする。restoreと物理deleteは提供しない。[ADR 0051](../decisions/0051-site-mistaken-registration-archive-boundary.md)は旧専用経路の判断理由として参照する。
 - CONF-0050は回答済み。予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使い、既存実績・確定請求をSite master変更で更新しない。[ADR 0052](../decisions/0052-site-downstream-snapshot-timing.md)を正とする。
 - CONF-0051からCONF-0053は回答済み。取極めの単価・時間・締日の範囲、既存OperationResult snapshot不変、専用履歴・revision・承認workflowなしを維持する。当時のstrict `sites:write`認可だけはFGA-03でtenant-trustへ置換した。[ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)と[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)を参照する。
 - CONF-0135は回答済み。ACTIVE/TERMINATEDの2値、工期終了後90日と予定guardによる競合安全な自動終了、派生Chip、現在遷移metadataを維持する。TERMINATEDも終了済み表示・確認付きで新規業務へ選択でき、単発残工事は終了状態のまま扱う。継続再開のreason・新工期・専用transactionを維持し、当時のstrict `sites:write`認可だけはFGA-03でtenant-trustへ置換した。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)と[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)を参照する。
@@ -52,7 +52,7 @@ SITE-01〜09の工程・検証・rollbackは当時の契約と達成証拠とし
 
 - SiteOperationSchedules Rulesは同一tenantの有効User、maintenance off、live Site、revision、実績参照遷移を確認するが、予定自体のoperation別permissionと全field validationはtransaction系の別課題である。
 - Site名をlive取得するBilling PDFは、master変更後の再生成表示が変わり得る。Customer・Agreement・Site表示情報のsnapshot時点はADR 0052で確定したが、OperationResult・Billing・帳票へのsnapshot実装はtransaction側の別checkpointである。
-- Site archiveの参照候補にはBilling、SiteEmployeeHistory等があるが、現行hasMany catalogには含まれない。ADR 0051により、誤登録archiveに必要な全参照inventoryとlive Site存在barrierだけはSITE-05の承認対象に含める。Company表示順はADR 0036の不存在参照除去契約を維持する。archive barrier以外のtransaction writer変更は、SITE-04の終了競合guardを除いて別checkpointへ分離する。
+- Site archiveの従属確認は現行SchemaのhasMany（SiteOperationSchedules、OperationResults、ArrangementNotifications）へ委譲する。Billing、SiteEmployeeHistory等の旧参照catalog・live Site存在barrier・専用CallableはHistoricalのSITE-05契約であり、SCR-07の現行経路へ持ち込まない。Company表示順はADR 0036の不存在参照除去契約を維持する。
 - 配置・通知・稼働実績・勤怠・請求・帳票のFirestore writer、rollback/refetch、同時実行、Rules、schema、APIは、SITE-04の予定作成・site/date変更・実績参照遷移とSITE-05のlive Site存在barrierに必要な範囲を除いて本ロードマップで変更しない。
 
 ## マイルストーン

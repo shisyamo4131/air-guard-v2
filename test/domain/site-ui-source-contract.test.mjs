@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
 
@@ -144,38 +144,17 @@ test("Site Managers and inline Agreement use normal Site model saves", async () 
   assert.match(agreementManager, /aria-label="選択した取極めを複製"[\s\S]*?:disabled="disabled \|\| !currentAgreement"/u);
 });
 
-test("Site Agreement Callable transport is removed from the client and Functions entrypoints", async () => {
-  const [actions, functions, apiIndex, moduleIndex] = await Promise.all([
-    source("composables/application/site/useSiteActions.js"),
-    source("composables/site/useSiteFunctions.js"),
-    source("functions/apis/index.js"),
-    source("functions/modules/sites/index.js"),
+test("Site legacy archive and action modules are absent while current Managers remain the write boundary", async () => {
+  for (const path of [
+    "composables/application/site/useSiteActions.js",
+    "composables/application/site/useSiteArchiveAction.js",
+    "composables/site/useSiteFunctions.js",
+    "components/Site/ArchiveDialog.vue",
+  ]) await assert.rejects(access(new URL("../../" + path, import.meta.url)));
+  const [apiIndex, moduleIndex] = await Promise.all([
+    source("functions/apis/index.js"), source("functions/modules/sites/index.js"),
   ]);
-  for (const sourceText of [actions, functions, apiIndex, moduleIndex]) {
-    assert.doesNotMatch(sourceText, /updateSiteAgreements|SiteAgreementUpdate/u);
-  }
-});
-
-test("Site action keeps lifecycle methods out of the standard write composable", async () => {
-  const [actions, functions, archive] = await Promise.all([
-    source("composables/application/site/useSiteActions.js"),
-    source("composables/site/useSiteFunctions.js"),
-    source("composables/application/site/useSiteArchiveAction.js"),
-  ]);
-  assert.match(actions, /runWithSiteWriteMutex/u);
-  assert.doesNotMatch(actions, /terminateSite|reactivateSite|useSiteFunctions|httpsCallable/u);
-  assert.doesNotMatch(functions, /terminateSite|reactivateSite/u);
-  assert.match(archive, /runWithSiteWriteMutex/u);
-  assert.match(archive, /transport\.archiveSite/u);
-  assert.doesNotMatch(actions, /firebase\/firestore|\.delete\s*\(|Sites_archive/u);
-});
-
-test("Site write mutex remains available as the shared low-level guard", async () => {
-  const actions = await source("composables/application/site/useSiteActions.js");
-  assert.match(actions, /const sharedSiteWriteState = Vue\.reactive\(\{ isSaving: false \}\)/u);
-  assert.match(actions, /export async function runWithSiteWriteMutex\(action\)/u);
-  assert.match(actions, /if \(sharedSiteWriteState\.isSaving\)/u);
-  assert.match(actions, /sharedSiteWriteState\.isSaving = false/u);
+  assert.doesNotMatch(apiIndex + moduleIndex, /archiveSite|updateSiteAgreements|SiteAgreementUpdate/u);
 });
 
 test("Site pages expose normal Manager writes and keep exceptional operations separate", async () => {

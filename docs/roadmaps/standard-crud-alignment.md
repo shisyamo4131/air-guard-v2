@@ -45,7 +45,7 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 | SCR-04 予定から実績化 | 10 | 0 | Planned | [個別完了条件](#scr-04-予定から実績化の目的と完了条件)に従い、SCR-02の成果を5つの目的と照合し、残る差分だけを解消する。未対応部分がなければ追加改修せず、必要な検証・受入れ証拠の充足を確認して完了判断する |
 | SCR-05 稼働請求・実績lock・稼働外売上 | 10 | 0 | Implementation（prelocal・検証待ち） | [個別完了条件](#scr-05-稼働請求実績lock稼働外売上の目的と完了条件)に従い、提供済み操作をAir Manager／Schemaへ委譲する。現行の入力・計算・画面別操作制限を維持し、不要経路撤去・Rules簡素化・後続反映を確認する |
 | SCR-06 Customer archive整合 | 10 | 0 | Implementation（prelocal・検証待ち） | [個別完了条件](#scr-06-customerアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、不要経路撤去・Rules簡素化・通常CRUD維持を確認する。既存archiveは変換せず保持し、復元画面と旧形式の復元対応は後続とする |
-| SCR-07 Site archive整合 | 10 | 0 | Planned | [個別完了条件](#scr-07-siteアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、不要経路撤去・Rules簡素化・通常CRUDと終了再開の維持を確認する。既存archiveは保持し、復元対応は後続とする |
+| SCR-07 Site archive整合 | 10 | 0 | Implementation（prelocal・検証待ち） | [個別完了条件](#scr-07-siteアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、不要経路撤去・Rules簡素化・通常CRUDと終了再開の維持を確認する。既存archiveは保持し、復元対応は後続とする |
 | SCR-08 提供済み請求操作の標準CRUD整合 | 10 | 0 | Planned | [個別完了条件](#scr-08-提供済み請求操作の目的と完了条件)に従い、SCR-01等の成果を再利用し、残る提供済み操作だけを標準化する。未対応がなければ追加改修せず証拠を照合する。未提供の確定・編集・削除画面は後続とする |
 | SCR-09 Employee退職・誤退職訂正の専用経路維持 | 10 | 0 | Planned | [個別完了条件](#scr-09-employee退職誤退職訂正の目的と完了条件)に従い、既存Callableの分岐・検証・履歴・再開とRulesの保護を維持する。有効な既存証拠を照合し、不足だけを確認・修正する |
 | SCR-10 Employee archive整合 | 10 | 0 | Planned | [個別完了条件](#scr-10-employeeアーカイブの目的と完了条件)に従い、Callable事前検証、ブラウザ標準archive、旧保存処理整理、Rules整合と許可・拒否・失敗を確認する。復元は後続とする |
@@ -177,7 +177,7 @@ Customerの復元画面と旧形式archiveの復元対応は、SCR-06から分�
 
 Siteの復元画面・旧形式archiveの復元対応は本節に後続事項として保持し、SCR-07の完了条件へ含めない。後続工程で標準形式と旧形式、対象data、互換性、必要な変換・検証・復旧方法を具体化する。今回の合意だけで既存dataを移行せず、復元可能とも保証しない。
 
-着手時はSite固有の従属定義、共有caller、既存archiveへの影響、対象file、互換性、rollbackと検証範囲を確認する。既存data保持と標準処理が両立しない箇所は、無断変換や独自経路の追加で埋めず報告する。今回の文書化ではSCR-07のPlanned・得点0を維持する。
+着手時はSite固有の従属定義、共有caller、既存archiveへの影響、対象file、互換性、rollbackと検証範囲を確認する。既存data保持と標準処理が両立しない箇所は、無断変換や独自経路の追加で埋めず報告する。SCR-07はImplementation（prelocal・検証待ち）・得点0とし、Local／Dev受入れまで完了扱いにしない。
 
 ## SCR-08 提供済み請求操作の目的と完了条件
 

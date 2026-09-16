@@ -510,6 +510,7 @@ service cloud.firestore {
     // 読取りは既存の同一tenant境界を維持する。作成・更新は同一tenantの
     // 有効な認証済み本登録Userへ許可する。
     // customerIdなしの仮Siteを許可し、設定後のunsetは拒否する。
+    // archiveは同一transaction内のraw copy + live deleteだけを許可する。
     match /Companies/{companyId}/Sites/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if isSystemMaintenanceOff()
@@ -519,14 +520,26 @@ service cloud.firestore {
       allow update: if isSystemMaintenanceOff()
                     && canWriteSite(companyId)
                     && isValidSiteUpdate(companyId, docId);
-      allow delete: if false;
+      allow delete: if isSystemMaintenanceOff()
+                    && canWriteSite(companyId)
+                    && !exists(/databases/$(database)/documents/Companies/$(companyId)/Sites_archive/$(docId))
+                    && existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Sites_archive/$(docId))
+                    && getAfter(/databases/$(database)/documents/Companies/$(companyId)/Sites_archive/$(docId)).data == resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Sites/$(docId));
     }
 
     // --- Rules for 'Sites_archive' subcollection under 'Companies' ---
-    // archiveの読取りは同一tenantに維持し、client writeは全て拒否する。
+    // archiveのread/update/deleteは拒否し、raw archiveの同時createだけを許可する。
     match /Companies/{companyId}/Sites_archive/{docId} {
-      allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow write: if false;
+      allow read, update, delete: if false;
+      allow create: if isSystemMaintenanceOff()
+                    && canWriteSite(companyId)
+                    && exists(/databases/$(database)/documents/Companies/$(companyId)/Sites/$(docId))
+                    && get(/databases/$(database)/documents/Companies/$(companyId)/Sites/$(docId)).data == request.resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Sites/$(docId));
+    }
+    match /Companies/{companyId}/Sites_archive/{document=**} {
+      allow read, write: if false;
     }
 
     // --- Rules for 'SiteOperationSchedules' subcollection under 'Companies' ---

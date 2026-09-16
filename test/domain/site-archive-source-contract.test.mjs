@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import { operation, runtime } from "./employeeBackgroundTestSupport.mjs";
 import { addOperationResultToBilling } from "../../functions/modules/billings/addOperationResultToBilling.js";
@@ -7,38 +7,30 @@ import { rebuildHistory } from "../../functions/modules/siteEmployeeHistories/re
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("Site archive UI reaches only the dedicated Callable and exposes no generic delete or restore path", async () => {
-  const paths = [
-    "pages/sites/[id].vue",
-    "components/Site/ArchiveDialog.vue",
-    "composables/application/site/useSiteArchiveAction.js",
+test("Site archive Callable and legacy client modules are absent after standard delete migration", async () => {
+  for (const path of [
+    "functions/apis/archiveSite.js",
+    "functions/modules/sites/archiveSite.js",
+    "functions/modules/sites/siteArchiveDocumentContract.js",
+    "functions/modules/sites/mappers.js",
     "composables/site/useSiteFunctions.js",
-    "composables/domain/site/siteArchiveUiContract.js",
-  ];
-  const [detail, dialog, ...rest] = await Promise.all(paths.map(read));
-  const combined = [detail, dialog, ...rest].join("\n");
-  assert.match(detail, /<SiteArchiveDialog\s+:site="doc"\s+@archived="handleArchived"/u);
-  assert.match(dialog, /<div v-if="canArchive">/u);
-  assert.match(detail, /function handleArchived\(\)\s*\{[\s\S]*?navigateTo\("\/sites"\)/u);
-  assert.match(dialog, /useSiteArchiveAction\(\)/u);
-  assert.match(combined, /httpsCallable\(\$functions, name\)\(input\)/u);
-  assert.match(combined, /archiveSite:\s*\(input\)\s*=>\s*call\("archiveSite", input\)/u);
-  assert.doesNotMatch(combined, /Sites_archive/u);
-  assert.doesNotMatch(combined, /from "firebase\/firestore"/u);
-  assert.doesNotMatch(
-    combined,
-    /\b(?:deleteDoc|setDoc|updateDoc|addDoc|writeBatch)\s*\(|\.(?:delete|restore|toDelete)\s*\(|AirItemManager|AirArrayManager|useBaseManager/u,
-  );
-  assert.doesNotMatch(combined, /restoreSite|SiteRestore|物理削除|復元する/u);
+    "components/Site/ArchiveDialog.vue",
+  ]) await assert.rejects(access(new URL("../../" + path, import.meta.url)));
+  const [index, detail] = await Promise.all([read("functions/apis/index.js"), read("pages/sites/[id].vue")]);
+  assert.doesNotMatch(index + detail, /archiveSite|useSiteFunctions|Sites_archive/u);
 });
 
-test("archive use-case does not scan transaction collections", async () => {
-  const source = await read("functions/modules/sites/archiveSite.js");
-  assert.doesNotMatch(source, /SiteOperationSchedules|OperationResults|ArrangementNotifications|Billings|SiteEmployeeHistories/u);
-  assert.doesNotMatch(source, /firestore\.collection|referenceQueries/u);
-  assert.match(source, /Promise\.all\(\[[\s\S]*?transaction\.get\(activeRef\)[\s\S]*?transaction\.get\(archiveRef\)/u);
-  assert.match(source, /transaction\.create\(archiveRef, envelope\);\s*transaction\.delete\(activeRef\);/u);
-  assert.doesNotMatch(source, /transaction\.(?:set|update)\(archiveRef|\.restore\s*\(/u);
+test("Site Rules expose maintenance, actor, tenant, and exact raw atomic-pair boundaries", async () => {
+  const rules = await read("firestore.rules");
+  const live = rules.match(/match \/Companies\/\{companyId\}\/Sites\/\{docId\} \{([\s\S]*?)\n    \}/u)?.[1];
+  const archive = rules.match(/match \/Companies\/\{companyId\}\/Sites_archive\/\{docId\} \{([\s\S]*?)\n    \}/u)?.[1];
+  assert.ok(live); assert.ok(archive);
+  for (const body of [live, archive]) assert.match(body, /isSystemMaintenanceOff\(\)/u);
+  assert.match(live, /canWriteSite\(companyId\)/u);
+  assert.match(live, /allow delete:[\s\S]*?!exists\([\s\S]*?Sites_archive[\s\S]*?\$\(docId\)/u);
+  assert.match(live, /existsAfter\([\s\S]*?Sites_archive[\s\S]*?getAfter\([\s\S]*?\.data == resource\.data[\s\S]*?!existsAfter\([\s\S]*?Sites\/\$\(docId\)/u);
+  assert.match(archive, /allow read, update, delete: if false;/u);
+  assert.match(rules, /match \/Companies\/\{companyId\}\/Sites_archive\/\{document=\*\*\} \{\s*allow read, write: if false;/u);
 });
 
 test("Rules validate result identifiers without requiring live parent masters", async () => {
@@ -53,7 +45,10 @@ test("Rules validate result identifiers without requiring live parent masters", 
     )?.[1];
     assert.ok(block, `${collectionName} Rules block`);
     if (collectionName === "OperationResults") {
-      assert.match(block, /allow read, write: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+      assert.match(block, /allow read: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+      assert.match(block, /allow create:/u);
+      assert.match(block, /allow update:/u);
+      assert.match(block, /allow delete:/u);
       assert.doesNotMatch(rules, /isValidOperationResultClient(?:Create|Update|Delete)/u);
     }
     else if (collectionName === "ArrangementNotifications") {
@@ -134,7 +129,8 @@ test("Rules keep generic Site delete and every client Sites_archive write unavai
     live,
     /allow create:[\s\S]*?!exists\([\s\S]*?\/Sites_archive\/\$\(docId\)\)/u,
   );
-  assert.match(live, /allow delete:\s*if false;/u);
-  assert.match(archive, /allow write:\s*if false;/u);
-  assert.doesNotMatch(archive, /allow (?:create|update|delete):\s*if (?!false)/u);
+  assert.match(live, /allow delete:[\s\S]*?existsAfter\([\s\S]*?Sites_archive[\s\S]*?getAfter\([\s\S]*?\.data == resource\.data/u);
+  assert.match(archive, /allow read, update, delete: if false;/u);
+  assert.match(archive, /allow read, update, delete:\s*if false;/u);
+  assert.match(archive, /allow create:[\s\S]*?isSystemMaintenanceOff\(\)[\s\S]*?canWriteSite\(companyId\)/u);
 });

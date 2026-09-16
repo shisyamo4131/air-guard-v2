@@ -13,6 +13,10 @@
 
 Customerの正規経路は単数Domain Managerの`toDelete`から`Customer.delete()`を呼び、Schemaの`hasMany`（`Sites.customerId`）で従属確認した後、ClientAdapterがraw同ID archive保存とlive削除を同一transactionで実行する。専用Callable、reason、監査envelope、Rulesへの従属queryは現行経路に含めない。旧形式archiveはHistoricalとして保持し、remote Functionの撤去状態は未確認である。
 
+## Current SCR-07
+
+Siteの正規経路は詳細画面のarchive mode `SiteManager`から`Site.delete()`を呼び、Schemaの`hasMany`（`SiteOperationSchedules.siteId`、`OperationResults.siteId`、`ArrangementNotifications.siteId`）で従属確認した後、ClientAdapterがraw同ID archive保存とlive削除を同一transactionで実行する。専用Callable、reason、監査envelope、Rulesへの従属queryは現行経路に含めない。旧形式archiveはHistoricalとして保持し、復元・物理削除の製品入口は提供しない。
+
 以下は旧仕様下での実装記録・設計案。標準処理への移行条件として独自監査・barrier・purge案を再適用しない。
 
 ## Historical: 旧方式の共通仕様との対応（2026-09-06）
@@ -26,7 +30,7 @@ Customerの正規経路は単数Domain Managerの`toDelete`から`Customer.delet
 | 対象 | 実装記録 | 提供条件・残対応 |
 |---|---|---|
 | Customer | 専用archive Callable、live Siteマスター確認、version付き原本・監査、archive client read/CUD拒否 | OperationResults／Billingsはarchiveを妨げない。自動purge・通常restoreは提供しない |
-| Site | `functions/modules/sites/archiveSite.js`と`siteArchiveDocumentContract.js`。専用操作で同ID移動・監査・再送照合。archive readは同社の有効な本登録User、client CUD拒否 | トランザクション参照を走査しない。物理削除・通常restoreは未提供 |
+| Site | 旧`functions/modules/sites/archiveSite.js`と`siteArchiveDocumentContract.js`。専用操作で同ID移動・監査・再送照合 | Historical。現行SCR-07は標準Site.deleteへ移行し、既存archiveを変換・削除しない |
 | Employee | 専用archive、User/Auth・予約・lock・lifecycle確認、旧削除triggerの無作用化 | トランザクション参照と集約索引はarchive条件にしない。通常restore・purgeは未提供 |
 | Outsourcer | 通常製品でarchive・restore・物理削除を提供しない | 固有の非提供条件を維持する |
 | Article / generic adapter | 下記の旧共通基盤調査を参照 | metadata、参照検査、上書き、迂回、restoreの問題が未解決。新しい共通仕様の適用済み実装ではない |

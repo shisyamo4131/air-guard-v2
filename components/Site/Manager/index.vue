@@ -1,7 +1,7 @@
 <script setup>
 /*****************************************************************************
  * @file components/Site/Manager/index.vue
- * @description AirItemManagerを使った現場の通常作成・更新コンポーネント
+ * @description AirItemManagerを使った現場の通常CRUD・明示的アーカイブコンポーネント
  *****************************************************************************/
 import { Site } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
@@ -14,19 +14,16 @@ const props = defineProps({
   beforeEdit: { type: Function, default: () => true },
   customInput: { type: [Object, Function], default: null },
   lifecycleMode: { type: String, default: null },
+  archiveMode: { type: Boolean, default: false },
   modelValue: {
     type: Object,
     default: () => new Site(),
     validator: (value) => value instanceof Site,
   },
 });
-const emit = defineEmits(["created", "updated"]);
+const emit = defineEmits(["created", "updated", "delete"]);
 
 const { attrs } = useBaseManager("SiteManager");
-
-function rejectDirectDelete() {
-  throw new Error("現場は直接削除できません。");
-}
 
 function resolveCustomInput({ editMode }) {
   if (props.customInput) {
@@ -38,7 +35,9 @@ function resolveCustomInput({ editMode }) {
 }
 
 async function beforeEdit(editMode, item) {
-  if (editMode === "DELETE") return rejectDirectDelete();
+  if (editMode === "DELETE" && !props.archiveMode) {
+    throw new Error("現場のアーカイブは詳細画面から実行してください。");
+  }
   if (editMode === "UPDATE" && props.lifecycleMode === "TERMINATE") {
     if (item.status !== Site.STATUS_ACTIVE) throw new Error("稼働中の現場だけ終了できます。");
     item.status = Site.STATUS_TERMINATED;
@@ -70,6 +69,10 @@ async function handleUpdate(draft) {
   }
   return await draft.update();
 }
+
+async function handleDelete(draft) {
+  return await draft.delete();
+}
 </script>
 
 <template>
@@ -84,13 +87,14 @@ async function handleUpdate(draft) {
     }"
     :before-edit="beforeEdit"
     :custom-input="resolveCustomInput"
-    disable-delete
-    hide-delete-btn
+    :disable-delete="!props.archiveMode"
+    :hide-delete-btn="!props.archiveMode"
     :handle-create="handleCreate"
     :handle-update="handleUpdate"
-    :handle-delete="rejectDirectDelete"
+    :handle-delete="handleDelete"
     @create="emit('created', $event)"
     @update="emit('updated', $event)"
+    @delete="emit('delete', $event)"
   >
     <template #activator="slotProps">
       <slot name="activator" v-bind="slotProps" />

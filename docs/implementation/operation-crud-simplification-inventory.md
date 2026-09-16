@@ -16,7 +16,7 @@
 |---|---|---|---|
 | Customer通常CRUD・取引状態／Outsourcer通常CRUD・取引状態 | 維持 | 単数・複数ManagerがClass.create/updateへ接続済み | 既存の標準保存を作り直さない。Outsourcerで未提供のarchive/restoreを自動追加しない |
 | Site・Employee通常CRUD | 大筋一致 | 標準Manager/Class保存は存在するが、状態変更を拒否するRulesが残る | Siteは状態変更工程で必要なRulesを合わせる。Employee退職・訂正の専用保護と退職後の通常情報編集禁止は維持する |
-| Customer／Site／Employee archive | SCR-06 Customerは標準化、Site／Employeeは要変更 | Customerは標準Class.deleteへ移行し、Site／Employeeは専用Callable・旧形式を維持 | CustomerのRules・旧形式保持・標準移動を確認。Site／Employeeは各roadmapで扱い、旧envelopeを標準restoreへ直接渡さない |
+| Customer／Site／Employee archive | SCR-06 Customer・SCR-07 Siteは標準化、Employeeは要変更 | Customer／Siteは標準Class.deleteへ移行し、Employeeは専用Callable・旧形式を維持 | Customer／SiteのRules・旧形式保持・標準移動を確認。Employeeは各roadmapで扱い、旧envelopeを標準restoreへ直接渡さない |
 | Restore | 提供範囲確認・archiveと同時検討 | client-adapterに標準restoreはあるが、対象masterの通常復旧入口は今回の検索で見つからない | 基盤の存在と製品UI提供を区別する。既存dataの有無・変換要否は未確認で、自動migrationしない |
 | Site手動終了・再開 | SCR-03 prelocal実装 | 専用editorをSiteManagerへ接続し、Site schemaの状態遷移検査とRulesのactor／tenant／metadata境界を追加。手動Callable／専用actionは撤去し、自動終了のsystem処理は維持 | security review、直接test、Dev受入れ、Rules実行時構文確認を残す。package／data shape／migrationは変更しない |
 
@@ -40,7 +40,7 @@
 
 実績化の現行判定はSCR-02で標準syncへ整合済み。下表に残る旧Generator→saveOperation記述は2026-09-15棚卸し時点の履歴であり、現行経路ではない。SCR-04は独立範囲のみを扱い、標準sync・通知不変・旧convert撤去を二重計上しない。
 
-- Master通常保存: `components/Customer/Manager/index.vue`、`components/Site/Manager/index.vue`、`components/Employee/Manager/index.vue`、`components/Outsourcer/Manager/index.vue`と各複数形Manager。Customer archiveは標準Schema／ClientAdapter、Site／Employee archiveは専用経路である。[Rules](../../firestore.rules)のCustomers/Employees/Sitesおよびarchive matchを照合した。
+- Master通常保存: `components/Customer/Manager/index.vue`、`components/Site/Manager/index.vue`、`components/Employee/Manager/index.vue`、`components/Outsourcer/Manager/index.vue`と各複数形Manager。Customer／Site archiveは標準Schema／ClientAdapter、Employee archiveは専用経路である。[Rules](../../firestore.rules)のCustomers/Employees/Sitesおよびarchive matchを照合した。
 - Site状態更新: [SiteManager](../../components/Site/Manager/index.vue)からSite schemaの標準`update()`へ接続し、Rulesでtenant／actor UID／状態metadata境界を保護する。自動終了だけは[scheduled lifecycle](../../functions/modules/sites/autoTermination.js)に残す。Employeeの専用入口は[LifecycleActions](../../components/Employee/LifecycleActions.vue)。installed Schemasの`src/Employee.js`のbeforeUpdate/toTerminatedは、状態更新拒否とUser削除を含む。
 - 請求・lock: [OperationBilling Manager](../../components/OperationBilling/Manager/index.vue)、[useOperationSubmission](../../composables/application/operation/useOperationSubmission.js)、[operationWriteContract](../../functions/shared/operationWriteContract.js)、[Rules](../../firestore.rules)のisValidOperationResultClientCreate/Update/Delete。installed Schemasの`src/OperationBilling.js`の_shouldCheckLock/delete/toggleLockと`src/OperationResult.js`のhookを照合した。
 - 顧客請求: [customerBillingHandlers](../../handlers/customerBillingHandlers.js)、01-05で撤去した旧`updateBillingPaymentDate`のGit履歴、RulesのBillings match。installed Schemasの`src/Billing.js`に確定後update/deleteを一律拒否するhookは今回見つからない。

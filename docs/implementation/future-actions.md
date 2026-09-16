@@ -983,16 +983,16 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 必要なテスト: ACTIVE→TERMINATED、候補group・Chip・識別情報、終了済み選択確認、単発残工事、一般master編集拒否、限定訂正、strict actor・reason・新工期による再有効化、Customer変更境界、Agreement非自動復帰、archive/restore拒否。
 - ユーザー判断が必要な事項: なし。CONF-0048の新規選択不可はCONF-0135でsupersedeされ、ADR 0054で方針確定済み。
 
-## FUT-0063 Site archiveと参照guardを競合安全にする
+## FUT-0063 Site archiveと参照guardを競合安全にする（Historical）
 
-- 状態: Open
+- 状態: Superseded（2026-09-16、SCR-07標準化）
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021
 - 対象ファイル・シンボル: schemas `Site.hasMany/logicalDelete`、client adapter `hasChild/delete/restore`、Site delete UI
 - 確認済み実装事実: schedule/result/arrangement notificationだけをtransaction外queryで確認してarchiveする。adapterにrestore APIがあるがUIは復元不能と表示し、restore入口はない。
 - 想定影響と発生条件: 確認後の新規参照とのrace、guard外参照の孤立、誤削除時の運用不能、説明と実装の不一致が起き得る。
 - 未確認点・仮説: 実装前inventoryで確定する全参照集合、各writerでlive Site存在を同じatomic boundaryへ強制できるか、既存archiveの実data状態は未確認。
-- 推奨する将来対応: ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite` Callable、全業務参照の同一transaction確認、全参照writerのlive Site存在barrier、version付き監査snapshotと冪等性を実装する。generic delete／restoreと物理deleteは使用せず、全barrierが揃うまでarchiveを有効化しない。
+- 推奨していた将来対応（Historical）: ADR 0051に従う専用`archiveSite` Callable、全業務参照確認、live Site存在barrier、監査snapshot、冪等性。SCR-07で採用せず、現行はSchemaのhasMany確認と標準`Site.delete()`を使う。restore・保持・物理削除は既存FUT-0146で扱う。
 - 必要なテスト: actor matrix、ACTIVE／TERMINATED、各hasManyとguard外参照、same-ID archive、同時参照作成、同一／別operation再試行、generic delete／restore非到達、欠損Siteを読む下流。
 - ユーザー判断が必要な事項: なし。CONF-0049とADR 0051で通常終了、誤登録archive、通常restore、保持の方針は確定済み。緊急restore、保持期限、削除・匿名化が必要になった場合は別checkpointで判断する。
 

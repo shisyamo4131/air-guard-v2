@@ -4,7 +4,6 @@ import { readFile } from "node:fs/promises";
 
 const PUBLIC_CALLABLES = [
   "archiveEmployee",
-  "archiveSite",
   "changeAdminUser",
   "checkEmailAvailability",
   "checkUserPreRegistration",
