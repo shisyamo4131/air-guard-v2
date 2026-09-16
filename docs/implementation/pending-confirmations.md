@@ -1,7 +1,7 @@
 # 実装調査から得た要確認事項台帳
 
 - 状態: 実装調査・暫定台帳
-- 最終確認日: 2026-08-28
+- 最終確認日: 2026-09-16
 - 対象: `docs/implementation/*.md` と `future-actions.md` に残る、実装検証だけでは確定できないユーザー判断
 - 運用: 同一判断は既存CONFへ証拠・関連FUTを追記する。回答後はStatusをAnsweredへ変更し、Answerへ日付と回答を記録する。実装だけで確認できる未検証事項は登録しない。
 
@@ -238,13 +238,13 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 - Status: Answered
 - Source segment/doc: SPEC-SEG-006〜009; `notification-authorization.md`; `arrangement-notifications.md`; `arrangement-notification-ui.md`
-- Evidence: 配置管理者の任意4状態・資格/OJT変更とGeneratorのLEAVED化は承認済み。一方配置管理者の認定permission、本人/管制のfield、payload/recipient上限は未決。
+- Evidence: 配置通知の個別編集によるstatus・actual値変更は標準updateへ接続済み。最終確定は通知を作成・更新せず、通知のactual値を実績化へ読むだけである。Rulesは同一tenantの有効な本登録Userへ通常read/writeを許可する現行方針へ整合した。
 - Question: 配置管理者を何で認定し、本人・管制・管理者が変更できるfield/status、手動通知、payload/件数上限をどう分けるか。
 - Why needed: crafted writeからの権限昇格・spamを防ぎつつ承認済み操作を維持するため。
 - Options and impact: Rulesでrole/field制御、server callable集約、現行同社全員write。安全性と実装量が異なる。
-- Current provisional treatment: 本人は自己配置連絡の確認・到着・上番・下番に必要な時刻とstatusだけを変更できる。配置管理者は同一会社内で任意status・time・qualification・OJTを変更できる。Generatorは対象schedule所属通知だけをLEAVED化できる。その他fieldとnotification生成はdedicated server processingへ限定する。payload allowlist・長さ・配列件数・URL、recipient/batch上限を検証し、actor・changedAt・before/afterを監査記録する。具体的role名はauthorization設計確定まで暫定permissionを使う。
+- Current treatment: 個別通知編集は既存通知だけを標準updateし、最終確定はArrangementNotificationのstatus・timestamp・shouldNotifyを変更しない。最終確定でmissing通知を作成せず、通知がないworkerは鉛筆編集対象外とする。通常read/writeのRules境界は同一tenantの有効な本登録Userで、field・payload業務検証はSchemas／正規application保存境界へ委譲する。
 - Related FUT IDs: FUT-0018, FUT-0021
-- Answer: 2026-08-11 回答済み。本人は自己配置連絡の確認・到着・上番・下番に必要な時刻・statusだけを変更可能とする。配置管理者は同一会社内で任意status・time・qualification・OJTを変更可能とする。Generatorは対象schedule所属通知だけをLEAVED化できる。その他field・notification生成はdedicated server processingへ限定する。payload field allowlist・length・array count・URL validation、recipient/batch upper limits、actor・changedAt・before/after auditを必須とする。具体的role名はauthorization設計確定時に決め、当面はprovisional permissionを使う。
+- Answer: 2026-09-16 回答済み。上記current treatmentを採用し、旧2026-08-11回答のGeneratorによる最終確定LEAVED化、専用server payload認可、notification生成前提はsupersedeする。個別編集のstatus/actual値変更と、最終確定の通知不変を区別する。
 
 ## CONF-0013 Notification/Recipients履歴の閲覧・手動作成・保持
 
@@ -466,12 +466,13 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 - Status: Answered
 - Source segment/doc: SPEC-SEG-009/010; `operation-result-generation.md`
-- Evidence: 画面成功条件はOperationResult作成までと承認済みだが、通知LEAVED更新と実績作成の間にtransactionがなく部分状態となり得る。一方、OperationResultはArrangementNotificationがない場合や配置実績・scheduleなしでもstandalone作成できる承認済み仕様である。
+- Evidence: 画面成功条件はOperationResult作成とschedule link更新までで、後続Trigger完了を含めない。既存通知は実績化の入力として読むだけで、通知更新と実績作成の部分状態は最終確定では発生しない。
 - Question: ArrangementNotification/scheduleが存在する経路とstandalone経路を分け、各pathでLEAVED・schedule link・OperationResult作成の確定点、失敗時の再開・rollbackをどう定めるか。
 - Why needed: 通知だけ完了扱い、または実績だけ作成済みとなる再実行不整合を防ぐため。
 - Options and impact: 通知ありpathの再開可能workflow、通知なし/standalone path、任意関連だけを条件付きtransaction化。全pathで通知・実績・scheduleを必須atomicにする案はstandalone仕様と両立しない。
-- Current provisional treatment: schedule＋notification、scheduleのみ、standaloneの3pathを明示し、存在する関連documentだけを同一transactionへ含める。missing notificationはerrorにせず、standaloneではschedule/notificationを推定しない。
+- Current treatment: scheduleからSchemas標準syncで同一docIdのOperationResult作成とschedule link更新をtransaction化する。通知mapはclient readでありatomicではない。通知なしは予定値へfallbackし、standaloneの設計は本checkpointの対象外とする。
 - Related FUT IDs: FUT-0027
+- Superseding answer (2026-09-16): 旧2026-08-11回答の3path・最終確定時の通知LEAVED化・notification更新同一transaction案は不採用とする。最終確定は通知を変更せず、既存通知のactual値を読むだけであり、通知map readとOperationResult＋schedule link transactionはatomicではない。notification expectation競合拒否は復活させない。
 - Answer: 2026-08-11 回答済み。3つの作成pathを採用する。(1) schedule＋notifications: 可能な範囲でOperationResult作成、schedule.operationResultId設定、既存notificationのLEAVED化を同一transactionで行い、pushは送らない。(2) scheduleのみ: notification作成は不要で、OperationResult＋schedule linkをatomicにする。入力値を優先し欠損だけschedule fallbackとし、no-notification sourceを記録する。(3) standalone: OperationResultだけを作成し、schedule/notificationを推定せずreason/sourceTypeを記録する。共通でscheduleId/sourceTypeはoptional、schedule単位の重複を防止し、standaloneは専用permissionとauditを要求する。missing notificationはerrorにせず、notificationは存在する場合だけ更新する。
 
 ## CONF-0032 SiteEmployeeHistory同日複数実績の代表ID

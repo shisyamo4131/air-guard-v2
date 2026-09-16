@@ -83,70 +83,6 @@ service cloud.firestore {
         || hasExistingCustomerReference(companyId, request.resource.data);
     }
 
-    function isValidOperationResultClientCreate(docId) {
-      return request.resource.data.siteId is string
-        && isSafeIdentifier(request.resource.data.siteId)
-        && request.resource.data.customerId is string
-        && isSafeCustomerId(request.resource.data.customerId)
-        && request.resource.data.docId is string
-        && request.resource.data.docId == docId
-        && request.resource.data.uid is string
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.isLocked is bool
-        && request.resource.data.isLocked == false
-        && request.resource.data.siteOperationScheduleId == null
-        && request.resource.data.articles is list
-        && request.resource.data.articles.size() == 0
-        && request.resource.data.employees is list
-        && request.resource.data.employees.size() == 0
-        && request.resource.data.outsourcers is list
-        && request.resource.data.outsourcers.size() == 0
-        && request.resource.data.employeeIds is list
-        && request.resource.data.employeeIds.size() == 0
-        && request.resource.data.outsourcerIds is list
-        && request.resource.data.outsourcerIds.size() == 0
-        && request.resource.data.workers is list
-        && request.resource.data.workers.size() == 0
-        && request.resource.data.useAdjusted is bool
-        && request.resource.data.useAdjusted == false
-        && request.resource.data.adjustedQuantityBase == 0
-        && request.resource.data.adjustedOvertimeMinutesBase == 0
-        && request.resource.data.adjustedQuantityQualified == 0
-        && request.resource.data.adjustedOvertimeMinutesQualified == 0
-        && request.resource.data.adjustedUnitPriceBase == 0
-        && request.resource.data.adjustedOvertimeUnitPriceBase == 0
-        && request.resource.data.adjustedUnitPriceQualified == 0
-        && request.resource.data.adjustedOvertimeUnitPriceQualified == 0
-        && request.resource.data.billingCalculationVersion is int
-        && request.resource.data.billingCalculationVersion == 2;
-    }
-
-    function isValidOperationResultClientUpdate(docId) {
-      let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return resource.data.docId is string
-        && resource.data.docId == docId
-        && request.resource.data.docId == docId
-        && resource.data.isLocked is bool
-        && resource.data.isLocked == false
-        && request.resource.data.isLocked == resource.data.isLocked
-        && !changed.hasAny([
-          'docId', 'createdAt', 'siteOperationScheduleId', 'articles',
-          'useAdjusted', 'adjustedQuantityBase',
-          'adjustedOvertimeMinutesBase', 'adjustedQuantityQualified',
-          'adjustedOvertimeMinutesQualified', 'adjustedUnitPriceBase',
-          'adjustedOvertimeUnitPriceBase', 'adjustedUnitPriceQualified',
-          'adjustedOvertimeUnitPriceQualified', 'billingCalculationVersion'
-        ])
-        && request.resource.data.uid == request.auth.uid;
-    }
-
-    function isValidOperationResultClientDelete(docId) {
-      return resource.data.docId is string
-        && resource.data.docId == docId
-        && resource.data.isLocked is bool
-        && resource.data.isLocked == false;
-    }
-
     function isValidFcmTokenCreate(token) {
       return hasActiveRegisteredUser()
         && request.resource.data.keys().hasOnly([
@@ -464,18 +400,9 @@ service cloud.firestore {
     }
 
     // --- Rules for 'OperationResults' subcollection under 'Companies' ---
-    // 同一tenant・稼働結果ID・lock境界と、Trigger/請求処理が所有するfieldを保護する。
+    // 同一tenantの有効な本登録Userによる通常CRUDを許可する。
     match /Companies/{companyId}/OperationResults/{docId} {
-      allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create: if isAuthenticated()
-                    && userCompanyId() == companyId
-                    && isValidOperationResultClientCreate(docId);
-      allow update: if isAuthenticated()
-                    && userCompanyId() == companyId
-          && isValidOperationResultClientUpdate(docId);
-      allow delete: if isAuthenticated()
-                    && userCompanyId() == companyId
-                    && isValidOperationResultClientDelete(docId);
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'SecurityReportIndexes' subcollection under 'Companies' ---

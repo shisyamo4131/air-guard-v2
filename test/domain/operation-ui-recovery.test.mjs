@@ -53,9 +53,29 @@ test("OperationResult keeps its historical security type until the same draft ch
 });
 
 test("OperationResult generation leaves duplicate prevention to schedule editing", async () => {
-  const generator = await source("composables/application/operation/useOperationGenerator.js");
+  const generator = await source("components/OperationResult/Generator/index.vue");
 
-  assert.doesNotMatch(generator, /operationEmployeeReferences/u);
-  assert.match(generator, /notificationEmployeeReferences\(value\)/u);
-  assert.match(generator, /some\(\(worker\) => !worker\.hasNotification\)/u);
+  assert.doesNotMatch(generator, /useOperationGenerator|saveOperation|Callable|action:\s*["']convert/u);
+  assert.doesNotMatch(generator, /schedule\.notify\(|\.notify\(/u);
+  assert.match(generator, /await targetSchedule\.syncToOperationResult\(targetNotificationsMap\)/u);
+  assert.match(generator, /<SiteOperationSchedulesManager[\s\S]*?:before-edit="beforeEdit"/u);
+  assert.match(generator, /#table="\{ items, toUpdate, isLoading \}"/u);
+  assert.match(generator, /@click:submit="toUpdate\(selectedSchedule\)"/u);
+  assert.match(generator, /<div class="operation-result-generator d-flex flex-column fill-height overflow-hidden" style="min-height: 0">[\s\S]*?<SiteOperationSchedulesManager[\s\S]*?class="flex-grow-1 overflow-hidden"[\s\S]*?style="min-height: 0"[\s\S]*?<\/SiteOperationSchedulesManager>[\s\S]*?<v-dialog[\s\S]*?persistent[\s\S]*?<\/v-dialog>[\s\S]*?<\/div>/u);
+  assert.doesNotMatch(generator, /notificationRetryAvailable|配置通知を再取得|上下番情報を再読込|>再読込<\/v-btn>/u);
+  assert.match(generator, /error\.value = "配置通知を取得できません。予定を再選択するか、画面を再表示してください。"/u);
+  assert.match(generator, /if \(!ready\.value\) \{\s*error\.value = "配置通知を確認できません。予定を再選択するか、画面を再表示してください。";\s*return false;\s*\}/u);
+  assert.match(generator, /if \(item\?\.docId !== selectedSchedule\.value\?\.docId\) \{\s*error\.value = "選択中の予定が変わりました。再選択してから再実行してください。";\s*return false;\s*\}/u);
+  assert.doesNotMatch(generator, /v-if="error && selectedSchedule"/u);
+  const listTag = generator.slice(generator.indexOf("<List"), generator.indexOf("/>", generator.indexOf("<List")));
+  const detailTag = generator.slice(generator.indexOf("<Detail"), generator.indexOf("/>", generator.indexOf("<Detail")));
+  assert.match(listTag, /:loading="isLoading \|\| confirming"/u);
+  assert.doesNotMatch(listTag, /preparing|!ready/u);
+  assert.doesNotMatch(listTag, /!ready/u);
+  assert.match(detailTag, /:loading="isLoading \|\| preparing \|\| confirming \|\| !ready"/u);
+  assert.ok(generator.indexOf("ready.value = false") < generator.indexOf("fetchDocs"));
+  assert.ok(generator.indexOf("fetchDocs") < generator.indexOf("subscribeDocs"));
+  assert.ok(generator.indexOf("subscribeDocs") < generator.indexOf("ready.value = true"));
+  assert.match(generator, /beforeEdit\(editMode, item\)[\s\S]*?ready\.value[\s\S]*?item\?\.docId !== selectedSchedule\.value\?\.docId[\s\S]*?syncToOperationResult\(targetNotificationsMap\)/u);
+  assert.doesNotMatch(generator, /notification\.status\s*=|notification\.update\(/u);
 });

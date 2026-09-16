@@ -6,12 +6,10 @@ import { OperationWriteError, operationEmployeeReferences } from "./operationRef
 export const OVERVIEW_FIELDS = Object.freeze(["siteId", "securityType", "dateAt", "dayType", "shiftType", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes", "requiredPersonnel", "qualificationRequired", "workDescription", "remarks"]);
 export const WORKER_FIELDS = Object.freeze(["id", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes", "isQualified", "isOjt"]);
 export const ADJUSTED_FIELDS = Object.freeze(["useAdjusted", "adjustedQuantityBase", "adjustedOvertimeMinutesBase", "adjustedQuantityQualified", "adjustedOvertimeMinutesQualified", "adjustedUnitPriceBase", "adjustedOvertimeUnitPriceBase", "adjustedUnitPriceQualified", "adjustedOvertimeUnitPriceQualified"]);
-export const NOTIFICATION_VALUES = Object.freeze(["actualStartTime", "actualEndTime", "actualIsStartNextDay", "actualBreakMinutes", "isQualified", "isOjt"]);
-export const NOTIFICATION_IDENTITY = Object.freeze(["docId", "siteOperationScheduleId", "siteId", "id", "index", "isEmployee", "workerId", "employeeId", "outsourcerId"]);
 export const WORKER_PARENT_FIELDS = Object.freeze(["siteId", "dateAt", "shiftType", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes"]);
 const BOOL_FIELDS = new Set(["isStartNextDay", "qualificationRequired", "isQualified", "isOjt", "useAdjusted", "desiredLocked"]);
 const NUMBER_FIELDS = new Set(["breakMinutes", "regulationWorkMinutes", "requiredPersonnel", "price", "quantity", "displayOrder", ...ADJUSTED_FIELDS.slice(1)]);
-const ACTIONS = new Set(["create", "duplicate", "overview", "workers", "articles", "order", "delete", "notify", "convert", "agreement", "adjusted", "lock"]);
+const ACTIONS = new Set(["create", "duplicate", "overview", "workers", "articles", "order", "delete", "notify", "agreement", "adjusted", "lock"]);
 const SCHEDULE_CUD_ACTIONS = new Set(["create", "duplicate", "overview", "workers", "order", "delete"]);
 export function rejectInput() { throw new OperationWriteError("invalid-argument"); }
 export function exactKeys(value, keys) { if (!plain(value) || Object.keys(value).some((key) => !keys.includes(key))) rejectInput(); }
@@ -32,7 +30,7 @@ export function parseOperationCommand(input) {
   // Keep schedule deletion here until its own migration checkpoint.
   if (kind === "result" && ["create", "overview", "workers", "delete"].includes(action)) rejectInput();
   if (action === "duplicate" ? !identifier(input.sourceId) || input.sourceId === input.documentId || !Object.hasOwn(input.changes, "dateAt") : Object.hasOwn(input, "sourceId")) rejectInput();
-  if ((kind !== "schedule" && ["notify", "convert", "order"].includes(action)) || (kind !== "billing" && ["agreement", "adjusted", "lock"].includes(action))
+  if ((kind !== "schedule" && ["notify", "order"].includes(action)) || (kind !== "billing" && ["agreement", "adjusted", "lock"].includes(action))
     || (kind === "billing" && !["overview", "articles", "agreement", "adjusted", "lock"].includes(action)) || (kind === "schedule" && action === "articles")) rejectInput();
   let fields = [];
   if (["create", "overview"].includes(action)) fields = kind === "billing" ? OVERVIEW_FIELDS.filter((key) => key !== "securityType") : OVERVIEW_FIELDS;
@@ -64,8 +62,7 @@ export function parseOperationCommand(input) {
   } else if (["rowAction", "array", "position", "destination"].some((key) => Object.hasOwn(input, key))) rejectInput();
   if (action === "notify" && typeof changes.shouldNotify !== "boolean") rejectInput();
   if (action === "lock" && typeof changes.desiredLocked !== "boolean") rejectInput();
-  if (action !== "convert" && Object.hasOwn(input, "notifications")) rejectInput();
-  if (action === "convert" && !plain(input.notifications)) rejectInput();
+  if (Object.hasOwn(input, "notifications")) rejectInput();
   if (Object.hasOwn(input, "siteStatuses")) {
     if (kind !== "schedule" || !["create", "duplicate", "overview"].includes(action) || !plain(input.siteStatuses)
       || Object.entries(input.siteStatuses).some(([id, status]) => !identifier(id) || !["ACTIVE", "TERMINATED"].includes(status))) rejectInput();
@@ -76,7 +73,7 @@ export function parseOperationCommand(input) {
 export function operationExpectedKeys(command) {
   const { action, changes } = command;
   if (action === "create") return [];
-  if (["workers", "notify", "convert"].includes(action)) return ["operationResultId", "siteId", "dateAt", "employees", "outsourcers"];
+  if (["workers", "notify"].includes(action)) return ["operationResultId", "siteId", "dateAt", "employees", "outsourcers"];
   if (action === "articles") return ["articles"];
   if (action === "adjusted") return [...ADJUSTED_FIELDS];
   if (action === "agreement") return ["siteId", "dateAt", "shiftType", "agreement", "billingDateAt"];
@@ -128,7 +125,7 @@ export function applyOperationCommand(raw, command) {
   if (kind === "result" && raw.isLocked) throw new OperationWriteError("failed-precondition", "編集ロック中の実績は編集できません。");
   if (action === "delete") return null;
   if (action === "lock") return { ...raw, isLocked: changes.desiredLocked };
-  if (["notify", "convert", "agreement"].includes(action)) return raw;
+  if (["notify", "agreement"].includes(action)) return raw;
   if (!["workers", "articles"].includes(action)) return calculateOperation(raw, kind, (model) => Object.assign(model, changes)).value;
   const array = raw[command.array];
   if (!Array.isArray(array)) throw new OperationWriteError("failed-precondition");
@@ -168,8 +165,4 @@ export function applyOperationCommand(raw, command) {
   value.outsourcerIds = (command.array === "outsourcers" ? next : raw.outsourcers).map((row) => row.id);
   value.workers = [...value.employees, ...value.outsourcers];
   return value;
-}
-
-export function notificationExpectation(raw) {
-  return raw === null ? null : expectedFields(raw, [...NOTIFICATION_IDENTITY, ...NOTIFICATION_VALUES]);
 }

@@ -53,9 +53,8 @@ test("Rules validate result identifiers without requiring live parent masters", 
     )?.[1];
     assert.ok(block, `${collectionName} Rules block`);
     if (collectionName === "OperationResults") {
-      assert.match(block, /isValidOperationResultClientCreate\(docId\)/u);
-      assert.match(block, /isValidOperationResultClientUpdate\(docId\)/u);
-      assert.match(block, /isValidOperationResultClientDelete\(docId\)/u);
+      assert.match(block, /allow read, write: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+      assert.doesNotMatch(rules, /isValidOperationResultClient(?:Create|Update|Delete)/u);
     }
     else if (collectionName === "ArrangementNotifications") {
       assert.match(block, /allow read, write: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);

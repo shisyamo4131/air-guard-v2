@@ -83,7 +83,6 @@ function commandCases() {
     { name: "adjusted", raw: billing, command: { kind: "billing", documentId: billing.docId, action: "adjusted", changes: { useAdjusted: true, adjustedQuantityBase: 2, adjustedUnitPriceBase: 12000 } }, keys: clientCommands.ADJUSTED_FIELDS },
     { name: "lock", raw: billing, command: { kind: "billing", documentId: billing.docId, action: "lock", changes: { desiredLocked: true } }, keys: ["isLocked"] },
     { name: "notify", raw: schedule, command: { kind: "schedule", documentId: schedule.docId, action: "notify", changes: { shouldNotify: true } }, keys: workerExpected },
-    { name: "convert", raw: schedule, command: { kind: "schedule", documentId: schedule.docId, action: "convert", changes: {}, notifications: {} }, keys: workerExpected },
     { name: "duplicate", raw: schedule, command: { kind: "schedule", documentId: "copy", sourceId: schedule.docId, action: "duplicate", changes: { dateAt: "2026-09-02" } }, keys: [...clientCommands.WORKER_PARENT_FIELDS, "employees", "outsourcers", "customerId", "agreement", "billingDateAt", "operationResultId"] },
     { name: "delete", raw: schedule, command: { kind: "schedule", documentId: schedule.docId, action: "delete", changes: {} }, keys: ["siteId", "employees", "outsourcers", "articles", "operationResultId", "siteOperationScheduleId", "updatedAt"] },
   ];
@@ -91,7 +90,7 @@ function commandCases() {
 
 test("client value encoding and operation command expectations stay wire-compatible with Functions", () => {
   const raw = operation();
-  for (const name of ["OVERVIEW_FIELDS", "WORKER_FIELDS", "ADJUSTED_FIELDS", "NOTIFICATION_VALUES", "NOTIFICATION_IDENTITY", "WORKER_PARENT_FIELDS"]) {
+  for (const name of ["OVERVIEW_FIELDS", "WORKER_FIELDS", "ADJUSTED_FIELDS", "WORKER_PARENT_FIELDS"]) {
     assert.deepEqual(clientCommands[name], serverCommands[name], name);
   }
   for (const { name, raw, command, keys } of commandCases()) {
@@ -131,7 +130,7 @@ test("client optimistic operation projection stays aligned with the authoritativ
     assert.deepEqual(encoded(client), encoded(server), name);
     if (name === "delete") assert.equal(client, null);
     if (name === "lock") assert.equal(client.isLocked, true);
-    if (["notify", "convert", "agreement"].includes(name)) assert.deepEqual(client.unknown, raw.unknown, `${name}: no-op retains unknown data`);
+    if (["notify", "agreement"].includes(name)) assert.deepEqual(client.unknown, raw.unknown, `${name}: no-op retains unknown data`);
   }
 
   const create = commandCases().find(({ name }) => name === "create").command;
@@ -159,7 +158,7 @@ test("client optimistic operation projection stays aligned with the authoritativ
   assert.deepEqual([...clientReferences.operationEmployeeReferences(raw, { scheduleId: raw.docId })], [...serverReferences.operationEmployeeReferences(raw, { scheduleId: raw.docId })]);
 });
 
-test("client date and notification projections retain Functions parity", () => {
+test("client date and notification references retain Functions parity", () => {
   const raw = operation();
   const left = clientDateTime(new SiteOperationSchedule(clientValues.rawForClass(raw)));
   const right = serverDateTime(new SiteOperationSchedule(serverValues.rawForClass(raw)));
@@ -178,7 +177,6 @@ test("client date and notification projections retain Functions parity", () => {
     actualIsStartNextDay: worker.isStartNextDay,
   })).toObject();
   assert.deepEqual([...clientReferences.notificationEmployeeReferences(notification)], [...serverReferences.notificationEmployeeReferences(notification)]);
-  assert.deepEqual(clientCommands.notificationExpectation(notification), serverCommands.notificationExpectation(notification));
 });
 
 test("schedule CUD uses tenant-wide server authorization while result client CRUD is rejected by the Callable contract", () => {
@@ -186,7 +184,7 @@ test("schedule CUD uses tenant-wide server authorization while result client CRU
   const base = { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: false, roles: [] };
   const scheduleCud = ["create", "duplicate", "overview", "workers", "order", "delete"]
     .map((action) => ({ kind: "schedule", action }));
-  const restrictedSchedule = [{ kind: "schedule", action: "notify" }, { kind: "schedule", action: "convert" }];
+  const restrictedSchedule = [{ kind: "schedule", action: "notify" }];
   const resultClientCrud = ["create", "overview", "workers", "delete"].map((action) => ({ kind: "result", action }));
   const restrictedResult = ["duplicate", "articles"].map((action) => ({ kind: "result", action }));
   const billing = ["overview", "articles", "agreement", "adjusted"].map((action) => ({ kind: "billing", action }));

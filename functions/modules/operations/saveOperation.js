@@ -1,9 +1,9 @@
 import { operationDateTime } from "../../shared/operationDateTime.js";
 import { FieldValue } from "firebase-admin/firestore";
-import { Site, SiteOperationSchedule, OperationResult, OperationResultDetail, ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
+import { Site, SiteOperationSchedule, OperationResult, ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
 import { plain, identifier, equal, rawForClass } from "../../shared/employeeContract.js";
 import { OperationWriteError, operationEmployeeReferences, notificationEmployeeReferences } from "../../shared/operationReferences.js";
-import { parseOperationCommand, operationAllowed, assertOperationExpected, applyOperationCommand, calculateOperation, mergeCalculated, notificationExpectation, WORKER_PARENT_FIELDS } from "../../shared/operationWriteContract.js";
+import { parseOperationCommand, operationAllowed, assertOperationExpected, applyOperationCommand, calculateOperation, mergeCalculated, WORKER_PARENT_FIELDS } from "../../shared/operationWriteContract.js";
 
 const fail = (code = "failed-precondition", message) => { throw new OperationWriteError(code, message); };
 const collectionFor = (kind) => kind === "schedule" ? "SiteOperationSchedules" : "OperationResults";
@@ -14,9 +14,9 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
   for (const command of commands) if (command.action === "duplicate" && commands.some((other) => other !== command && collectionFor(other.kind) === collectionFor(command.kind) && (other.documentId === command.sourceId || other.documentId === command.documentId))) fail("invalid-argument");
   // Notification preparation and conversion each require their own completed
   // confirmation read. A batch cannot substitute for that user-visible boundary.
-  for (const command of commands) if (["notify", "convert"].includes(command.action)
+  for (const command of commands) if (command.action === "notify"
     && commands.some((other) => other !== command && other.documentId === command.documentId
-      && (other.kind === "schedule" || command.action === "convert"))) fail("invalid-argument");
+      && other.kind === "schedule")) fail("invalid-argument");
   const identity = await resolveIdentity();
   const root = `Companies/${identity.companyId}`;
   return firestore.runTransaction(async (transaction) => {
@@ -206,8 +206,8 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
             if (Object.hasOwn(changes, "billingDateAt")) model.billingDateAt = changes.billingDateAt;
           }).value;
         }
-        if (kind === "schedule" && !["notify", "convert"].includes(action)) after = await cancelNotifications(documentId, raw, after);
-        if (kind === "schedule" && ["notify", "convert"].includes(action)) {
+        if (kind === "schedule" && action !== "notify") after = await cancelNotifications(documentId, raw, after);
+        if (kind === "schedule" && action === "notify") {
           const workers = [...raw.employees, ...raw.outsourcers];
           const notifications = new Map();
           for (const worker of workers) {
@@ -235,39 +235,11 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
               (array === "employees" ? employees : outsourcers).push(worker.hasNotification ? worker : { ...worker, hasNotification: true });
             }
             after = { ...raw, employees, outsourcers, workers: [...employees, ...outsourcers] };
-          } else {
-            const expectations = Object.fromEntries([...notifications].map(([id, notification]) => [id, notificationExpectation(notification)]));
-            if (!equal(expectations, command.notifications)) fail("aborted", "通知が更新されました。実績化の内容を読み直してください。");
-            const site = await requireSite(raw.siteId);
-            if (site.isTemporary !== false) fail();
-            const result = await plan(`${root}/OperationResults/${documentId}`, "result");
-            if (result.before !== null || result.after !== null) fail("already-exists");
-            const convert = (worker) => {
-              const notification = notifications.get(`${documentId}_${worker.workerId}`);
-              if (notification === null) return worker;
-              for (const key of ["isQualified", "isOjt"]) if (typeof notification[key] !== "boolean") fail();
-              for (const key of ["actualStartTime", "actualEndTime"]) if (notification[key] != null && typeof notification[key] !== "string") fail();
-              if (notification.actualBreakMinutes != null && (typeof notification.actualBreakMinutes !== "number" || !Number.isFinite(notification.actualBreakMinutes))) fail();
-              if (notification.actualIsStartNextDay != null && typeof notification.actualIsStartNextDay !== "boolean") fail();
-              const calculated = operationDateTime(new OperationResultDetail(rawForClass(worker)));
-              const before = calculated.toObject();
-              Object.assign(calculated, { startTime: notification.actualStartTime ?? worker.startTime, endTime: notification.actualEndTime ?? worker.endTime, breakMinutes: notification.actualBreakMinutes ?? worker.breakMinutes, isStartNextDay: notification.actualIsStartNextDay ?? worker.isStartNextDay, isQualified: notification.isQualified, isOjt: notification.isOjt });
-              try { calculated.validate(); } catch { fail("invalid-argument"); }
-              return mergeCalculated(worker, before, calculated.toObject());
-            };
-            const employees = raw.employees.map(convert), outsourcers = raw.outsourcers.map(convert);
-            const model = operationDateTime(new OperationResult({ ...rawForClass(raw), employees: rawForClass(employees), outsourcers: rawForClass(outsourcers), siteOperationScheduleId: documentId }));
-            try { for (const worker of model.workers) worker.validate(); } catch { fail("invalid-argument"); }
-            const created = model.toObject();
-            for (const key of Object.keys(created)) if (equal(rawForClass(raw[key]), created[key])) created[key] = raw[key];
-            Object.assign(created, { employees, outsourcers, workers: [...employees, ...outsourcers] });
-            result.after = await applySiteAgreement(created, "result");
-            after = { ...raw, operationResultId: documentId };
           }
         }
         target.after = after;
       }
-      results.push({ documentId, ...(action === "convert" ? { resultId: documentId } : {}) });
+      results.push({ documentId });
     }
     let updated = false;
     const audit = { uid: identity.uid, updatedAt: timestamp() };

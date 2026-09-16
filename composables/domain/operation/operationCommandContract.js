@@ -3,14 +3,12 @@ import { expectedFields } from "../shared/valueContract.js";
 export const OVERVIEW_FIELDS = Object.freeze(["siteId", "securityType", "dateAt", "dayType", "shiftType", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes", "requiredPersonnel", "qualificationRequired", "workDescription", "remarks"]);
 export const WORKER_FIELDS = Object.freeze(["id", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes", "isQualified", "isOjt"]);
 export const ADJUSTED_FIELDS = Object.freeze(["useAdjusted", "adjustedQuantityBase", "adjustedOvertimeMinutesBase", "adjustedQuantityQualified", "adjustedOvertimeMinutesQualified", "adjustedUnitPriceBase", "adjustedOvertimeUnitPriceBase", "adjustedUnitPriceQualified", "adjustedOvertimeUnitPriceQualified"]);
-export const NOTIFICATION_VALUES = Object.freeze(["actualStartTime", "actualEndTime", "actualIsStartNextDay", "actualBreakMinutes", "isQualified", "isOjt"]);
-export const NOTIFICATION_IDENTITY = Object.freeze(["docId", "siteOperationScheduleId", "siteId", "id", "index", "isEmployee", "workerId", "employeeId", "outsourcerId"]);
 export const WORKER_PARENT_FIELDS = Object.freeze(["siteId", "dateAt", "shiftType", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes"]);
 
 export function operationExpectedKeys(command) {
   const { action, changes } = command;
   if (action === "create") return [];
-  if (["workers", "notify", "convert"].includes(action)) return ["operationResultId", "siteId", "dateAt", "employees", "outsourcers"];
+  if (["workers", "notify"].includes(action)) return ["operationResultId", "siteId", "dateAt", "employees", "outsourcers"];
   if (action === "articles") return ["articles"];
   if (action === "adjusted") return [...ADJUSTED_FIELDS];
   if (action === "agreement") return ["siteId", "dateAt", "shiftType", "agreement", "billingDateAt"];
@@ -32,8 +30,4 @@ export function operationExpectedKeys(command) {
 // The Callable parses and authorizes the command independently.
 export function expectedForOperation(raw, command) {
   return expectedFields(raw || {}, command.action === "duplicate" ? Object.keys(raw || {}) : operationExpectedKeys(command));
-}
-
-export function notificationExpectation(raw) {
-  return raw === null ? null : expectedFields(raw, [...NOTIFICATION_IDENTITY, ...NOTIFICATION_VALUES]);
 }

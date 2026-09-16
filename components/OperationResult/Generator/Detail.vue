@@ -87,7 +87,7 @@ const actionBtnAttrs = computed(() => {
           </template>
           <template #append="{ worker }">
             <td>
-              <!-- 上下番確定処理では配置通知のステータスは `下番済み` に強制更新 -->
+              <!-- 作業員の実績を個別編集する場合だけ、当該配置通知を `下番済み` として保存 -->
               <!-- `excluded-keys` によりステータス編集コンポーネントを非表示化（CustomInput で対応） -->
               <ArrangementNotificationManager
                 :doc="notificationsMap[worker.notificationKey]"
@@ -95,10 +95,13 @@ const actionBtnAttrs = computed(() => {
               >
                 <template #activator="activatorProps">
                   <v-btn
+                    v-if="activatorProps.item?.docId"
                     icon="mdi-pencil"
-                    @click="() => activatorProps.toUpdate()"
+                    aria-label="作業員実績を修正"
+                    title="作業員実績を修正"
+                    @click="activatorProps.toUpdate(activatorProps.item)"
                     size="small"
-                    :disabled="props.loading || activatorProps.disabled"
+                    :disabled="props.loading"
                   />
                 </template>
               </ArrangementNotificationManager>

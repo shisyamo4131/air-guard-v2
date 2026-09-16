@@ -32,9 +32,6 @@ const emit = defineEmits(["submit:complete"]);
 const { attrs } = useBaseManager("ArrangementNotificationManager");
 const manager = useTemplateRef("manager");
 const internalDoc = reactive(new ArrangementNotification());
-const hasValidDoc = computed(
-  () => props.doc instanceof ArrangementNotification && Boolean(props.doc.docId),
-);
 
 /*****************************************************************************
  * WATCHERS
@@ -64,10 +61,7 @@ async function handleUpdate(item) {
 /*****************************************************************************
  * DEFINE EXPOSE
  *****************************************************************************/
-function toUpdate(item = props.doc) {
-  if (!(item instanceof ArrangementNotification) || !item.docId) return false;
-  return manager.value?.toUpdate(item) ?? false;
-}
+const toUpdate = (...args) => manager.value?.toUpdate(...args);
 defineExpose({ toUpdate });
 </script>
 
@@ -87,17 +81,8 @@ defineExpose({ toUpdate });
     :handle-delete="rejectUnsupportedOperation"
     @submit:complete="emit('submit:complete', $event.item)"
   >
-    <template #activator="slotProps">
-      <slot
-        name="activator"
-        v-bind="{
-          ...slotProps,
-          disabled: slotProps.disableUpdate || !hasValidDoc,
-        }"
-      />
-    </template>
     <template v-for="(_, name) in $slots" #[name]="scope">
-      <slot v-if="name !== 'activator'" :name="name" v-bind="scope || {}" />
+      <slot :name="name" v-bind="scope ?? {}" />
     </template>
   </air-item-manager>
 </template>

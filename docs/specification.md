@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-09-15
-- 仕様バージョン: 0.8.25
+- 最終更新日: 2026-09-16
+- 仕様バージョン: 0.8.26
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -264,6 +264,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 取引終了・退職・再開・訂正などマスターの業務状態変更は、ManagerとSchemasクラスの標準更新を使う。認証account、User、tenant管理の変更を伴う部分は厳密な専用処理として分離する。業務上の状態・入力条件と保存経路は区別し、終了・退職後の通常情報編集など未変更の提供条件を一律撤去しない。
 - 請求の通常編集・確定・確定後の訂正・削除を標準CRUDに統一する。確定済み請求も直接編集・削除でき、確定を理由とする専用Callable・新revision作成を必須としない。請求documentの削除と、稼働請求管理から元の稼働実績を削除することは別であり、後者は提供しない。
 - 予定からの実績化もManagerとSchemasクラスの標準処理を使う。クラスが持つ関連documentの更新・transactionを利用し、処理が複数documentに及ぶことだけを理由に独自Callableへ移さない。
+- 最終操作「上下番を確定する」はArrangementNotificationを作成・更新せず、status、各timestamp、shouldNotifyを変更しない。既存通知は実績化時に読むだけで、actualStartTime、actualEndTime、actualBreakMinutes、actualIsStartNextDay、isQualified、isOjtをOperationResultへ反映し、通知がない項目は予定値へfallbackする。通知mapの読取りと実績・予定linkのtransactionはatomicではなく、document単位last-write-winsの既知境界として扱う。
+- worker鉛筆による個別実績編集では、対象の既存ArrangementNotificationだけを標準updateでLEAVEDへ更新する。通知documentがないworkerには鉛筆操作を表示しない。最終確定前にmissing通知を`notify(false)`で作成しない。
 - ArrangementNotificationの作成と、配置確認・上番・下番の更新は標準クラスの処理を使う。その作成・状態変更を受けたFunctionsが送信用Notificationsを生成し、Notificationsの作成トリガーがFCM送信と結果記録を行う既存構成を維持する。通知対象・受信設定・送信抑止条件の変更はこの保存方式の採用に含めない。
 - 稼働実績自体は標準CRUDで保存し、請求・勤怠・勤務回数・履歴等への反映は既存Functionsトリガーへ任せる。実績の保存成功と後続処理の完了は区別する。
 - これらのCRUDのserver認可は認証・同一tenantの共通境界とする。Schemasクラスがschema・業務検証を担う。提供UIを介さない操作はサポート対象外とし、画面別の編集制限を理由に独自Callableやrole別Rulesを追加しない。本節で標準処理と確定した操作へ、複数document・順序・監査等の一般的な例外候補を根拠に旧専用経路を再要求しない。認証・tenant管理、FCM送信等の外部作用の専用境界は維持する。
@@ -370,6 +372,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 連勤は配置予定に基づく注意喚起であり、配置の保存を禁止する条件とはしない。連勤関係を構成する双方の従業員配置タグに警告アイコンを表示し、ツールチップで該当理由を示す。
 - 現場稼働予定は稼働日から60日経過後に自動削除され、復元できない。
 - 配置通知がある場合、上下番確定では通知の実勤務時間を使用する。通知がない場合は予定勤務時間を使用する。
+- 上下番確定は`SiteOperationSchedulesManager`の`beforeEdit`から`SiteOperationSchedule.syncToOperationResult`を呼び出し、Schemasのtransactionで同じdocIdのOperationResult作成とschedule.operationResultId更新を行う。旧`useOperationGenerator`、`saveOperation`の`convert` action、notification expectation比較は現行経路に含めない。実績作成後のprojection Triggerは維持する。
 - 配置通知の状態遷移は `ARRANGED`、`CONFIRMED`、`ARRIVED`、`LEAVED` の順を基本とし、Schemasクラスの標準状態遷移メソッドで更新し、後続通知はFunctionsトリガーへ任せる。
 - ユーザーが上下番確定を開始してから処理が終了するまでは、処理中ダイアログを表示し、別の現場稼働予定を再選択できないようにする。成功・失敗にかかわらず処理終了時にダイアログを解除する。
 

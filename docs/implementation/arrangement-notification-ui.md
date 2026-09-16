@@ -2,10 +2,12 @@
 
 - 状態: 履歴資料。2026-09-15の標準CRUD仕様により、下記「承認済み仕様」の専用server・idempotency・rollback・再送制御案は現行要件ではない
 - 対象セグメント: SPEC-SEG-008 — ArrangementNotification状態遷移UIと時間入力結線
-- 最終確認日: 2026-08-11（SPEC-DEEP-014で対象component本文を再確認）
+- 最終確認日: 2026-09-16（個別編集と最終確定の通知作用を再整理）
 - 根拠ファイル: `components/ArrangementNotifications/Manager/index.vue`、`components/ArrangementNotification/Manager/index.vue`、`components/ArrangementNotification/Manager/toLeaved.vue`、`components/ArrangementNotification/CustomInput/index.vue`、`components/ArrangementNotification/TransitionBtn/index.vue`、`components/Arrangements/Manager/index.vue`・`useIndex.js` の直接呼出し、`composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js` のnotify、`components/OperationResult/Generator/index.vue`・`Detail.vue` の直接結線
 
 この文書は2026-08時点の調査と当時の設計意図を残す履歴資料である。現行要件は[現行仕様](../specification.md#標準crudと後続処理)と[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)を正とし、下記の専用server transaction、expected-state競合、idempotency、rollback・refetch、独自再送制御をSCR-02へ再導入しない。
+
+2026-09-16現行補正: 個別worker編集は既存ArrangementNotificationをLEAVEDへ標準updateするが、最終「上下番を確定する」は通知を作成・更新せず、status・timestamp・shouldNotifyを変更しない。通知のactual値は実績化時に読むだけで、通知なしは予定値へfallbackする。
 
 ## 承認済み仕様
 

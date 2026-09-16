@@ -11,6 +11,7 @@ import { useDefaults } from "vuetify";
  *****************************************************************************/
 const _props = defineProps({
   items: { type: Array, default: () => [] },
+  loading: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "OperationResultGeneratorList");
 
@@ -27,13 +28,19 @@ const selectedItems = computed({
     return selectedSchedule.value ? [selectedSchedule.value] : [];
   },
   set(v) {
+    if (props.loading) return;
     selectedSchedule.value = v.length > 0 ? v[0] : null;
   },
 });
 </script>
 
 <template>
-  <v-card class="d-flex flex-column" style="min-width: 288px; max-width: 288px">
+  <v-card
+    class="d-flex flex-column"
+    :aria-busy="props.loading"
+    :class="{ 'operation-result-generator-list--loading': props.loading }"
+    style="min-width: 288px; max-width: 288px"
+  >
     <v-toolbar
       class="flex-grow-0"
       color="secondary"
@@ -45,6 +52,7 @@ const selectedItems = computed({
       <air-list
         v-if="props.items.length > 0"
         v-model:selected="selectedItems"
+        :disabled="props.loading"
         class="py-0"
       >
         <template v-for="(schedule, index) in props.items" :key="index">

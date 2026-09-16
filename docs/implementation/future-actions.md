@@ -32,7 +32,7 @@ Local completed、Resolved、Superseded等は記録された限定条件のま�
 
 [FUT-0017](#fut-0017-authentication削除時token-cleanup失敗を回収する) · [FUT-0018](#fut-0018-arrangementnotificationからの通知生成をrolefield入力で制限する) · [FUT-0019](#fut-0019-notificationrecipientsのclient権限をschema契約と一致させる) · [FUT-0020](#fut-0020-user-document-idとauthentication-uidの不変条件を保護する) · [FUT-0021](#fut-0021-arrangementnotificationの状態遷移とtimestampを強制する) · [FUT-0022](#fut-0022-arrangementnotificationの実勤務日時休憩計算を修正する)
 
-[FUT-0023](#fut-0023-arrangementnotification直接削除によるschedule-flag不整合を防ぐ) · [FUT-0024](#fut-0024-notify-transaction失敗時のclient-instance-rollbackを保証する) · [FUT-0025](#fut-0025-arrangementnotification-uiの未使用prop遷移apiを整理する) · [FUT-0026](#fut-0026-arrangementnotification遷移notifyの多重実行と利用者向け失敗処理を確認する) · [FUT-0027](#fut-0027-上下番確定の通知更新とoperationresult作成を再開可能にする) · [FUT-0028](#fut-0028-配置通知作成失敗時の上下番確定方針を決める)
+[FUT-0023](#fut-0023-arrangementnotification直接削除によるschedule-flag不整合を防ぐ) · [FUT-0024](#fut-0024-notify-transaction失敗時のclient-instance-rollbackを保証する) · [FUT-0025](#fut-0025-arrangementnotification-uiの未使用prop遷移apiを整理する) · [FUT-0026](#fut-0026-arrangementnotification遷移notifyの多重実行と利用者向け失敗処理を確認する) · [FUT-0027](#fut-0027-上下番確定の通知更新とoperationresult作成を再開可能にする)
 
 [FUT-0029](#fut-0029-agreementなしoperationresult確定とbilling保留を正式化する) · [FUT-0030](#fut-0030-operationresult後続triggerの部分成功と再試行を検証する) · [FUT-0033](#fut-0033-請求稼働一覧の無効create操作とbilling集約競合を解消する) · [FUT-0035](#fut-0035-dailyattendance同期をoperationresultids逆引きへ移行する) · [FUT-0036](#fut-0036-dailyattendance詳細を従業員明細だけに限定する) · [FUT-0037](#fut-0037-dailyattendance開始終了を実日時で集約する)
 
@@ -111,6 +111,10 @@ Local completed、Resolved、Superseded等は記録された限定条件のま�
 ### Resolved（2026-09-08 Local実装）
 
 [FUT-0001](#fut-0001-ページアクセスをfail-closedへ変更する) · [FUT-0003](#fut-0003-認証初期化の処理完了と利用可能状態を分離する) · [FUT-0004](#fut-0004-user切替時の購読置換を保証する)
+
+### Superseded（2026-09-16 SCR-02）
+
+[FUT-0028](#fut-0028-配置通知作成失敗時の上下番確定方針を決める)
 
 ### Completed
 
@@ -385,10 +389,10 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 重大度: High
 - 発見セグメント: SPEC-SEG-006、SPEC-DEEP-007
 - 対象ファイル・シンボル: `firestore.rules` のArrangementNotifications match、`functions/triggers/arrangementNotification.js`、`createNotificationFor*Arrangement.js`、`onNotificationCreated`
-- 確認済み実装事実: 同一会社の任意認証UserはArrangementNotifications全体をread/writeできる。createはshouldNotify未指定をtrueとし、updateは特定status遷移で、Admin SDKがNotificationを作る。Rulesとtriggerはactor role、許可field、本人・対象関係を検証しない。2026-08-10に、配置管理者は任意の4状態への変更と同時の資格・OJT変更を行え、OperationResult Generatorは任意状態からLEAVEDにできると承認された。両pageの実装permissionは `site-operation-schedules:read` だが、これが配置管理者の正式な認定条件かは未決である。SPEC-DEEP-014で、管理component自身にもactor/tenant/field allowlistがなく、従業員componentも渡されたnotificationの本人性を再検証しないことを確認した。onCreateもpayload型・長さ・recipient配列・件数を検証しない。
+- 確認済み実装事実: 同一会社の任意認証UserはArrangementNotifications全体をread/writeできる。createはshouldNotify未指定をtrueとし、updateは特定status遷移で、Admin SDKがNotificationを作る。Rulesとtriggerはactor role、許可field、本人・対象関係を検証しない。配置管理者の任意status・資格・OJT変更方針は既存確認事項だが、SCR-02のOperationResult最終確定はArrangementNotificationを作成・更新しない。LEAVEDへの標準updateはworker鉛筆の個別編集routeだけである。両pageの実装permissionは `site-operation-schedules:read` だが、これが配置管理者の正式な認定条件かは未決である。SPEC-DEEP-014で、管理component自身にもactor/tenant/field allowlistがなく、従業員componentも渡されたnotificationの本人性を再検証しないことを確認した。onCreateもpayload型・長さ・recipient配列・件数を検証しない。
 - 想定影響と発生条件: 自社の通常Userがcrafted documentまたはstatus更新を行うと、権限昇格したtriggerを通じて自社Userへの意図しない通知、spam、大量処理、任意title/body/imageUrl/dataを伴う送信を起こし得る。別会社pathはRulesで拒否される。
 - 未確認点・仮説: 具体的な配置管理者role名、暫定permissionから正式authorizationへの移行方法、FCM payloadの具体的上限値は未確認。
-- 推奨する将来対応: 本人は自己配置連絡の確認・到着・上番・下番に必要な時刻・statusだけ、配置管理者は同一会社内の任意status・time・qualification・OJT、Generatorは対象schedule所属通知のLEAVED化だけに制限する。その他field・notification生成はdedicated server processingへ限定する。payload field allowlist・length・array count・URL、recipient/batch上限を検証し、actor・changedAt・before/afterを監査記録する。
+- 推奨する将来対応: 本人は自己配置連絡の確認・到着・上番・下番に必要な時刻・statusだけ、配置管理者は同一会社内の任意status・time・qualification・OJT、worker鉛筆の個別編集routeは対象通知のLEAVED updateだけに制限する。OperationResultの最終確定へ通知writeを戻さない。その他field・notification生成はdedicated server processingへ限定する。payload field allowlist・length・array count・URL、recipient/batch上限を検証し、actor・changedAt・before/afterを監査記録する。
 - 必要なテスト: 一般User・従業員本人・管理role・他社User・super-user別のRules、crafted field、status skip、shouldNotify省略、任意image/data、大量recipient、存在しないUser。
 - ユーザー判断が必要な事項: authorization設計確定時の配置管理者role名、payload・recipient・batchの具体的上限値。
 
@@ -424,10 +428,10 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 重大度: High
 - 発見セグメント: SPEC-SEG-007、SPEC-DEEP-038
 - 対象ファイル・シンボル: schemas `ArrangementNotification.update`・`toArranged`・`toConfirmed`・`toArrived`・`toLeaved`、status enum、ArrangementNotifications Rules
-- 確認済み実装事実: transition methodは現在statusを検査せず任意状態から呼べる。override updateはinstance.statusでdispatchするため事前にstatusを書き換えて任意transitionを選べ、未知statusではsilent no-opする。Rulesも任意status updateを許可する。配置管理UIは4statusをchipで選び対応methodを直接実行し、上下番確定UIは編集開始時にstatusをLEAVEDへ強制するため、順序飛ばし・逆遷移は画面から到達可能である。従業員UIはenum nextによる順方向だけを提示する。SPEC-DEEP-014で、`ArrangementNotificationChip`は未知status時にthrowし得る一方、ListItem/StatusChipは別のfallbackを使う表示契約不一致も確認した。toArrived/toLeavedは存在未確認の `confirmAt` を参照するため、通常のCONFIRMED→ARRIVED→LEAVEDでもconfirmedAtが現在日時へ上書きされ得る。enum commentとCONFIRMED.prevも矛盾する。
+- 確認済み実装事実: transition methodは現在statusを検査せず任意状態から呼べる。override updateはinstance.statusでdispatchするため事前にstatusを書き換えて任意transitionを選べ、未知statusではsilent no-opする。Rulesも任意status updateを許可する。配置管理UIは4statusをchipで選び対応methodを直接実行し、worker鉛筆の個別編集routeは既存通知をLEAVEDへ標準updateする。一方、SCR-02の上下番確定UIはArrangementNotificationを作成・更新せず、通知をLEAVEDへ強制しない。従業員UIはenum nextによる順方向だけを提示する。SPEC-DEEP-014で、`ArrangementNotificationChip`は未知status時にthrowし得る一方、ListItem/StatusChipは別のfallbackを使う表示契約不一致も確認した。toArrived/toLeavedは存在未確認の `confirmAt` を参照するため、通常のCONFIRMED→ARRIVED→LEAVEDでもconfirmedAtが現在日時へ上書きされ得る。enum commentとCONFIRMED.prevも矛盾する。
 - 想定影響と発生条件: 不正順序・直接write・取消し操作でstatusとconfirmed/arrived/leaved timestampが履歴を正しく表さず、通知再送、上下番確定、監査・稼働実績の誤判定につながり得る。
 - 未確認点・仮説: append-only historyの保存先・保持期間、配置管理者の具体的role、manager resend UIは未確認。
-- 推奨する将来対応: 配置管理者の同一会社内任意status/time/qualification/OJT変更と、Generatorの対象schedule所属通知だけのLEAVED強制を許可する。本人は自己配置連絡の確認・到着・上番・下番に必要な時刻・statusだけに制限する。transition historyはappend-onlyとし、過去確定時刻を消去・上書きせず、correctionのbefore・after・actor・reasonを記録する。reverseや同status再進行では自動再送せず、manager reason付きexplicit resendだけを許可し、User forwardとmanager correctionをaudit上区別する。`confirmAt`を正しいfieldへ修正し、未知statusを拒否する。
+- 推奨する将来対応: 配置管理者の同一会社内任意status/time/qualification/OJT変更と、worker鉛筆の個別編集routeにおける対象通知だけのLEAVED updateを許可する。OperationResultの最終確定へ通知writeを戻さない。本人は自己配置連絡の確認・到着・上番・下番に必要な時刻・statusだけに制限する。transition historyはappend-onlyとし、過去確定時刻を消去・上書きせず、correctionのbefore・after・actor・reasonを記録する。reverseや同status再進行では自動再送せず、manager reason付きexplicit resendだけを許可し、User forwardとmanager correctionをaudit上区別する。`confirmAt`を正しいfieldへ修正し、未知statusを拒否する。
 - 必要なテスト: 全状態×全transition、直接status write、concurrent update、逆遷移、timestamp保持・reset、未知status、通知発火回数。
 - ユーザー判断が必要な事項: authorization設計確定時の配置管理者role名、append-only historyの保持期間、explicit resendの権限・理由区分。
 
@@ -437,7 +441,7 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 重大度: High
 - 発見セグメント: SPEC-SEG-007
 - 対象ファイル・シンボル: `actualStartAt`、`actualEndAt`、`totalWorkMinutes`、`actualIsStartNextDay`、3transitionのactual field設定、`toLeaved` timeOptions
-- 確認済み実装事実: actual日時はactualIsStartNextDayではなく予定isStartNextDayを使い、終了跨日はactual時刻ではなく予定isSpansNextDayを使う。従業員下番UIと上下番確定UIはactualStartTime、actualIsStartNextDay、actualEndTime、actualBreakMinutesをinstanceへ直接結線してから引数なしでtoLeavedを呼ぶため、timeOptions未使用は現在のUIでは入力喪失の直接原因ではないが、入力したactualIsStartNextDayは日時計算へ反映されない。toArranged/toConfirmed/toArrivedはactualBreakMinutesを予定breakMinutesではなく60へ固定し、配置管理UIからこれらのstatusを選んだ場合にも同じ上書きが起こる。SPEC-DEEP-038では配置Tagだけがactual時刻を`||`で予定へfallbackし、資格・OJTで用いるnullish実効値契約と異なることを確認した。
+- 確認済み実装事実: actual日時はactualIsStartNextDayではなく予定isStartNextDayを使い、終了跨日はactual時刻ではなく予定isSpansNextDayを使う。従業員下番UIとworker鉛筆の個別編集UIはactualStartTime、actualIsStartNextDay、actualEndTime、actualBreakMinutesをinstanceへ直接結線してから引数なしでtoLeavedを呼ぶため、timeOptions未使用は現在のUIでは入力喪失の直接原因ではないが、入力したactualIsStartNextDayは日時計算へ反映されない。SCR-02のOperationResult最終確定はこの通知transitionを呼ばず、ArrangementNotificationを作成・更新しない。toArranged/toConfirmed/toArrivedはactualBreakMinutesを予定breakMinutesではなく60へ固定し、配置管理UIからこれらのstatusを選んだ場合にも同じ上書きが起こる。SPEC-DEEP-038では配置Tagだけがactual時刻を`||`で予定へfallbackし、資格・OJTで用いるnullish実効値契約と異なることを確認した。
 - 想定影響と発生条件: 実開始・終了が予定と異なる日跨ぎ、翌日開始、休憩変更の場合、totalWorkMinutesが誤り、稼働実績・勤怠・請求へ不正な時間が連携される可能性がある。
 - 未確認点・仮説: datetime/break validationの具体的許容範囲、scheduled/actual breakの保存field・migrationは未確認。
 - 推奨する将来対応: base dateをschedule dateとし、`actualIsStartNextDay`を明示する。end <= startは翌日とする。actual値を優先し、scheduled値はfallback/defaultだけに使う。breakはactual入力・確認値とし、固定60分を自動確定せずscheduled defaultだけにする。scheduled/actual breakを別保持し、保存前に日跨ぎを含むdatetime・breakを検証する。
@@ -489,25 +493,26 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-008
 - 対象ファイル・シンボル: `ArrangementNotifications/Manager` のonUpdateHandler、`TransitionBtn`、`useSiteOperationScheduleActions.notify`、OperationResult Generatorのschedule watcher
-- 確認済み実装事実: 従業員managerはtransition中にlocal/global loadingを設定するがTransitionBtnへloading/disabledを渡さない。notify actionもglobal loadingを設定するが、確認した呼出しcardのdisabled結線は未確認である。失敗は主にloggerへ渡し、従業員transitionと配置管理notifyには専用の利用者向け失敗message・retry UIがない。SPEC-DEEP-014で、下番managerとcustom inputのvalidation/loading/errorも基底managerへ委譲され、ListItemのsite cache未準備・日時欠損はplaceholder/current-time表示となることを確認した。SPEC-DEEP-030で、上下番確定の最終submitはloading中disabledになる一方、schedule Listへloading/disabledは結線されず処理中も選択変更できること、async watcherが以前の非null scheduleを先にunsubscribeせず取消し・世代確認も持たないことを確認した。
+- 確認済み実装事実: 従業員managerはtransition中にlocal/global loadingを設定するがTransitionBtnへloading/disabledを渡さない。notify actionもglobal loadingを設定するが、確認した呼出しcardのdisabled結線は未確認である。失敗は主にloggerへ渡し、従業員transitionと配置管理notifyには専用の利用者向け失敗message・retry UIがない。SPEC-DEEP-014で、下番managerとcustom inputのvalidation/loading/errorも基底managerへ委譲され、ListItemのsite cache未準備・日時欠損はplaceholder/current-time表示となることを確認した。SCR-02でGeneratorのList lock・confirming中のworker鉛筆lock・generation tokenによるstale response防止はsource実装済みだが、runtime挙動は未確認である。
 - 想定影響と発生条件: 基底managerやglobal overlayが入力を遮断しない場合、連打・遅延・選択変更でtransitionやNotification作成が重複し、timestamp上書き、重複push、選択対象との競合が起こり得る。失敗時は利用者が成否を判断できず再操作する可能性がある。
-- 未確認点・仮説: `AirItemManager`・`useBaseManager` のsubmit lockとglobal loading overlayのpointer遮断は未確認。List component自体には選択抑止がないが、overlayが実操作を遮断する可能性は残る。
+- 未確認点・仮説: `AirItemManager`・`useBaseManager` のsubmit lockとglobal loading overlayのpointer遮断は未確認。ArrangementNotification transition/notifyの失敗表示、retry、並行実行時のruntime挙動も未確認である。
 - 推奨する将来対応: transition中は対象行の全操作をdisabledにし、client/server双方でduplicateを拒否する。server idempotency keyを設ける。失敗時はlocal rollback、最新refetch、error表示を行い、state＋notificationは無条件自動retryせずrefresh後の明示retryとする。
 - 必要なテスト: transition/notify連打、client/server duplicate拒否、遅延中の対象変更、row-only lock、失敗時rollback/refetch/error、明示retry、offline復帰、複数tab、同一document concurrent update、idempotency key再送。
 - ユーザー判断が必要な事項: なし。対象行lockと明示retry方針は2026-08-11に確認済み。
 
 ## FUT-0027 上下番確定の通知更新とOperationResult作成を再開可能にする
 
-- 状態: Open
+
+- 状態: Open（残存調査のみ）
 - 重大度: High
 - 発見セグメント: SPEC-SEG-009、SPEC-DEEP-030
 - 対象ファイル・シンボル: OperationResult Generatorのworker編集、`SiteOperationSchedule.syncToOperationResult`
-- 確認済み実装事実: workerごとのArrangementNotification LEAVED更新は個別保存され、その後のOperationResult createとschedule.operationResultId updateだけが別の同一transactionで実行される。最終transaction失敗時に通知を元状態へ戻す処理はない。SPEC-DEEP-030で、Result createはschedule docIdを指定し、client adapterが存在preconditionなしのtransaction `set`を行うため、schedule linkが欠損・staleでも同一IDの既存Resultを上書きできるsource契約を確認した。developer duplicateも全snapshotをcloneし、同日・既存内容・sourceType/provenance・server専用permissionを検査しない。2026-08-31に利用者がDEVで上下番確定を実行し、OperationResult登録は成功した一方、処理時に「予期しないエラー」趣旨のSnackbarを観測した。同時にFcmTokens登録の403 permission-denied、SecurityReports thumbnailの404、Chrome message channel errorも観測されたが、いずれも上下番確定errorとの因果関係は未確認である。
-- 想定影響と発生条件: Site/Agreement fetch、OperationResult validation、transaction競合・Rules等で最終確定が失敗すると、配置通知だけがLEAVEDでOperationResult未作成という部分状態が残る。反対に、別のruntime経路または後段処理でOperationResult作成後に通知・画面処理だけが失敗する場合、実績は存在するのに利用者へ全体失敗と見える部分成功も起こり得る。2026-08-31のDEV観測がどちらの経路かは未確定である。
-- 未確認点・仮説: DEV観測ではArrangementNotificationの実際のstatus、SiteOperationSchedule link、Snackbarの発生元を照合していない。関連通知をLEAVEDへ更新する処理の一部失敗、await漏れ、例外がglobal error処理だけへ渡る経路は調査仮説であり、原因とは断定しない。FcmTokens 403、SecurityReports 404、Chrome message channel errorは同時刻の別事象である可能性を維持する。現行adapterでnotification更新をOperationResult＋schedule linkと同一transactionへ含められる範囲、sourceType/reason schema、standalone専用permission、既存data migrationも未実装・未確認である。
-- 推奨する将来対応: 次回の上下番確定改修時に、「上下番を確定する」buttonからOperationResult作成、SiteOperationSchedule link更新、対象ArrangementNotification全件のLEAVED更新、成功・失敗Snackbarまでの実行経路とawaitを追跡し、例外の発生箇所をresource別に識別する。3pathを実装する。(1) schedule＋notificationsは可能な範囲でOperationResult作成、schedule.operationResultId、既存notification LEAVEDを同一transactionにしpushしない。(2) scheduleのみはnotificationを作らずOperationResult＋schedule linkをatomic化し、入力優先・欠損schedule fallback・no-notification sourceを記録する。(3) standaloneはOperationResultのみでreason/sourceTypeを記録する。scheduleId/sourceTypeをoptionalにし、schedule重複防止、standalone専用permission/audit、missing notification非error、存在するnotificationだけ更新を強制する。transaction化できない作用は、部分成功を誤って全体失敗と表示せず、失敗resourceを識別できるlogまたは利用者向けmessageと再開手順を持たせる。FcmTokens登録失敗は上下番確定の成否・Snackbarから分離する。
-- 必要なテスト: buttonからOperationResult・schedule link・notificationまでの正常経路、3path、notification 0/1/複数、全件LEAVED、既にLEAVED、通知なしworker、一部更新失敗、pushなし、入力優先/fallback、optional scheduleId/sourceType、schedule重複拒否、既存同一ID・stale link時の非上書き、standalone/duplicate permission・provenance・audit、transaction abort/retry、missing notification非error、同じ操作の再実行、各段階の失敗注入、成功時Snackbarなし、失敗resourceを区別するmessage/log、FcmTokens 403が確定成否とSnackbarへ影響しないこと。
-- ユーザー判断が必要な事項: 具体的sourceType語彙、standalone permission名、audit保持等の実装詳細。3path契約は2026-08-11に確認済み。
+- 確認済み実装事実: SCR-02で最終確定は標準syncに整合し、ArrangementNotificationを作成・更新せず既存通知のactual値を読む。worker鉛筆の個別編集だけが既存通知をLEAVEDへ標準updateする。Result createのschedule ID存在preconditionなし、developer duplicateの重複・provenance・server permission未検査、2026-08-31 DEVのSnackbarと同時発生したFCM 403等は独立した確認対象として残る。
+- 想定影響と発生条件: 現行の通知強制更新を前提にした部分状態リスクは該当しない。残る影響は、Snackbar発生源を誤認すると利用者が確定成否を判断できないこと、FCM 403等を上下番確定失敗と誤って関連付けることである。2026-08-31のDEV観測の因果関係は未確定である。
+- 未確認点・仮説: DEV観測ではArrangementNotificationの実際のstatus、SiteOperationSchedule link、Snackbarの発生元を照合していない。FcmTokens 403、SecurityReports 404、Chrome message channel errorは同時刻の別事象である可能性を維持する。Snackbarと確定成否の因果関係、Result存在precondition、duplicateのprovenance・server permissionは未確認である。
+- 推奨する将来対応: Snackbarの発生源をOperationResult確定、FCM登録、その他resource別に切り分け、確定成否と並行errorの利用者表示を分離する。Result存在preconditionとduplicateのprovenance/permissionは独立課題として追跡する。
+- 必要なテスト: Snackbar発生源のresource別分離、FCM 403が確定成否へ影響しないこと、Result存在precondition、duplicate provenance/permission。
+- ユーザー判断が必要な事項: 現時点で新たな3path採用判断は不要。旧3path案はSuperseded historyとして扱う。
 
 ### 2026-09-04 DEV再観測delta
 
@@ -521,16 +526,13 @@ SPEC-DEEP-041追加根拠: developer duplicateのdomain APIは複数日と同日
 
 ## FUT-0028 配置通知作成失敗時の上下番確定方針を決める
 
-- 状態: Open
+- 状態: Superseded（2026-09-16 SCR-02）
 - 重大度: Low
 - 発見セグメント: SPEC-SEG-009
 - 対象ファイル・シンボル: OperationResult GeneratorのselectedSchedule watcher、`SiteOperationSchedule.syncToOperationResult` converter
-- 確認済み実装事実: 未通知workerがいる場合の `notify(false)` errorはmessage表示後に吸収され、購読と編集を続ける。sync converterはnotificationがなければ予定時刻・休憩・翌日flag・資格・OJTへfallbackし、通知全件存在やLEAVEDを検査しない。
-- 想定影響と発生条件: 2026-08-10に、上下番確定は作業完了後で外部push不要、missing通知の作成に失敗しても予定値fallbackで続行してよいと承認された。`notify(false)` はshouldNotify=falseでpush生成を抑止する。
-- 未確認点・仮説: 仕様判断は解決済み。fallback使用を監査上記録する必要性と、notify transactionの部分失敗可否は未確認。
-- 推奨する将来対応: 承認済みfallbackとpush非送信を回帰testで固定する。監査表示が必要なら別途仕様化する。
-- 必要なテスト: notify全失敗・一部欠落、購読遅延、非LEAVED通知、予定値fallback、retry後確定。
-- ユーザー判断が必要な事項: なし。予定値fallback許可で解決済み。
+- 現行確認済み実装事実: 最終確定は`notify(false)`を呼ばず、既存ArrangementNotificationのactual値を読む。通知がないworkerは予定時刻・休憩・翌日flag・資格・OJTへfallbackし、最終確定でArrangementNotificationを作成・更新しない。
+- 旧方針（2026-08-10〜2026-09-15）: `notify(false)`でmissing通知を作成し、失敗を吸収して予定値fallbackで続行する案は、現行実装によりSupersededとなった。
+- 残存事項: 通知送信・監査の独立した調査はFUT-0027のSnackbar/FCM切り分けへ統合する。新たな実装・判断は本項では要求しない。
 
 ## FUT-0029 agreementなしOperationResult確定とBilling保留を正式化する
 

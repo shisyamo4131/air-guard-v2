@@ -5,7 +5,7 @@
 - 現在の進捗: 10%
 - 目的: [棚卸し](../implementation/operation-crud-simplification-inventory.md#2026-09-15の実装棚卸し)で確認した専用保存経路・Rules・クラス契約の差を、一つずつ承認済み仕様へ揃える。
 - 開始基準: local main `048e44e9cfd4ca887ec328e7e835c291579e68af`と、同基準で調査した2026-09-15の棚卸し。
-- 作業branch: `codex/standard-crud-alignment`。本書の棚卸し解消を範囲とし、checkpointごとに差分・検証・Git統合を閉じる。
+- 作業branch: `codex/scr02-worker-result-edit-action`（SCR-02全体の作業branchとして利用者承認済み）。本書の棚卸し解消を範囲とし、checkpointごとに差分・検証・Git統合を閉じる。
 - 成果範囲: SCR-01を完了。入金予定日を標準Manager／Class保存へ移し、Rulesを整合して旧専用経路とremote Functionを撤去した。Local自動検証と画面確認、GitHub ActionsによるDev反映、会社管理者によるDev受入れまで完了した。package変更、data migration、既存documentの一括操作は行っていない。
 - 要件の正本: [標準CRUDと後続処理](../specification.md#標準crudと後続処理)、[画面別lock](../specification.md#稼働実績ロックと画面別操作)、[archive・restore](../specification.md#ドキュメントのアーカイブと物理削除)。本書で新しい機能要件を追加しない。
 
@@ -26,9 +26,9 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 | マイルストーン | 重み | 得点 | 状態 | 完了条件・対象となる確認 |
 |---|---:|---:|---|---|
 | SCR-01 Billings入金予定日 | 10 | 10 | Completed | 提供済み編集をManager／Classへ接続し、Rulesと旧比較testを整合。保存・再表示・失敗、tenant境界を検証する |
-| SCR-02 配置通知の状態更新・編集 | 10 | 0 | In Progress（Dev補正反映済み・Dev再受入れ待ち） | Managerと本人向け確認・上番・下番を標準クラスへ接続し、Schemas生成とのnotify parityを揃え、Local補正で左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を利用者確認済み。HostingのみDevへ反映済みで、未確定現場稼働0件のためDev再受入れを行う |
+| SCR-02 配置通知の状態更新・編集 | 10 | 0 | In Progress（今回追加修正のユーザーcode review待ち・Local未実行） | 通知個別編集と最終確定を標準Manager／Schemasへ整合し、最終確定で通知を変更せず、既存通知のactual値を実績へ反映する。旧convert経路を撤去済み。targeted domain testは実行済みだが、ユーザーcode reviewとLocal Emulator/UI受入れが未完了 |
 | SCR-03 Site手動終了・再開 | 10 | 0 | Planned | 終了・再開の既存業務条件と標準クラスを照合し、入口・保存・Rulesを整合。自動終了system処理と終了後の通常編集条件を維持する |
-| SCR-04 予定から実績化 | 10 | 0 | Planned | Generatorを標準syncToOperationResultへ接続し、同ID実績作成・予定更新・通知実勤務値反映・作成Rulesを整合。旧convert callerを撤去し、既存実績作成を回帰確認する |
+| SCR-04 予定から実績化 | 10 | 0 | Planned | SCR-02で整合した標準sync・同ID実績作成・予定更新・通知actual値反映・旧convert撤去を再実装・二重計上しない。残る独立範囲だけを改めて選定し、実績後続Triggerや別UIの受入れが必要な場合に着手する |
 | SCR-05 稼働請求・実績lock・稼働外売上 | 10 | 0 | Planned | 取極め・調整・lock等を既存OperationBilling／OperationResultの標準保存へ接続し、共有Rulesを整合。画面別操作表、経理画面アクセス、稼働請求からの実績削除禁止、請求・勤怠等への後続反映を検証する |
 | SCR-06 Customer archive・restore整合 | 10 | 0 | Planned | 既存archive入口をManager／Classへ接続し、従属あり拒否・なし移動、同ID標準restore、tenant境界、旧envelope互換性を確認。専用writerと対象Rulesを一体で整合し、通常CRUDを維持する |
 | SCR-07 Site archive・restore整合 | 10 | 0 | Planned | Siteの従属hook、標準移動・復旧、旧形式を照合し、既存入口とRulesを整合。SCR-06の共通確認は有効な範囲だけ再利用する |
@@ -126,6 +126,8 @@ code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-
 完了時は各行から実装差分と検証receiptへリンクし、command・exit・review findingと解消・未確認事項を確認可能にする。棚卸しには変更後の実装事実を反映する。SCR-01の製品検証証拠は実装記録とDev release記録へ保存した。
 
 ## 次の作業
+
+2026-09-16訂正: 今回の標準CRUD・通知不変・旧convert撤去・OperationResult標準sync整合はSCR-02へ含める。今回追加修正はユーザーcode review待ち、Local未実行、SCR-02は0点のままとする。SCR-04はPlannedのまま維持し、SCR-02で整合した実績化範囲を再実装・二重計上しない。
 
 SCR-02の製品codeとtest codeは準備済みで、得点は0のままとする。Schemas `3.0.0-dev.3`をroot/Functionsへ導入し、package identityとintegrityの`PostAdoption`は成功した。配置通知生成の`actualIsStartNextDay`はFunctionsのnotify生成分岐にも実勤務値を引き継ぐよう補正した。TESTERのLocal UI確認、ユーザー本人の遷移確認、domain-full 1433/1433、Local Emulator 180/180を含む対象検証は成功済みである。GitHub ActionsによるDevのHosting/Functions反映と会社管理者によるDev UI表示も成功した。DEV read-only確認では配置通知2579件を取得し、翌日開始1件と関連予定・勤務実績の整合を確認したため、migration/repairは不要と判断した。未確定dataが0件のため確定操作のDev受入れは未完了である。Generatorの共通rowへ`overflow-hidden`と`min-height: 0`を追加し、左右独立scroll・右toolbar/actions固定・外側columnとalert→reload→row順序を固定するsource regression testを追加した。`node --test test/domain/operation-editor.test.mjs`はTESTER最終39/39、review findingは0件である。Local UIは利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格とした。release merge commit `05600c5dd8f7a5f55afae94832dd8f7b246fa531`のGitHub Actions run `35046048154`はsuccessとなり、HostingのみをDevへ反映した。Dev URLはHTTP 200・final URI一致・no-store/must-revalidate/no-cacheで、会社管理者Chromeの対象3画面表示を確認した。現在の未確定現場稼働は0件のため、scroll補正のDev再受入れは未完了で、SCR-02は得点0、状態はDev補正反映済み・Dev再受入れ待ちとする。詳細は[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)を参照する。SCR-04の標準実績化とは分離し、Dev反映済みで残るDev再受入れを別承認で閉じる。SCR-01の製品code・Rules・Dev反映と受入れは完了している。
 

@@ -545,12 +545,14 @@ test("arrangement notification managers use standard CRUD transitions and no del
   const generatorDetail = await source("components/OperationResult/Generator/Detail.vue");
   assert.match(single, /air-item-manager/u); assert.match(single, /useBaseManager/u); assert.match(single, /item\.update\(\)/u);
   assert.match(single, /includesStatus/u); assert.match(single, /customInput/u); assert.match(single, /beforeEdit/u); assert.match(single, /submit:complete/u); assert.match(single, /toUpdate/u);
-  assert.match(single, /const hasValidDoc = computed\([\s\S]*?props\.doc instanceof ArrangementNotification[\s\S]*?Boolean\(props\.doc\.docId\)/u);
-  assert.match(single, /function toUpdate\(item = props\.doc\)[\s\S]*?if \(!\(item instanceof ArrangementNotification\) \|\| !item\.docId\) return false;[\s\S]*?manager\.value\?\.toUpdate\(item\)/u);
-  assert.match(single, /disabled: slotProps\.disableUpdate \|\| !hasValidDoc/u);
+  assert.doesNotMatch(single, /hasValidDoc|disabled: slotProps\.disableUpdate \|\| !hasValidDoc|useSlots|forwardedSlotNames/u);
+  assert.match(single, /const toUpdate = \(\.\.\.args\) => manager\.value\?\.toUpdate\(\.\.\.args\);/u);
+  assert.match(single, /<template v-for="\(_, name\) in \$slots" #\[name\]="scope">\s*<slot :name="name" v-bind="scope \?\? \{\}" \/>/u);
+  assert.doesNotMatch(single, /<template #activator/u);
+  assert.doesNotMatch(single, /<slot v-if="name !== 'activator'"/u);
   assert.doesNotMatch(single, /if \(!props\.doc\?\.docId\)/u);
   assert.match(generatorDetail, /:doc="notificationsMap\[worker\.notificationKey\]"/u);
-  assert.match(generatorDetail, /:disabled="props\.loading \|\| activatorProps\.disabled"/u);
+  assert.match(generatorDetail, /:disabled="props\.loading"/u);
   assert.match(personal, /air-array-manager/u); assert.match(personal, /useBaseManager/u); assert.match(personal, /new SiteOperationSchedule\(\)\.fetchDoc/u);
   assert.match(personal, /baselineStatus/u); assert.match(personal, /DEFINITION\.value\?\.\[baselineStatus\.value\]\?\.next\?\.transition/u); assert.match(personal, /await item\[transition\]\(\)/u); assert.match(personal, /#input-default/u); assert.match(personal, /#editor-actions/u); assert.match(personal, /ArrangementNotificationTransitionBtn/u); assert.match(personal, /ArrangementNotificationManagerToLeaved/u); assert.match(personal, /modelValue/u);
   assert.match(personal, /:loading="loading"/u); assert.match(personal, /:disabled="disabled \|\| loading"/u); assert.match(personal, /emit\("submit:complete", event\.item\)/u); assert.match(personal, /manager\.value\?\.quitEditing\(\)/u);
@@ -777,7 +779,27 @@ test("schedule managers use the standard Air manager and model handlers", async 
   assert.match(plural, /Object\.keys\(slots\)\.filter\(\(name\) => name !== "table"\)/u);
   assert.match(plural, /v-for="name in forwardedSlotNames"/u);
   assert.doesNotMatch(plural, /v-for="\(_, name\) in \$slots"/u);
-  assert.match(generator, /<template #table="\{ items \}">[\s\S]*<List[\s\S]*<Detail/u);
+  assert.match(generator, /<template #table="\{ items, toUpdate, isLoading \}">[\s\S]*<List[\s\S]*<Detail/u);
+  assert.doesNotMatch(generator, /useOperationGenerator|saveOperation|Callable|action:\s*["']convert/u);
+  assert.doesNotMatch(generator, /schedule\.notify\(|\.notify\(/u);
+  assert.match(generator, /await targetSchedule\.syncToOperationResult\(targetNotificationsMap\)/u);
+  assert.match(generator, /:before-edit="beforeEdit"/u);
+  assert.ok(generator.indexOf("ready.value = false") < generator.indexOf("fetchDocs"));
+  assert.ok(generator.indexOf("fetchDocs") < generator.indexOf("subscribeDocs"));
+  assert.ok(generator.indexOf("subscribeDocs") < generator.indexOf("ready.value = true"));
+  const listTag = generator.slice(generator.indexOf("<List"), generator.indexOf("/>", generator.indexOf("<List")));
+  const detailTag = generator.slice(generator.indexOf("<Detail"), generator.indexOf("/>", generator.indexOf("<Detail")));
+  assert.match(listTag, /:loading="isLoading \|\| confirming"/u);
+  assert.doesNotMatch(listTag, /preparing|!ready/u);
+  assert.doesNotMatch(listTag, /!ready/u);
+  assert.match(detailTag, /:loading="isLoading \|\| preparing \|\| confirming \|\| !ready"/u);
+  assert.match(generator, /beforeEdit\(editMode, item\)[\s\S]*?ready\.value[\s\S]*?item\?\.docId !== selectedSchedule\.value\?\.docId[\s\S]*?syncToOperationResult\(targetNotificationsMap\)/u);
+  assert.doesNotMatch(generator, /notification\.(?:create|update|status|confirmedAt|arrivedAt|leavedAt|shouldNotify)\s*=|notification\.to(?:Arranged|Confirmed|Arrived|Leaved)\(|\.create\(\)|\.update\(\)|\.notify\(/u);
+  const { descriptor: generatorDescriptor, errors: generatorErrors } = parse(generator, { filename: "components/OperationResult/Generator/index.vue" });
+  assert.deepEqual(generatorErrors, []);
+  const generatorCompiled = compileScript(generatorDescriptor, { id: "operation-result-generator" });
+  const generatorTemplate = compileTemplate({ source: generatorDescriptor.template.content, filename: "components/OperationResult/Generator/index.vue", id: "operation-result-generator", compilerOptions: { bindingMetadata: generatorCompiled.bindings } });
+  assert.deepEqual(generatorTemplate.errors, []);
   assert.match(generatorDetail, /<SecurityReportsManager/u);
   assert.match(handlers, /await item\.create\(\)/u);
   assert.match(handlers, /await item\.update\(\)/u);
@@ -794,17 +816,16 @@ test("operation result generator keeps list and detail independently scrollable 
   const list = await source("components/OperationResult/Generator/List.vue");
   const detail = await source("components/OperationResult/Generator/Detail.vue");
 
-  const tableSlotIndex = generator.indexOf('<template #table="{ items }">');
-  const tableColumnIndex = generator.indexOf('<div class="d-flex flex-column fill-height ga-2">', tableSlotIndex);
+  const tableSlotIndex = generator.indexOf('<template #table="{ items, toUpdate, isLoading }">');
+  const tableColumnIndex = generator.indexOf('<div class="d-flex flex-column flex-grow-1 fill-height overflow-hidden ga-2" style="min-height: 0">', tableSlotIndex);
   const tableSlotEnd = generator.indexOf("</template>", tableColumnIndex);
   assert.ok(tableSlotIndex >= 0 && tableColumnIndex > tableSlotIndex && tableSlotEnd > tableColumnIndex, "table slot must contain the generator column");
   const tableSlot = generator.slice(tableColumnIndex, tableSlotEnd);
-  assert.match(tableSlot, /^<div class="d-flex flex-column fill-height ga-2">/u);
-  assert.match(tableSlot, /<v-alert[\s\S]*?<\/v-alert>[\s\S]*?<v-btn[\s\S]*?>再読込<\/v-btn>[\s\S]*?<div class="d-flex flex-grow-1 overflow-hidden ga-2" style="min-height: 0">/u);
-  assert.match(
-    generator,
-    /<div class="d-flex flex-grow-1 overflow-hidden ga-2" style="min-height: 0">\s*<List class="fill-height"[^>]*\/>\s*<Detail class="fill-height"[^>]*\/>\s*<\/div>/u,
-  );
+  assert.match(tableSlot, /^<div class="d-flex flex-column flex-grow-1 fill-height overflow-hidden ga-2" style="min-height: 0">/u);
+  assert.match(tableSlot, /<v-alert[\s\S]*?<\/v-alert>[\s\S]*?<div class="d-flex flex-grow-1 overflow-hidden ga-2" style="min-height: 0">/u);
+  assert.match(generator, /<div class="d-flex flex-grow-1 overflow-hidden ga-2" style="min-height: 0">[\s\S]*?<List[\s\S]*?class="fill-height"[\s\S]*?\/>[\s\S]*?<Detail[\s\S]*?class="fill-height"[\s\S]*?\/>[\s\S]*?<\/div>/u);
+  assert.match(generator, /<div class="operation-result-generator d-flex flex-column fill-height overflow-hidden" style="min-height: 0">[\s\S]*?<SiteOperationSchedulesManager[\s\S]*?class="flex-grow-1 overflow-hidden"[\s\S]*?style="min-height: 0"[\s\S]*?>[\s\S]*?<\/SiteOperationSchedulesManager>[\s\S]*?<v-dialog[\s\S]*?<\/v-dialog>[\s\S]*?<\/div>/u);
+  assert.doesNotMatch(generator, /<template>\s*<SiteOperationSchedulesManager[\s\S]*?\n\s*<v-dialog/u);
 
   const toolbarIndex = list.indexOf("<v-toolbar");
   const listScrollerIndex = list.indexOf('<div class="flex-grow-1 overflow-y-auto');
@@ -819,4 +840,53 @@ test("operation result generator keeps list and detail independently scrollable 
   assert.match(detail.slice(detailBodyIndex, detail.indexOf(">", detailBodyIndex)), /class="[^"]*\bflex-grow-1\b[^"]*\boverflow-y-auto\b[^"]*"/u);
   assert.doesNotMatch(detail.slice(detailBodyIndex, detailBodyEnd), /<v-card-actions\b/u, "actions must not be nested in the scrolling card body");
   assert.match(detail.slice(detailActionsIndex, detail.indexOf(">", detailActionsIndex)), /class="[^"]*\bflex-grow-0\b[^"]*"/u);
+  const { descriptor, errors } = parse(detail, { filename: "components/OperationResult/Generator/Detail.vue" });
+  assert.deepEqual(errors, []);
+  const compiled = compileScript(descriptor, { id: "operation-result-generator-detail" });
+  const template = compileTemplate({
+    source: descriptor.template.content,
+    filename: "components/OperationResult/Generator/Detail.vue",
+    id: "operation-result-generator-detail",
+    compilerOptions: { bindingMetadata: compiled.bindings },
+  });
+  assert.deepEqual(template.errors, []);
+  assert.match(detail, /<template #append-header>\s*<th>action<\/th>\s*<\/template>/u);
+  assert.match(detail, /<template #append="\{ worker \}">/u);
+  assert.equal((detail.match(/<ArrangementNotificationManager\b/gu) ?? []).length, 1);
+  const workerActionStart = detail.indexOf("<ArrangementNotificationManager");
+  const workerActionEnd = detail.indexOf("</ArrangementNotificationManager>", workerActionStart);
+  const workerAction = detail.slice(workerActionStart, workerActionEnd);
+  assert.match(workerAction, /v-if="activatorProps\.item\?\.docId"/u);
+  assert.match(workerAction, /<v-btn\b[\s\S]*?icon="mdi-pencil"[\s\S]*?aria-label="作業員実績を修正"[\s\S]*?title="作業員実績を修正"[\s\S]*?@click="activatorProps\.toUpdate\(activatorProps\.item\)"[\s\S]*?:disabled="props\.loading"[\s\S]*?\/>/u);
+  assert.doesNotMatch(workerAction, /activatorProps\.(?:disabled|disableUpdate)/u);
+});
+
+test("operation result confirmation guards selection and worker actions", async () => {
+  const generator = await source("components/OperationResult/Generator/index.vue");
+  const list = await source("components/OperationResult/Generator/List.vue");
+  const detail = await source("components/OperationResult/Generator/Detail.vue");
+
+  assert.match(generator, /const preparing = ref\(false\);\s*const confirming = ref\(false\);/u);
+  assert.match(generator, /if \(confirming\.value\) return false;/u);
+  assert.match(generator, /const targetDocId = item\.docId;[\s\S]*?const targetNotificationsMap = Object\.fromEntries/u);
+  assert.match(generator, /await targetSchedule\.syncToOperationResult\(targetNotificationsMap\);/u);
+  assert.match(generator, /if \(selectedSchedule\.value\?\.docId === targetDocId\) \{\s*selectedSchedule\.value = null;/u);
+  assert.match(generator, /finally \{\s*confirming\.value = false;[\s\S]*?if \(!selectedSchedule\.value\) \{[\s\S]*?clearNotifications\(\);[\s\S]*?ready\.value = false;/u);
+  assert.match(generator, /<v-dialog v-model="confirming" persistent[\s\S]*上下番を確定しています/u);
+  const listTag = generator.slice(generator.indexOf("<List"), generator.indexOf("/>", generator.indexOf("<List")));
+  const detailTag = generator.slice(generator.indexOf("<Detail"), generator.indexOf("/>", generator.indexOf("<Detail")));
+  assert.match(listTag, /:loading="isLoading \|\| confirming"/u);
+  assert.doesNotMatch(listTag, /preparing|!ready/u);
+  assert.doesNotMatch(listTag, /!ready/u);
+  assert.match(detailTag, /:loading="isLoading \|\| preparing \|\| confirming \|\| !ready"/u);
+  assert.doesNotMatch(generator, /notificationRetryAvailable|配置通知を再取得|上下番情報を再読込|>再読込<\/v-btn>/u);
+  assert.match(generator, /error\.value = "配置通知を取得できません。予定を再選択するか、画面を再表示してください。"/u);
+  assert.match(generator, /if \(!ready\.value\) \{\s*error\.value = "配置通知を確認できません。予定を再選択するか、画面を再表示してください。";\s*return false;\s*\}/u);
+  assert.match(generator, /if \(item\?\.docId !== selectedSchedule\.value\?\.docId\) \{\s*error\.value = "選択中の予定が変わりました。再選択してから再実行してください。";\s*return false;\s*\}/u);
+  assert.match(generator, /error\.value = "上下番を確定できません。選択内容を確認して再試行してください。"/u);
+  assert.doesNotMatch(generator, /v-if="error && selectedSchedule"/u);
+  assert.match(list, /loading: \{ type: Boolean, default: false \}/u);
+  assert.match(list, /if \(props\.loading\) return;/u);
+  assert.match(list, /:disabled="props\.loading"/u);
+  assert.match(detail, /:disabled="props\.loading"/u);
 });

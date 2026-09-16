@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Timestamp } from "../../functions/node_modules/firebase-admin/lib/firestore/index.js";
 import { Site, SiteOperationSchedule, OperationResult, ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
 import { saveOperation } from "../../functions/modules/operations/saveOperation.js";
-import { expectedForOperation, notificationExpectation, parseOperationCommand } from "../../functions/shared/operationWriteContract.js";
+import { expectedForOperation, parseOperationCommand } from "../../functions/shared/operationWriteContract.js";
 import { encodeExpected } from "../../functions/shared/employeeContract.js";
 
 for (const kind of ["schedule", "result"]) test(`${kind} duplicate reads the original raw and preserves copied workers/articles/adjustment without granting billing edits`, async () => {
@@ -223,9 +223,9 @@ test("active same-tenant users can update and delete schedules while restricted 
     assert.equal(state.records.has(path("schedule")), false);
   }
 
-  for (const action of ["notify", "convert"]) {
+  for (const action of ["notify"]) {
     const raw = operation(), state = harness(raw, { actor: { roles: [] } });
-    await assert.rejects(state.save(command(raw, action, action === "notify" ? { shouldNotify: false } : {}, action === "convert" ? { notifications: {} } : {})), { code: "permission-denied" });
+    await assert.rejects(state.save(command(raw, action, { shouldNotify: false })), { code: "permission-denied" });
     assert.equal(state.writes.length, 0);
   }
 
@@ -296,31 +296,11 @@ test("schedule create and moved date retain Site status, Customer reference and 
   assert.equal(result.writes.length, 0);
 });
 
-test("notify and conversion read each destination, preserve actual false/zero and reject notification-only conflict atomically", async () => {
+test("convert command is rejected after result generation moved to standard model persistence", async () => {
   const raw = operation(), state = harness(raw);
-  await state.save(command(raw, "notify", { shouldNotify: false }));
-  assert.equal(state.employeesRead().length, 0);
-  const prepared = state.records.get(path("schedule"));
-  const notifications = {};
-  for (const worker of prepared.workers) {
-    const key = `${root}/ArrangementNotifications/${worker.notificationKey}`;
-    const notification = { ...state.records.get(key), actualStartTime: "09:00", actualBreakMinutes: 0, actualIsStartNextDay: false, isQualified: true, isOjt: false };
-    state.records.set(key, notification); notifications[worker.notificationKey] = notificationExpectation(notification);
-  }
-  const convert = command(prepared, "convert", {}, { notifications });
-  const firstKey = `${root}/ArrangementNotifications/${prepared.workers[0].notificationKey}`;
-  const first = state.records.get(firstKey);
-  state.records.set(firstKey, { ...first, actualStartTime: "10:00" });
-  const previousWrites = state.writes.length;
-  await assert.rejects(state.save(convert), { code: "aborted" });
-  assert.equal(state.writes.length, previousWrites); assert.equal(state.records.has(path("result")), false);
-  state.records.set(firstKey, first);
-  await state.save(convert);
-  const result = state.records.get(path("result"));
-  assert.equal(state.records.get(path("schedule")).operationResultId, "operation");
-  for (const worker of result.workers) { assert.equal(worker.startTime, "09:00"); assert.equal(worker.breakMinutes, 0); assert.equal(worker.isStartNextDay, false); assert.equal(worker.isQualified, true); }
-  assert.equal(state.employeesRead().length, 0);
-  await assert.rejects(state.save(convert));
+  assert.throws(() => parseOperationCommand(command(raw, "convert")), { code: "invalid-argument" });
+  await assert.rejects(state.save(command(raw, "convert")), { code: "invalid-argument" });
+  assert.equal(state.writes.length, 0);
 });
 
 test("wire rejects client indexes, paths, metadata, foreign field groups, invalid row positions and wrong input types", () => {
@@ -346,31 +326,6 @@ test("worker replacement cancels the old notification and clears the replacement
   assert.equal(saved.employees[1].hasNotification, true);
   assert.equal(state.records.has(`${root}/ArrangementNotifications/operation_employee-a`), false);
   assert.equal(saved.remarks, "parallel"); assert.equal(saved.unknown.stamp, stamp);
-});
-
-test("conversion uses nullish fallbacks for both worker kinds and preserves unchanged raw Timestamp precision", async () => {
-  const raw = operation(), state = harness(raw);
-  const stamp = new Timestamp(1788200000, 123456789);
-  raw.employees[0].createdAt = stamp;
-  raw.employees[0].unknown = { stamp };
-  const notifications = {};
-  for (const worker of raw.workers) {
-    const notification = new ArrangementNotification(worker).toObject();
-    notification.docId = worker.notificationKey;
-    notification.actualStartTime = null;
-    delete notification.actualEndTime;
-    notification.actualBreakMinutes = null;
-    delete notification.actualIsStartNextDay;
-    state.records.set(`${root}/ArrangementNotifications/${notification.docId}`, notification);
-    notifications[notification.docId] = notificationExpectation(notification);
-  }
-  await state.save(command(raw, "convert", {}, { notifications }));
-  const saved = state.records.get(path("result"));
-  for (const worker of saved.workers) {
-    assert.equal(worker.startTime, "08:00"); assert.equal(worker.endTime, "17:00"); assert.equal(worker.breakMinutes, 60); assert.equal(worker.isStartNextDay, false);
-  }
-  assert.deepEqual(encodeExpected(saved.employees[0].createdAt), encodeExpected(stamp));
-  assert.equal(saved.employees[0].unknown.stamp, stamp);
 });
 
 test("normal result create is not accepted by the Callable writer", async () => {
@@ -419,13 +374,10 @@ test("existing notification with false schedule flag refuses reset, including co
   assert.strictEqual(state.records.get(`${root}/ArrangementNotifications/${notification.docId}`), notification);
 });
 
-test("worker change/notify and conversion cannot skip the completed preparation and fresh confirmation read", async () => {
+test("notify cannot share a schedule target with another command", async () => {
   const raw = operation(), state = harness(raw);
-  const convert = command(raw, "convert", {}, { notifications: Object.fromEntries(raw.workers.map((worker) => [worker.notificationKey, null])) });
-  for (const preparation of [command(raw, "notify", { shouldNotify: false }), command(raw, "workers", { startTime: "10:00" }, { rowAction: "update", array: "employees", position: 0 })]) {
-    await assert.rejects(state.save(preparation, convert), { code: "invalid-argument" });
-    assert.equal(state.writes.length, 0);
-  }
+  await assert.rejects(state.save(command(raw, "notify", { shouldNotify: false }), command(raw, "workers", { startTime: "10:00" }, { rowAction: "update", array: "employees", position: 0 })), { code: "invalid-argument" });
+  assert.equal(state.writes.length, 0);
 });
 
 test("actual server create plus ten worker adds do not read Employee masters", async () => {

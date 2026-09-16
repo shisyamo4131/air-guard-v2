@@ -1,12 +1,14 @@
 # Operation CRUD簡素化の現行棚卸し
 
-- 確認日: 2026-09-15
+- 確認日: 2026-09-16
 - checkpoint: INVENTORY-0915
 - 状態: 承認済み仕様とlocal実装の静的棚卸し。製品変更・Dev受入れを意味しない
 - 対象: マスタの状態変更・archive/restore、現場稼働予定、稼働実績、稼働請求、請求、配置通知の画面・Manager・Class・Callable・Firestore Rules・後続Trigger
 - 正本: 要件は[現行仕様](../specification.md)、通常CRUD移行は[ADR 0071](../decisions/0071-normal-business-manager-and-callable-boundary.md)、archive・物理削除境界は[ADR 0072](../decisions/0072-transaction-delete-client-trigger-boundary.md)、棚卸し解消の進捗は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)
 
 ## 2026-09-15の実装棚卸し
+
+2026-09-16現行補正: SCR-02の今回差分で、GeneratorはSchemas `SiteOperationSchedule.syncToOperationResult`へ接続済み。最終確定はArrangementNotificationを作成・更新せず、既存通知のactual値を読むだけである。旧`useOperationGenerator`、`saveOperation`の`convert`、notification expectation比較は撤去済み。OperationResult Rulesは同一tenantの有効な本登録Userへ通常read/writeを許可し、field・lock・worker・docIdの業務検証はSchemas／正規applicationへ委譲する。SCR-04へ二重計上しない。
 
 基準はlocal mainの`048e44e9cfd4ca887ec328e7e835c291579e68af`。対象は今回確定したarchive・状態変更・請求・実績lock・実績化・通知・後続Triggerである。実コードとinstalledクラスを読取り、同じ基準でmasterと請求を独立調査した。remote適用状態、実data、画面実操作、送信、runtime testは未確認。以下の優先度は改修順の判断であり、不具合の深刻度や実装承認ではない。
 
@@ -22,18 +24,20 @@
 | 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
 | Billings入金予定日 | SCR-01 Completed | 詳細画面はManager/Classの標準update、Rulesはtenant共通の既存update、旧PaymentDateEditor・Callable・expected比較はsourceとDevから撤去済み。標準保存、listener再表示、日付条件・解除、背景writerとの併存をLocal確認し、Devの会社管理者画面で変更・解除・再表示・既存表示維持を受け入れた | 残作業なし。失敗経路は自動test成功を受入証拠とし、backend停止時の画面確認は完了条件外 |
 | 請求確定・確定後の編集削除 | 中・未提供UIを含む | 顧客請求のC/U/D handlerがunsupported。詳細の編集入口は入金予定日。Billingにstatus/confirmはあるが確定画面・issuer snapshot保存経路は今回未確認 | 「既存確定ロックの撤去」と誤分類しない。提供UI・標準保存・Rulesを実装する単位。現在の入金予定日編集から分ける |
-| 予定から実績化 | 高・要変更 | Generator→useOperationGenerator→saveOperation。通知の期待値比較やserver側変換が存在。ClassにはsyncToOperationResultがあるがRules createは予定ID=null・作業員空等を要求 | Generatorとクラス標準実績化、OperationResults作成Rules、旧convert callerを同時に整合。通知の実勤務時間反映・予定との紐付けは維持 |
+| 予定から実績化 | 高・要変更 | Generator→SiteOperationSchedule.syncToOperationResult。既存通知のactual値を読み、通知なしは予定値fallback。最終確定では通知を作成・更新しない | 標準sync、OperationResults作成Rules、既存通知の実勤務時間反映・予定との紐付けを整合。旧convert callerと通知期待値比較は撤去済み |
 | 配置通知作成 | 維持 | schedule.notifyでClassから通知documentを生成し予定側状態を同じtransactionで更新 | 後続通知生成と送信までclientへ移さない |
 | 配置確認・上番・下番／通知編集 | SCR-02 In Progress（Dev補正反映済み・Dev再受入れ待ち） | 単数・本人向けManagerはAir ManagerとArrangementNotificationの標準`update()`／遷移methodへ接続し、旧expected比較・patch transaction・再読込経路を撤去した。Schemas `3.0.0-dev.3`をroot/Functionsへ導入し、notify生成の`actualIsStartNextDay` parityをsaveOperationにも反映した。直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21、TESTERの会社管理者Local UI、ユーザー本人の遷移確認は成功した。DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した。Dev受入れでは上下番確定画面の縦長内容で確定buttonへ到達できない既存UI layout regressionを確認したが、Generator共通rowのscroll境界補正とsource regression test（TESTER最終39/39、review finding 0件）は完了し、Local UIも利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格とした | Devへ対象dataを用意できた後、同じUI条件を会社管理者で再受入れする |
 | Notifications生成・FCM・結果記録／実績から請求勤怠等の反映 | 維持 | ArrangementNotifications→Notifications→FCMの二段階Trigger、OperationResultのC/U/D→各projection同期が存在 | 新しい専用層を増やさず既存Triggerを維持。保存完了と後続反映完了を区別して検証する |
 
 ### 主な一次根拠
 
+実績化の現行判定はSCR-02で標準syncへ整合済み。下表に残る旧Generator→saveOperation記述は2026-09-15棚卸し時点の履歴であり、現行経路ではない。SCR-04は独立範囲のみを扱い、標準sync・通知不変・旧convert撤去を二重計上しない。
+
 - Master通常保存: `components/Customer/Manager/index.vue`、`components/Site/Manager/index.vue`、`components/Employee/Manager/index.vue`、`components/Outsourcer/Manager/index.vue`と各複数形Manager。専用archiveは[Customer](../../functions/modules/customer/archiveCustomer.js)、[Site](../../functions/modules/sites/archiveSite.js)、[Employee](../../functions/modules/employees/archiveEmployee.js)。[Rules](../../firestore.rules)のCustomers/Employees/Sitesおよびarchive matchを照合した。
 - Site状態更新: [useSiteActions](../../composables/application/site/useSiteActions.js)のterminate/reactivate、[server lifecycle](../../functions/modules/sites/lifecycle.js)。Employeeの専用入口は[LifecycleActions](../../components/Employee/LifecycleActions.vue)。installed Schemasの`src/Employee.js`のbeforeUpdate/toTerminatedは、状態更新拒否とUser削除を含む。
 - 請求・lock: [OperationBilling Manager](../../components/OperationBilling/Manager/index.vue)、[useOperationSubmission](../../composables/application/operation/useOperationSubmission.js)、[operationWriteContract](../../functions/shared/operationWriteContract.js)、[Rules](../../firestore.rules)のisValidOperationResultClientCreate/Update/Delete。installed Schemasの`src/OperationBilling.js`の_shouldCheckLock/delete/toggleLockと`src/OperationResult.js`のhookを照合した。
 - 顧客請求: [customerBillingHandlers](../../handlers/customerBillingHandlers.js)、01-05で撤去した旧`updateBillingPaymentDate`のGit履歴、RulesのBillings match。installed Schemasの`src/Billing.js`に確定後update/deleteを一律拒否するhookは今回見つからない。
-- 実績化: [useOperationGenerator](../../composables/application/operation/useOperationGenerator.js)、[saveOperation](../../functions/modules/operations/saveOperation.js)。installed Schemasの`src/SiteOperationSchedule.js`のsyncToOperationResultは同ID実績作成と予定更新を同じtransactionで行う。
+- 実績化: `components/OperationResult/Generator/index.vue`、installed Schemasの`src/SiteOperationSchedule.js`の`syncToOperationResult`。同ID実績作成と予定更新を同じtransactionで行う。旧composableと旧convertは撤去済み。
 - 通知: [標準作成への入口](../../composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js)、[単数Manager](../../components/ArrangementNotification/Manager/index.vue)、[本人向け複数Manager](../../components/ArrangementNotifications/Manager/index.vue)、[下番Manager](../../components/ArrangementNotification/Manager/toLeaved.vue)、[配置通知Trigger](../../functions/triggers/arrangementNotification.js)、[送信・結果記録](../../functions/modules/utils/notifications.js)。
 - 実績の後続反映: [OperationResult Trigger](../../functions/triggers/operationResult.js)、[projection同期](../../functions/modules/operations/syncOperationResultProjections.js)。一つのprojectionの失敗で残りを実行せず終える構造ではなく、個別実行後に失敗を集約する。
 

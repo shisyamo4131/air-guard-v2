@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 2026-09-16 SCR-02の最終確定中に`confirming`ダイアログを表示し、別予定の選択・再読込・再submit・作業員鉛筆編集を抑止するようにした。確定対象と通知mapを固定し、成功時は同一対象だけ選択解除、失敗時は選択保持、成功・失敗とも処理終了時に状態を解除する。Local/Dev検証はユーザーcode review後のため未実行。
+- 2026-09-16 SCR-02の追加修正として、GeneratorをSchemas標準syncへ接続し、最終確定時はArrangementNotificationを変更せず既存通知のactual値だけを実績へ反映する経路へ整合した。旧convert・通知expectation比較を撤去し、targeted domain testは実行済み。ユーザーcode review待ちで、Local Emulator/UI・domain-full・build・Dev受入れは未実行。SCR-04とは重複計上しない。
 - SCR-02として、rootアプリとCloud Functionsへ公開Schemas exact `3.0.0-dev.3`を導入し、PostAdoptionでname/version/resolved/integrityの一致を確認した。配置通知生成のsaveOperation notify分岐へSchemasの`actualIsStartNextDay` parity（`worker.isStartNextDay`）を反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21が成功した。GitHub ActionsによるDevのHosting/Functions反映と、会社管理者によるDev UIの表示確認は成功した。DEV read-only確認では配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した。writeは0件で、未確定dataが0件のため確定操作のDev受入れは未完了である。Prod、FCM実配信、backend日付算術、dashboard本人表示は未検証で、SCR-02は得点0、状態はDev補正反映済み・Dev再受入れ待ちを維持する。[Local検証記録](docs/verification/scr-02-arrangement-notification-local.md)を参照。
 - Dev受入れで確認した上下番確定処理画面の既存UI layout regressionに対し、Generatorの共通two-pane rowへ`overflow-hidden`と`min-height: 0`を追加した。source regression testは左右独立scroll、右toolbar/actions固定、外側columnとalert→reload→row順序を固定し、TESTER最終39/39、review finding 0件となった。利用者確認によりLocal UIの左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格とした。release merge commit `05600c5dd8f7a5f55afae94832dd8f7b246fa531`のGitHub Actions run `35046048154`はsuccessとなり、HostingのみをDevへ反映した。Dev URLはHTTP 200・final URI一致・no-store/must-revalidate/no-cacheで、会社管理者Chromeの対象3画面表示を確認した。SCR-02の通知状態・package差分やSCR-04の標準実績化とは分離しており、未確定dataが0件のためDev再受入れは未実施、得点0、状態はDev補正反映済み・Dev再受入れ待ちである。
 

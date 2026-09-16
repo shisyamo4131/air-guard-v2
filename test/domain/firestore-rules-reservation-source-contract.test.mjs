@@ -109,32 +109,10 @@ test("Billing uses an explicit tenant update boundary outside the fallback", asy
     /match \/Companies\/\{companyId\}\/OperationResults\/\{docId\} \{([\s\S]*?)\n    \}/u,
   )?.[1];
   assert.ok(operationResultBody, "OperationResults must have an explicit document match");
-  assert.match(
-    operationResultBody,
-    /allow create:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?isValidOperationResultClientCreate\(docId\)/u,
-  );
-  assert.match(
-    source,
-    /function isValidOperationResultClientCreate\(docId\)[\s\S]*?request\.resource\.data\.siteId is string[\s\S]*?request\.resource\.data\.customerId is string[\s\S]*?request\.resource\.data\.docId == docId[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid[\s\S]*?request\.resource\.data\.isLocked == false[\s\S]*?request\.resource\.data\.siteOperationScheduleId == null[\s\S]*?request\.resource\.data\.articles\.size\(\) == 0[\s\S]*?request\.resource\.data\.workers\.size\(\) == 0[\s\S]*?request\.resource\.data\.billingCalculationVersion == 2/u,
-  );
+  assert.match(operationResultBody, /allow read, write: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+  assert.doesNotMatch(source, /isValidOperationResultClient(?:Create|Update|Delete)/u);
   assert.doesNotMatch(source, /isValidSiteReferenceCreate|hasExistingCustomerReferenceAfter|liveSiteExistsAfter/u);
-  assert.match(
-    operationResultBody,
-    /allow update:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?isValidOperationResultClientUpdate\(docId\)/u,
-  );
-  assert.match(
-    source,
-    /function isValidOperationResultClientUpdate\(docId\)[\s\S]*?resource\.data\.docId == docId[\s\S]*?request\.resource\.data\.docId == docId[\s\S]*?resource\.data\.isLocked == false[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid/u,
-  );
   assert.doesNotMatch(source, /isValid(?:Site|Customer)ReferenceUpdate/u);
-  assert.match(
-    operationResultBody,
-    /allow delete:[\s\S]*?userCompanyId\(\) == companyId[\s\S]*?isValidOperationResultClientDelete\(docId\)/u,
-  );
-  assert.match(
-    source,
-    /function isValidOperationResultClientDelete\(docId\)[\s\S]*?resource\.data\.docId == docId[\s\S]*?resource\.data\.isLocked == false/u,
-  );
 
   const siteBody = source.match(
     /match \/Companies\/\{companyId\}\/Sites\/\{docId\} \{([\s\S]*?)\n    \}/u,

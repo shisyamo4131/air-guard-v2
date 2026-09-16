@@ -1,5 +1,7 @@
 # Employee（従業員）マスター実装調査
 
+2026-09-16現行補正: SCR-02の実績化では、GeneratorからSchemas標準`SiteOperationSchedule.syncToOperationResult`へ接続する。最終確定は通知を変更せず、既存通知のactual値を読むだけで、通知なしは予定値へfallbackする。通知map readとOperationResult・schedule link transactionはatomicではない。worker鉛筆の個別編集だけが既存通知をLEAVEDへ更新する。旧server transaction／notify(false)事前作成／通知expectation比較の記述は現行方針として扱わない。
+
 ## FGA-04での情報分類
 
 本書は実装差と過去の設計・調査記録を扱う。確認済み要件は[Employee仕様](../specification.md#employeeの操作権限と保持)、FGA-04の適用・受入れは[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)と[Dev検証記録](../verification/fga-04-employee-manager-lww-dev.md)を正とする。後段のEMP工程と初期調査を現在の通常保存契約として使わない。
@@ -369,7 +371,7 @@ Class取得後にquery fieldを足すだけでは不十分である。新field�
 | 実績の請求編集 | 概要からsecurityTypeを除くfield群、agreement選択とbillingDateAt、調整群、articlesを別所有群として扱う | OperationBillingの現契約ではlock中の請求編集を許す。通常実績のlock拒否を流用しない。無関係な群は最新raw保持。agreementは現在のSite取極めから選択対象を再解決し、clientの任意料金全文を採用しない |
 | 請求調整 | useAdjustedと下記8field | 対象群のraw期待値を照合し、既存の計算式を再利用。worker identityや並びを変更しない |
 | 請求lock | desiredLocked/expectedLockedのboolean | toggle命令を再送せず、現在bool照合後にisLockedと監査だけ更新。worker全文を受け取らない |
-| notify/実績化 | 予定ID、通知の実施選択、開始時のpointer/対象workerと実績化に使う通知の局所raw期待値 | 最新予定と下記通知rawから生成。notify(false)も同じ境界。実績create/予定pointer・通知create/予定更新を既存の保存単位で確定 |
+| notify/実績化 | 予定ID、既存通知のactual値、対象worker | 標準syncが既存通知を読み、actual値を反映。通知なしは予定値fallback。最終確定で通知create/updateは行わない |
 | 通知状態 | targetStatus、actualStartTime/actualEndTime/actualIsStartNextDay/actualBreakMinutes/isQualified/isOjt | status/actual群のraw期待値照合。id/isEmployee/employeeId/siteIdは変更不可。既存4状態methodの計算/時刻を維持 |
 
 認可は次の操作別とする。現行Rulesの広いallowと正規業務presetが一致しない箇所があるため、「既存actor維持」を広いallowの無条件移植と解釈しない。[共通認可仕様](../specification.md#テナントと認証)と業務presetに従い、今回serverへ移す具体operationに限定して強制する。全取引権限の刷新ではない。
@@ -385,12 +387,11 @@ Class取得後にquery fieldを足すだけでは不十分である。新field�
 
 worker/article等の行は、表示順や名称から推測せず、開始時のraw配列と原本位置を期待値として照合する。schemaで採番される行keyや取極めの選択keyはactual実装と突合し、衝突/不存在なら拒否する。独自ID導入や曖昧な先頭一致を追加しない。
 
-実績化では予定だけを変換しない。`components/OperationResult/Generator/index.vue`が渡す通知mapとinstalled `SiteOperationSchedule.syncToOperationResult`の既存変換を維持する。serverは最新予定のemployees/outsourcers各行から現行notificationKey（予定IDとworkerIdによる既存導出）を得て、同tenantの対応する通知rawをtransaction内で全writeより先に取得する。通知の予定・worker種別/ID・Siteとの対応を検査し、clientが指定した別通知や通知本文の任意snapshotを生成元にしない。
+実績化では予定だけを変換しない。`components/OperationResult/Generator/index.vue`が渡す通知mapとinstalled `SiteOperationSchedule.syncToOperationResult`の既存変換を使用する。最終確定は通知を作成・更新せず、同tenantの既存通知を読み、対応する通知rawのactual値を実績へ反映する。通知mapのclient readとOperationResult・schedule link transactionはatomicではなく、clientが指定した別通知や任意snapshotを生成元にしない。
 
 - `actualStartTime / actualEndTime / actualBreakMinutes / actualIsStartNextDay`は、対応通知fieldがnullまたは不存在のときだけ予定worker値へfallbackし、0やfalseを有効値として保持する。
 - `isQualified / isOjt`は、通知が存在するときはその値、通知自体が不存在なら予定worker値を使う。不正な通知を不存在としてskipしない。従業員と外注先の両配列に同じ既存変換を適用する。
-- clientの確認開始時に、予定pointer/worker配列と、対応通知の存在状態・識別情報・上記6fieldをrawで取得し、局所期待値として保持する。表示Classの初期値を不存在の期待値にしない。serverの同transaction読取り値と異なればwrite 0・再読込/再確認とし、通知だけが並行更新された場合に古い確認で確定しない。期待値は比較専用であり、その値を実績へ直接コピーしない。
-- 画面の「未通知ならnotify(false)」の準備後に、実績化の期待値を取り直す。通知作成と確認値取得が終わる前は実績化を送信できない。通知取得失敗と通知なしを区別する。
+- clientは確定時点の通知mapを渡すが、通知expectation競合拒否やtransaction内の再読を行わない。通知なしは予定値へfallbackし、missing通知を`notify(false)`で事前作成しない。通知取得と実績化はatomicではない既知境界として扱う。
 
 server成功は更新有無・対象IDを返し、実績化は確定result IDを返す最小形とする。clientは保存await後に正本を再取得し、拒否/競合はdraft保持、結果不明は自動再送しない。状態反転や実績化の再送で二重処理しない期待値を試験する。既存の即時表示がある操作では拒否時の表示rollbackと正本再取得を接続し、別の同時編集を古い全文で巻き戻さない。
 

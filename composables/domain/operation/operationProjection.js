@@ -38,7 +38,7 @@ export function applyOperationProjection(raw, command) {
   if (kind === "result" && raw.isLocked) invalid();
   if (action === "delete") return null;
   if (action === "lock") return { ...raw, isLocked: changes.desiredLocked };
-  if (["notify", "convert", "agreement"].includes(action)) return raw;
+  if (["notify", "agreement"].includes(action)) return raw;
   if (!["workers", "articles"].includes(action)) return calculateOperation(raw, kind, (model) => Object.assign(model, changes)).value;
   const array = raw[command.array];
   if (!Array.isArray(array) || command.position > array.length || (command.rowAction !== "add" && command.position === array.length)) invalid();
