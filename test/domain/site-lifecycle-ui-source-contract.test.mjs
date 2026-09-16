@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
@@ -63,12 +63,16 @@ test("Terminated Site selection is visibly identified and requires explicit keep
 });
 
 test("Site lifecycle actions do not use dedicated Callable methods", async () => {
-  const [actions, functions] = await Promise.all([
-    read("composables/application/site/useSiteActions.js"),
-    read("composables/site/useSiteFunctions.js"),
-  ]);
-  assert.doesNotMatch(actions, /terminateSite|reactivateSite|useSiteFunctions/u);
-  assert.doesNotMatch(functions, /terminateSite|reactivateSite/u);
+  const manager = await read("components/Site/Manager/index.vue");
+  assert.match(manager, /lifecycleMode/u);
+  assert.match(manager, /draft\.update\(\)/u);
+  assert.doesNotMatch(manager, /terminateSite|reactivateSite|httpsCallable/u);
+  await assert.rejects(
+    access(new URL("../../composables/application/site/useSiteActions.js", import.meta.url)),
+  );
+  await assert.rejects(
+    access(new URL("../../composables/site/useSiteFunctions.js", import.meta.url)),
+  );
 });
 
 test("Schedule input keeps confirmation metadata while normal saves use Air managers and the model", async () => {
@@ -78,14 +82,16 @@ test("Schedule input keeps confirmation metadata while normal saves use Air mana
   assert.match(input, /attachSiteScheduleConfirmation\(props\.item, \{[\s\S]*operationId: confirmationOperationId/u);
   assert.match(input, /onBeforeUnmount\(\(\) => clearSiteScheduleConfirmation\(props\.item\)\)/u);
 
-  const editor = await read("composables/application/operation/useOperationEditor.js");
   const submission = await read("composables/application/operation/useOperationSubmission.js");
-  assert.match(editor, /await confirmTerminatedScheduleSite/u);
   assert.match(submission, /await confirmTerminatedScheduleSite/u);
   assert.match(await read("components/SiteOperationSchedule/Manager/index.vue"), /<air-item-manager/u);
+  assert.match(await read("handlers/siteOperationScheduleHandlers.js"), /await item\.update\(\)/u);
   assert.match(await read("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js"), /await schedule\.update\(\)/u);
   assert.match(await read("composables/useSiteOperationScheduleDuplicator.js"), /instance\.duplicate\(selectedDates\.value\)/u);
   assert.match(await read("composables/application/operation/useOperationDuplicator.js"), /submission\.submit\(operations\)/u);
+  await assert.rejects(
+    access(new URL("../../composables/application/operation/useOperationEditor.js", import.meta.url)),
+  );
 
   const detail = await read("pages/sites/[id].vue");
   const arrangements = await read("components/Arrangements/Manager/index.vue");

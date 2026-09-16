@@ -1,7 +1,8 @@
 # 0046 Customer archiveの参照barrierと監査境界
 
 - 日付: 2026-09-04
-- 状態: Superseded（2026-09-15、ADR 0060改訂およびSCR-06でCustomer標準archiveへ移行。以下はHistorical）
+- 状態: Superseded
+- 状態補足: 2026-09-15のADR 0060改訂およびSCR-06でCustomer標準archiveへ移行。以下はHistorical。
 - 現行入口: 単数Domain Manager → `Customer.delete()` → Schema `hasMany`（`Sites.customerId`） → raw same-ID archiveとlive deleteのatomic Rules境界。専用Callable、reason、監査envelope、Customer client delete拒否は現行方式では使用しない。既存archive dataは保持し、remote Functionの撤去状態は未確認。
 - Historical本文の一部置換: 2026-09-14の[ADR 0074](0074-transaction-parent-reference-independence.md)により、OperationResults／Billingsの参照確認とlive Customer存在barrierを廃止した。以下に残るCustomer専用archive監査・同ID衝突防止は旧方式の記録であり、現行維持条件ではない。
 - 関連仕様: `docs/specification.md` の「取引先・現場・取極め」

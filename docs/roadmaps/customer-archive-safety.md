@@ -4,7 +4,8 @@
 
 - 状態: Historical／SCR-06で方式置換
 - 開始日: 2026-09-04
-- 現在の進捗: CAS-01〜05の履歴のみ。現行標準archiveの適用状況は[標準CRUD整合ロードマップ](standard-crud-alignment.md#scr-06-customerアーカイブの目的と完了条件)を正とする
+- 現在の進捗: 100%
+- 現行SCR-06進捗: Implementation（prelocal・検証待ち）・得点0。標準archiveの適用状況は[標準CRUD整合ロードマップ](standard-crud-alignment.md#scr-06-customerアーカイブの目的と完了条件)を正とする。CAS-01〜05の100%はHistoricalの完了記録であり、現行製品の完了を示さない。
 - 部分加点: なし
 - 完了条件: （履歴）旧専用Callable方式の完了条件。現行の標準archive移行条件は[SCR-06](standard-crud-alignment.md#scr-06-customerアーカイブの目的と完了条件)に従う。
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[実装設計](../implementation/customer-archive-safety.md)
