@@ -4,7 +4,8 @@
 
 ## Unreleased
 
-- SCR-02として、rootアプリとCloud Functionsへ公開Schemas exact `3.0.0-dev.3`を導入し、PostAdoptionでname/version/resolved/integrityの一致を確認した。配置通知生成のsaveOperation notify分岐へSchemasの`actualIsStartNextDay` parity（`worker.isStartNextDay`）を反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21が成功した。TESTERの会社管理者Local UIで取消・必須field validation・一時値保存・listener反映・reload保持・baseline復元、ユーザー本人の一方向遷移とLEAVED時の「閉じる」のみ表示を確認した。DEV read-only確認では配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した。writeは0件である。build、Dev/Prod、remote/data、FCM実配信、backend日付算術、Dev受入れは未実施で、SCR-02は未完・得点0、状態はLocal完了・Dev待ちを維持する。[Local検証記録](docs/verification/scr-02-arrangement-notification-local.md)を参照。
+- SCR-02として、rootアプリとCloud Functionsへ公開Schemas exact `3.0.0-dev.3`を導入し、PostAdoptionでname/version/resolved/integrityの一致を確認した。配置通知生成のsaveOperation notify分岐へSchemasの`actualIsStartNextDay` parity（`worker.isStartNextDay`）を反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21が成功した。GitHub ActionsによるDevのHosting/Functions反映と、会社管理者によるDev UIの表示確認は成功した。DEV read-only確認では配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した。writeは0件で、未確定dataが0件のため確定操作のDev受入れは未完了である。Prod、FCM実配信、backend日付算術、dashboard本人表示は未検証で、SCR-02は得点0、状態はLocal補正確認済み・Dev反映待ちを維持する。[Local検証記録](docs/verification/scr-02-arrangement-notification-local.md)を参照。
+- Dev受入れで確認した上下番確定処理画面の既存UI layout regressionに対し、Generatorの共通two-pane rowへ`overflow-hidden`と`min-height: 0`を追加した。source regression testは左右独立scroll、右toolbar/actions固定、外側columnとalert→reload→row順序を固定し、TESTER最終39/39、review finding 0件となった。利用者確認によりLocal UIの左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格とした。SCR-02の通知状態・package差分やSCR-04の標準実績化とは分離しており、Dev再反映・Dev再受入れは未実施、得点0、状態はLocal補正確認済み・Dev反映待ちである。
 
 - Local Emulator全件testを各小工程の完了条件から最終Dev候補差分の確認へ集約した。各工程の対象testは継続し、最終全件成功後は非失効証拠を再利用、失効・不足範囲だけを再検証する。影響不明・全体基盤変更・明示例外の全件確認は維持する。[ADR 0040](docs/decisions/0040-impact-based-staged-verification.md#2026-09-15-local-emulator全件確認の集約と証拠再利用)を参照。
 

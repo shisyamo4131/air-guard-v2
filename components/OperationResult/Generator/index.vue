@@ -21,7 +21,7 @@ provide("notificationsMap", notificationsMap);
       <div class="d-flex flex-column fill-height ga-2">
         <v-alert v-if="generator.error.value" type="warning">{{ generator.error.value }}</v-alert>
         <v-btn v-if="selectedSchedule" :disabled="generator.busy.value || generator.preparing.value || generator.uncertain.value" aria-label="上下番情報を再読込" @click="generator.prepare">再読込</v-btn>
-        <div class="d-flex flex-grow-1 ga-2">
+        <div class="d-flex flex-grow-1 overflow-hidden ga-2" style="min-height: 0">
           <List class="fill-height" :items="items" />
           <Detail class="fill-height" :loading="!generator.ready.value" @click:submit="convert" />
         </div>
