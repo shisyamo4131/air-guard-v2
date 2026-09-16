@@ -257,6 +257,7 @@ SPEC-DEEP-039b追加根拠: client token登録はgetToken/FcmToken createを含�
 ### 2026-09-15 Dev配置管理画面でのFCM購読エラー（利用者報告・要改修）
 
 - 発生環境・操作: Dev環境で配置管理画面を開いたまましばらく経過した場合、または画面を初めて立ち上げて何かを更新した場合などに、以下のメッセージがSnackbarへ表示されるとの利用者報告。経過時間、具体的な更新操作、発生頻度、ブラウザ、再ログインによる変化は未確認。
+- 2026-09-16追加観測（利用者報告）: Dev環境の配置管理画面を操作中、突然画面がリロードしたように見える動作が発生し、その直後に同じFCM購読エラーが表示された。一定時間の経過によるものか、何らかの操作・事象をトリガーとするものかは不明。実際のページ再読込み、画面の再描画、アプリの再初期化のいずれかは未確認であり、リロード様の動作とFCMエラーの因果関係も未確定。調査時は当該動作の発生元・契機と、認証・通知初期化およびFCM登録呼出しとの時系列を確認する。
 - 報告されたエラー: `Messaging: A problem occurred while subscribing the user to FCM: Request is missing required authentication credential. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project. (messaging/token-subscribe-failed).`
 - 原因・影響の確認状態: 利用者は過去の改修による回帰を疑っているが、原因commit・発生元・再現条件は未特定。配置の更新自体の成否、通知登録・配送への影響、認証状態との関係も未確認。今回CodexによるDev再現や通信・log調査は行っていない。
 - 対応事項: 本FUTのFCM登録失敗に関する具体的な不具合として調査・修正する。起動直後と長時間経過後の登録呼出し、Snackbarへのエラー伝播、認証・通知初期化の順序を追跡し、関連変更履歴と照合する。原因を特定せず認証情報の追加、設定変更、再試行、エラーの非表示だけで解消した扱いにしない。
@@ -2133,6 +2134,9 @@ EMP-01再照合（2026-09-06）: 現行の自宅座標readerは検索範囲で�
 
 ## FUT-0144 server adapterのhasMany field契約をschema/clientと一致させる
 
+- 2026-09-16追加確認・利用者判断: 導入済み`@shisyamo4131/air-firebase-v2-server-adapter`の`delete({ transaction })`は外側transactionを受け取るが、`hasChild()`は`item.collection`を参照し、参照確認にtransaction外の`queryRef.get()`を使用している。Schemaの`collectionPath`との不一致とtransaction引渡し時の読取り契約を後続改修対象とする。静的確認のみでruntime再現は未実施。
+- 実施時期: 利用者は早急に改修しないと決定した。重要度と着手時期を区別し、SCR-10の前提にしない。関連packageの変更・公開・採用は今回行わず、着手時に対象repositoryと影響・検証範囲を確定する。transaction内の従属読取りと同時参照作成の完全防止は別の保証として扱う。
+
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-042
@@ -2162,6 +2166,7 @@ EMP-01再照合（2026-09-06）: 現行の自宅座標readerは検索範囲で�
 - 状態: Needs decision（将来のマスタdata削除機能見直し）
 - 発見セグメント: SPEC-SEG-042。2026-09-15の利用者判断で対応方針を更新。
 - 現在の採用方針: [共通仕様](../specification.md#ドキュメントのアーカイブと物理削除)に従い、当面はclient-adapter標準の論理削除・restoreを利用する。
+- 2026-09-16追加方針: 将来、マスタドキュメントを「無効化 → アーカイブ → 物理削除」の順で扱う機能を実装する意向を記録する。無効化の意味、各段階の条件・権限・期間・復旧・既存dataとの互換性は追って決める。現行仕様への即時適用、field追加、移行、物理削除の実行を承認したものではなく、SCR-10の完了条件にも追加しない。
 - 将来対応: マスタdataの削除機能を見直す。対象master、削除と終了・退職の使い分け、restoreの提供範囲、同ID衝突、最終的な物理削除・保持、必要な監査を利用者と決める。独自envelope・専用Callable・参照barrier・最小ID記録の採用を前提にしない。
 - 実装差: [archive実装差](archive-restore.md)に集約する。標準方式への切替え、既存archiveの互換性確認、復旧入口は未完了。今回の記録で移行・復旧を実施したとは扱わない。
 - 対応時期: 標準方式への切替えと区別した将来の機能見直し工程。見直し完了を標準方式採用の前提にせず、具体的な時期・範囲は未決とする。
