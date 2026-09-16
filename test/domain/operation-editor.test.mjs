@@ -788,3 +788,35 @@ test("schedule managers use the standard Air manager and model handlers", async 
   assert.match(actions, /SiteOperationSchedule\.runTransaction/u);
   assert.doesNotMatch(actions, /useOperationSubmission|scheduleCommands/u);
 });
+
+test("operation result generator keeps list and detail independently scrollable with fixed actions", async () => {
+  const generator = await source("components/OperationResult/Generator/index.vue");
+  const list = await source("components/OperationResult/Generator/List.vue");
+  const detail = await source("components/OperationResult/Generator/Detail.vue");
+
+  const tableSlotIndex = generator.indexOf('<template #table="{ items }">');
+  const tableColumnIndex = generator.indexOf('<div class="d-flex flex-column fill-height ga-2">', tableSlotIndex);
+  const tableSlotEnd = generator.indexOf("</template>", tableColumnIndex);
+  assert.ok(tableSlotIndex >= 0 && tableColumnIndex > tableSlotIndex && tableSlotEnd > tableColumnIndex, "table slot must contain the generator column");
+  const tableSlot = generator.slice(tableColumnIndex, tableSlotEnd);
+  assert.match(tableSlot, /^<div class="d-flex flex-column fill-height ga-2">/u);
+  assert.match(tableSlot, /<v-alert[\s\S]*?<\/v-alert>[\s\S]*?<v-btn[\s\S]*?>再読込<\/v-btn>[\s\S]*?<div class="d-flex flex-grow-1 overflow-hidden ga-2" style="min-height: 0">/u);
+  assert.match(
+    generator,
+    /<div class="d-flex flex-grow-1 overflow-hidden ga-2" style="min-height: 0">\s*<List class="fill-height"[^>]*\/>\s*<Detail class="fill-height"[^>]*\/>\s*<\/div>/u,
+  );
+
+  const toolbarIndex = list.indexOf("<v-toolbar");
+  const listScrollerIndex = list.indexOf('<div class="flex-grow-1 overflow-y-auto');
+  assert.ok(toolbarIndex >= 0 && listScrollerIndex > toolbarIndex, "list toolbar must precede its scroll container");
+  assert.match(list.slice(listScrollerIndex, list.indexOf("</div>", listScrollerIndex)), /class="[^"]*\bflex-grow-1\b[^"]*\boverflow-y-auto\b[^"]*"/u);
+
+  const detailToolbarIndex = detail.indexOf("<v-toolbar");
+  const detailBodyIndex = detail.indexOf('<v-card-text v-if="selectedSchedule"');
+  const detailBodyEnd = detail.indexOf("</v-card-text>", detailBodyIndex);
+  const detailActionsIndex = detail.indexOf('<v-card-actions v-if="selectedSchedule"');
+  assert.ok(detailToolbarIndex >= 0 && detailBodyIndex > detailToolbarIndex && detailBodyEnd > detailBodyIndex && detailActionsIndex > detailBodyEnd, "detail controls must remain in toolbar, body, body-close, actions order");
+  assert.match(detail.slice(detailBodyIndex, detail.indexOf(">", detailBodyIndex)), /class="[^"]*\bflex-grow-1\b[^"]*\boverflow-y-auto\b[^"]*"/u);
+  assert.doesNotMatch(detail.slice(detailBodyIndex, detailBodyEnd), /<v-card-actions\b/u, "actions must not be nested in the scrolling card body");
+  assert.match(detail.slice(detailActionsIndex, detail.indexOf(">", detailActionsIndex)), /class="[^"]*\bflex-grow-0\b[^"]*"/u);
+});
