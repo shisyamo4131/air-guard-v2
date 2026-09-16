@@ -13,7 +13,7 @@
 
 Page 3ファイルのroute、query/filter、終了・削除到達性、navigation・error境界のfile単位確認は[Article・Customer・Site pages deep review](article-customer-site-pages-deep-review.md)を参照する。
 
-Siteの通常writeは作成、基本情報・Customer・Agreement変更、手動終了、再有効化を含み、同じtenantの有効な認証済み本登録Userへrole、permission、会社管理者、super-user区分に依存せず許可する。確認済みemail、Auth UIDとUser `docId`、tenant claim・User所属tenant・path tenant、有効・本登録Userを共通境界とする。終了・再有効化は予定・status・工期・server metadataを守る専用Callable／transactionを維持する。誤登録・重複だけを対象とするarchiveは例外で、従来のstrict `sites:write` actorと専用`archiveSite` Callableを維持する。
+Siteの通常writeは作成、基本情報・Customer・Agreement変更、手動終了、再有効化を含み、同じtenantの有効な認証済み本登録Userへrole、permission、会社管理者、super-user区分に依存せず許可する。確認済みemail、Auth UIDとUser `docId`、tenant claim・User所属tenant・path tenant、有効・本登録Userを共通境界とする。手動終了・再有効化は標準SiteManager／Site schemaの状態更新として保存し、状態変更理由・actor UID・時刻・工期・Customer不変と予定条件をschemaで検査する。自動終了はsystem Functionとして維持する。誤登録・重複だけを対象とするarchiveは例外で、従来のstrict `sites:write` actorと専用`archiveSite` Callableを維持する。
 
 | 入口 | 現行UI | pageSettings | Rules |
 |---|---|---|---|
@@ -21,7 +21,7 @@ Siteの通常writeは作成、基本情報・Customer・Agreement変更、手動
 | `/sites/[id]` | 閲覧・予定表示。通常writeのclient判定を満たすUserに基本情報・取引先・取極め更新と終了。削除入口なし | `sites:read` | 同上 |
 | `/sites/terminated` | TERMINATEDを名称検索し詳細遷移。通常writeのclient判定を満たすUserに再有効化入口 | `sites:read` | 同上 |
 
-client policyはcurrent Authとlive User stateを送信直前に再評価し、同一client module内のSite writeをsingle-flightにする。通常writeはroleを認可根拠にせず、Rules／Callableも同一tenantの有効な本登録User境界を強制する。archiveだけは専用client policyとserver policyでstrict actorを維持する。
+通常のcreate/update/lifecycleはbase Managerのinstance単位loading/errorと標準Site schema／Rules境界を使い、専用client policyや共有mutexを持たない。通常writeはroleを認可根拠にせず、Rulesは同一tenantの有効な本登録Userとactor UID境界を強制する。archiveだけは専用client policyとserver policyでstrict actorを維持し、`runWithSiteWriteMutex`で同一client module内の操作を直列化する。
 
 ## データ契約
 
@@ -44,7 +44,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 - 作成時から`hasAbbreviation/abbreviation/siteNumber/remarks`を入力でき、基本編集も同じfieldを扱う。
 - code/name等の一意性validationはない。
 - 単数`SiteManager`は既存またはその場の新規Siteを所有し、複数形`SitesManager`は一覧配列と行選択を所有する。一覧のUPDATE選択は`beforeEdit`から詳細へ遷移して一覧dialogを開かない。create/update handlerはSite modelの標準`create`／`update`を直接呼び、schema hook、validation、会社prefix、metadata、transaction保存を標準adapterへ委ねる。delete handlerは拒否してgeneric logical archiveへ到達させない。
-- 通常updateはdraftのSite document全体を後保存優先で保存する。取極めも現在のSiteへ編集後の配列を重ねて同じ通常`update()`を使う。終了・再有効化・予定競合・archiveは通常編集とは別の専用入口と保存処理を維持する。
+- 通常updateはdraftのSite document全体を後保存優先で保存する。取極めも現在のSiteへ編集後の配列を重ねて同じ通常`update()`を使う。終了・再有効化もSiteManagerの標準`update()`へ接続し、予定条件・状態metadata・Customer不変はSite schemaとRulesで保護する。archiveは通常編集とは別の専用入口と保存処理を維持する。
 
 ## 検索・表示
 
@@ -53,7 +53,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 - TERMINATED一覧は、検索文字列がある時はN-gram検索へstatus=TERMINATEDを追加する。空検索ではstatus=TERMINATEDのうちupdatedAt降順・同値時はdocument ID降順で最近更新された最大20件を表示し、入力変更・clear後に古い応答を反映しない。loading、0件、失敗を区別する。
 - Site AutocompleteはN-gram検索にstatus constraintを付けず、ACTIVEを先にしつつ検索関連順を維持する。検索・ID lookupの古い応答を破棄し、TERMINATED確認の取消時は直前の確定値を保持する。
 - 詳細はroute ID変更時に購読を切替え、初回loading、取得失敗、not-foundを区別する。not-foundでは編集・終了・再有効化・archive等の操作UIを描画しない。購読開始後の非同期listener errorは現行共通adapterがerror callbackを公開しないため、既存の制約として残る。
-- SITE-04では非atomicな旧手動終了を専用Callableへ置換した。ACTIVE Siteだけを通常編集でき、TERMINATEDは終了済み表示と新規選択確認を経て単発予定に使用できる。継続再開はreasonと新工期を必須にし、現在のCustomer設定を変えない。read-only actorにはmaster write入口を表示せず、削除入口はactorにかかわらず表示しない。
+- SITE-04の旧手動終了Callableは履歴・Git上の経路であり、現行の手動終了・再有効化はSiteManager／Site schemaの標準更新経路を使う。ACTIVE Siteだけを通常編集でき、TERMINATEDは終了済み表示と新規選択確認を経て単発予定に使用できる。継続再開はreasonと新工期を必須にし、現在のCustomer設定を変えない。read-only actorにはmaster write入口を表示せず、削除入口はactorにかかわらず表示しない。
 
 ## 参照関係・変更影響
 
@@ -68,11 +68,11 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 ## 削除・無効化
 
-- `terminateSite`はmaintenance、actor、ACTIVE、現在以降の予定、全未実績予定、Site revisionを一つのtransactionで再確認し、現在遷移metadataとともにTERMINATEDへ変更する。`reactivateSite`はTERMINATED、actor、maintenanceを再確認し、reasonと新工期を保存してACTIVEへ戻す。Customer未設定を含む現在値は変更しない。
+- 手動終了・再有効化はSiteManagerの標準`update()`からSite schemaへ渡し、ACTIVE→TERMINATED／TERMINATED→ACTIVEの遷移、reason、actor UID、時刻、工期、Customer不変をschemaで検査する。終了時は現在以降の予定と未実績予定の存在を保存前に確認する。Customer未設定を含む現在値は変更しない。Functionsの手動Callableは公開経路から撤去した。
 - 自動終了はJST工期終了日の90日後から候補とし、bounded cursorで走査して各Siteをtransactionで再確認する。予定cleanupとは別scheduled Function・別失敗境界で、失敗はlog後に再throwする。初回Dev releaseではFunctionを未公開としたため、legacy予定の必須field欠損有無はSITE-09の合成data受入れ対象外とした。公開前の別checkpointでremote確認する。
-- 確認済み方針ではTERMINATEDの通常master編集を制限する一方、終了済みChip・識別情報・確認付きで新規業務の選択候補へ残す。単発残工事はTERMINATEDのまま扱い、継続再開は同じCustomer、同一tenantの有効な本登録User、reason、新工期を必須とする。roleは認可根拠にしないが、専用Callable／transactionによるstatus・予定・工期・server metadataの保護を維持する。Customer変更許可は別operationとして維持し、既存実績へ自動反映せず、Agreementも自動再有効化しない。終了・再有効化はSITE-04で実装し、actor認可だけをFGA-03で置換した。
+- 確認済み方針ではTERMINATEDの通常master編集を制限する一方、終了済みChip・識別情報・確認付きで新規業務の選択候補へ残す。単発残工事はTERMINATEDのまま扱い、継続再開は同じCustomer、同一tenantの有効な本登録User、reason、新工期を必須とする。roleは認可根拠にしない。Customer変更許可は別operationとして維持し、既存実績へ自動反映せず、Agreementも自動再有効化しない。SCR-03の手動状態変更は標準更新経路へ接続し、自動終了のsystem-only境界は維持する。
 - SITE-05のarchiveはACTIVE／TERMINATEDを問わず誤登録・重複だけを対象にする。入力をexact `{siteId, reason, operationId}`へ限定し、現在のAuth、同社User、maintenance、strict actor、active Site、同ID archive、exact 5 collectionの直接参照を一つのtransactionで検査する。成功時はschema version付きの完全なSite snapshotとserver確定のactor・時刻・reason・operation IDをsame-ID `Sites_archive`へ作成してlive Siteを削除する。同じactor・reason・operation IDの再試行だけを冪等に扱い、異なる再試行、参照、同ID衝突、不正状態はwrite 0で拒否する。
-- schema/common adapterには旧generic logical delete/restore実装が残るが、Site UI・Site managerからは到達せず、RulesはSite deleteと`Sites_archive` client CUDを拒否する。通常restoreと物理deleteの製品入口は提供しない。Site詳細のarchive確認画面はreasonを必須とし、Siteの通常更新・終了・再有効化と共通mutexで直列化する。不確実な通信失敗の再試行は同じoperation IDを維持する。
+- schema/common adapterには旧generic logical delete/restore実装が残るが、Site UI・Site managerからは到達せず、RulesはSite deleteと`Sites_archive` client CUDを拒否する。通常restoreと物理deleteの製品入口は提供しない。Site詳細のarchive確認画面はreasonを必須とし、archive操作だけを専用policyと共通mutexで直列化する。不確実な通信失敗の再試行は同じoperation IDを維持する。
 
 ## Rules・tenant境界
 

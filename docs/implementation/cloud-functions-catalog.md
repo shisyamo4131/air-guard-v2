@@ -160,3 +160,7 @@ scheduled handlerはerrorを吸収する。onUpdateCustomerも内部同期error�
 Firebase CLI、deploy、emulator、外部API、secret/env、実dataを使用していない。実deploy済みfunction一覧、Google Cloud側runtime overrides、IAM/invoker/App Check enforcement、retry policy、logs/metrics、traffic、cold start、quotaは未確認である。各handlerの業務algorithm、全error path、下流trigger完了順は既存個別文書の範囲を超えて再読していない。
 
 </details>
+
+## 2026-09-16 local source補正
+
+上記は2026-08-20時点のHistorical調査表であり、当時存在した`terminateSite`／`reactivateSite` Callable行と当時計数は履歴として保持する。現行local sourceではSCR-03により手動2 Callableとそのmanual mappingを撤去済みで、公開scheduled exportは`runDailySiteTermination`（内部module helperは`sitesAutoTermination`）である。Dev／remote deploymentの現行export一覧は本書だけでは確認していない。

@@ -18,19 +18,18 @@ test("Site detail identifies lifecycle state and keeps normal editors read-only 
   assert.match(source, /<SiteEditorReactivate v-else/u);
 });
 
-test("Site lifecycle dialogs gate by state and submit only exact callable inputs", async () => {
+test("Site lifecycle editors gate by state and use standard Manager input", async () => {
   const terminate = await read("components/Site/Editor/Terminate.vue");
-  assert.match(terminate, /!canWrite\.value \|\| props\.site\.status !== "ACTIVE"/u);
-  assert.match(terminate, /terminate\(\{ siteId: props\.site\.docId, reason: normalized \}\)/u);
-  assert.match(terminate, /maxlength="200"/u);
-  assert.match(terminate, /getSiteOperationErrorMessage/u);
+  assert.match(terminate, /<SiteManager/u);
+  assert.match(terminate, /lifecycle-mode="TERMINATE"/u);
+  assert.match(terminate, /custom-input="SiteLifecycleInput"/u);
+  assert.match(terminate, /props\.site\.status !== 'ACTIVE'/u);
 
   const reactivate = await read("components/Site/Editor/Reactivate.vue");
-  assert.match(reactivate, /!canWrite\.value \|\| props\.site\.status !== "TERMINATED"/u);
-  assert.match(reactivate, /reactivate\(\{[\s\S]*siteId: props\.site\.docId,[\s\S]*reason: normalized,[\s\S]*constructionPeriodStartDate: startDate\.value,[\s\S]*constructionPeriodEndDate: endDate\.value/u);
-  assert.match(reactivate, /startDate\.value > endDate\.value/u);
-  assert.match(reactivate, /取引先は変更せず/u);
-  assert.doesNotMatch(reactivate, /customerId\s*:/u);
+  assert.match(reactivate, /<SiteManager/u);
+  assert.match(reactivate, /lifecycle-mode="REACTIVATE"/u);
+  assert.match(reactivate, /custom-input="SiteLifecycleInput"/u);
+  assert.match(reactivate, /props\.site\.status !== 'TERMINATED'/u);
 });
 
 test("Terminated Site selection is visibly identified and requires explicit keep-terminated confirmation", async () => {
@@ -63,11 +62,13 @@ test("Terminated Site selection is visibly identified and requires explicit keep
   assert.match(terminatedPage, /router\.push\(`\/sites\/\$\{item\.docId\}`\)/u);
 });
 
-test("Site actions keep lifecycle calls inside the shared single-flight permission boundary", async () => {
-  const source = await read("composables/application/site/useSiteActions.js");
-  assert.match(source, /const siteFunctions = useSiteFunctions\(\)/u);
-  assert.match(source, /async function terminate\(\{ siteId, reason \}\)[\s\S]*executeSiteWrite\(SITE_WRITE_OPERATION\.TERMINATE[\s\S]*assertWritePermission\(\)[\s\S]*siteFunctions\.terminateSite\(\{ siteId, reason \}\)/u);
-  assert.match(source, /async function reactivate\([\s\S]*executeSiteWrite\(SITE_WRITE_OPERATION\.TERMINATE[\s\S]*assertWritePermission\(\)[\s\S]*siteFunctions\.reactivateSite/u);
+test("Site lifecycle actions do not use dedicated Callable methods", async () => {
+  const [actions, functions] = await Promise.all([
+    read("composables/application/site/useSiteActions.js"),
+    read("composables/site/useSiteFunctions.js"),
+  ]);
+  assert.doesNotMatch(actions, /terminateSite|reactivateSite|useSiteFunctions/u);
+  assert.doesNotMatch(functions, /terminateSite|reactivateSite/u);
 });
 
 test("Schedule input keeps confirmation metadata while normal saves use Air managers and the model", async () => {

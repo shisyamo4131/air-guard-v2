@@ -7,10 +7,13 @@ const SITE_SFCS = Object.freeze([
   "components/Site/Manager/index.vue",
   "components/Site/Autocomplete.vue",
   "components/Site/PostalCodeInput.vue",
+  "components/Site/CustomInput/Lifecycle.vue",
   "components/Site/CustomInput/index.vue",
   "components/Site/CustomInput/Base.vue",
   "components/Site/CustomInput/Customer.vue",
   "components/Site/Editor/Agreements.vue",
+  "components/Site/Editor/Terminate.vue",
+  "components/Site/Editor/Reactivate.vue",
   "components/Sites/Manager/index.vue",
   "components/Sites/DataTable/index.vue",
   "pages/sites/index.vue",
@@ -35,31 +38,17 @@ async function vueFiles(directory) {
   return files;
 }
 
-test("Every Vue consumer of useSiteActions has an explicit runtime import", async () => {
+test("Vue consumers do not use the retired site lifecycle action composable", async () => {
   const files = [
     "app.vue",
     ...(await vueFiles("components")),
     ...(await vueFiles("layouts")),
     ...(await vueFiles("pages")),
   ];
-  const consumers = [];
-  const missingImports = [];
-  const explicitImport =
-    /import\s*\{[^}]*\buseSiteActions\b[^}]*\}\s*from\s*["']@\/composables\/application\/site\/useSiteActions["']/u;
-
   for (const path of files) {
     const content = await source(path);
-    if (!/\buseSiteActions\s*\(/u.test(content)) continue;
-    consumers.push(path);
-    if (!explicitImport.test(content)) missingImports.push(path);
+    assert.doesNotMatch(content, /\buseSiteActions\s*\(/u, `${path} uses retired useSiteActions`);
   }
-
-  assert.ok(consumers.length > 0, "expected at least one useSiteActions Vue consumer");
-  assert.deepEqual(
-    missingImports,
-    [],
-    `useSiteActions consumers without an explicit import:\n${missingImports.join("\n")}`,
-  );
 });
 
 test("SITE-03 Site SFCs parse and compile", async () => {
@@ -167,121 +156,26 @@ test("Site Agreement Callable transport is removed from the client and Functions
   }
 });
 
-test("Site action rebuilds authorization state at send time and refuses direct delete", async () => {
-  const [actions, archive] = await Promise.all([
+test("Site action keeps lifecycle methods out of the standard write composable", async () => {
+  const [actions, functions, archive] = await Promise.all([
     source("composables/application/site/useSiteActions.js"),
+    source("composables/site/useSiteFunctions.js"),
     source("composables/application/site/useSiteArchiveAction.js"),
   ]);
-  assert.match(actions, /authenticationUid: \$auth\?\.currentUser\?\.uid/u);
-  assert.match(actions, /isEmailVerified: \$auth\?\.currentUser\?\.emailVerified/u);
-  assert.match(
-    actions,
-    /function assertWritePermission\(\)[\s\S]*?assertSiteWriteAllowed\(authorizationContext\(\)\)/u,
-  );
-  assert.match(
-    actions,
-    /const sharedSiteWriteState = Vue\.reactive\(\{ isSaving: false \}\)[\s\S]*?export async function runWithSiteWriteMutex\(action\)[\s\S]*?if \(sharedSiteWriteState\.isSaving\)[\s\S]*?"operation-in-progress"[\s\S]*?sharedSiteWriteState\.isSaving = true[\s\S]*?return await action\(\)[\s\S]*?finally[\s\S]*?sharedSiteWriteState\.isSaving = false/u,
-  );
-  assert.match(
-    actions,
-    /async function executeSiteWrite\(operation, action\)[\s\S]*?assertWritePermission\(\)[\s\S]*?return await runWithSiteWriteMutex\(async \(\) => \{[\s\S]*?return await action\(\)/u,
-  );
-  assert.match(
-    archive,
-    /import \{ runWithSiteWriteMutex \} from "@\/composables\/application\/site\/useSiteActions";/u,
-  );
-  assert.match(
-    archive,
-    /operationState\.run\(OPERATION, siteId, async \(\) => \{[\s\S]*?return await runWithSiteWriteMutex\(async \(\) => \{/u,
-  );
-  assert.match(
-    actions,
-    /async function rejectDirectDelete[\s\S]*?"operation-not-available"[\s\S]*?"現場は直接削除できません。"/u,
-  );
+  assert.match(actions, /runWithSiteWriteMutex/u);
+  assert.doesNotMatch(actions, /terminateSite|reactivateSite|useSiteFunctions|httpsCallable/u);
+  assert.doesNotMatch(functions, /terminateSite|reactivateSite/u);
+  assert.match(archive, /runWithSiteWriteMutex/u);
+  assert.match(archive, /transport\.archiveSite/u);
   assert.doesNotMatch(actions, /firebase\/firestore|\.delete\s*\(|Sites_archive/u);
 });
 
-test("Site action single-flight is shared across distinct composable instances", async () => {
+test("Site write mutex remains available as the shared low-level guard", async () => {
   const actions = await source("composables/application/site/useSiteActions.js");
-  const executable = actions.replace(/^import[\s\S]*?;\r?\n/gmu, "");
-  const auth = {
-    uid: "actor-a",
-    companyId: "company-a",
-    isSuperUser: false,
-    isSuperUserClaimValid: true,
-    user: {
-      docId: "actor-a",
-      companyId: "company-a",
-      isTemporary: false,
-      disabled: false,
-      isAdmin: true,
-      roles: [],
-    },
-  };
-  class HarnessAuthorizationError extends Error {
-    constructor(code, message) {
-      super(message);
-      this.code = code;
-    }
-  }
-  globalThis.__siteActionsHarness = {
-    Vue: {
-      reactive: (value) => value,
-      computed: (getter) => ({ get value() { return getter(); } }),
-    },
-    useAuthStore: () => auth,
-    useNuxtApp: () => ({
-      $auth: { currentUser: { uid: "actor-a", emailVerified: true } },
-    }),
-    useSiteFunctions: () => ({ terminateSite: async () => undefined, reactivateSite: async () => undefined }),
-    SITE_WRITE_OPERATION: {
-      CREATE: "create", UPDATE: "update", CUSTOMER: "customer",
-      TERMINATE: "terminate",
-    },
-    SiteAuthorizationError: HarnessAuthorizationError,
-    assertSiteWriteAllowed: () => undefined,
-    getSiteWriteDecision: () => ({ allowed: true, reason: null }),
-  };
-  const moduleSource = `
-    const {
-      Vue, useAuthStore, useNuxtApp, useSiteFunctions, SITE_WRITE_OPERATION,
-      SiteAuthorizationError, assertSiteWriteAllowed,
-      getSiteWriteDecision
-    } = globalThis.__siteActionsHarness;
-    ${executable}
-  `;
-
-  try {
-    const module = await import(
-      `data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}#${Date.now()}`,
-    );
-    const first = module.useSiteActions();
-    const second = module.useSiteActions();
-    let releaseFirst;
-    const firstPending = new Promise((resolve) => { releaseFirst = resolve; });
-    const firstWrite = first.executeSiteWrite("create", () => firstPending);
-    await Promise.resolve();
-
-    assert.equal(first.isSaving.value, true);
-    assert.equal(second.isSaving.value, true);
-    let secondCallbackCalls = 0;
-    await assert.rejects(
-      () => second.executeSiteWrite("create", () => { secondCallbackCalls += 1; }),
-      (error) => error.code === "operation-in-progress",
-    );
-    assert.equal(secondCallbackCalls, 0);
-
-    releaseFirst("created");
-    assert.equal(await firstWrite, "created");
-    assert.equal(first.isSaving.value, false);
-    assert.equal(second.isSaving.value, false);
-    assert.equal(
-      await second.executeSiteWrite("create", async () => "second-created"),
-      "second-created",
-    );
-  } finally {
-    delete globalThis.__siteActionsHarness;
-  }
+  assert.match(actions, /const sharedSiteWriteState = Vue\.reactive\(\{ isSaving: false \}\)/u);
+  assert.match(actions, /export async function runWithSiteWriteMutex\(action\)/u);
+  assert.match(actions, /if \(sharedSiteWriteState\.isSaving\)/u);
+  assert.match(actions, /sharedSiteWriteState\.isSaving = false/u);
 });
 
 test("Site pages expose normal Manager writes and keep exceptional operations separate", async () => {

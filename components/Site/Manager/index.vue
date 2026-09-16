@@ -13,6 +13,7 @@ defineOptions({ inheritAttrs: false });
 const props = defineProps({
   beforeEdit: { type: Function, default: () => true },
   customInput: { type: [Object, Function], default: null },
+  lifecycleMode: { type: String, default: null },
   modelValue: {
     type: Object,
     default: () => new Site(),
@@ -38,7 +39,19 @@ function resolveCustomInput({ editMode }) {
 
 async function beforeEdit(editMode, item) {
   if (editMode === "DELETE") return rejectDirectDelete();
-  if (editMode === "UPDATE" && item.status !== Site.STATUS_ACTIVE) {
+  if (editMode === "UPDATE" && props.lifecycleMode === "TERMINATE") {
+    if (item.status !== Site.STATUS_ACTIVE) throw new Error("稼働中の現場だけ終了できます。");
+    item.status = Site.STATUS_TERMINATED;
+    item.statusChangeSource = "MANUAL";
+    item.statusChangeReason = "";
+  }
+  if (editMode === "UPDATE" && props.lifecycleMode === "REACTIVATE") {
+    if (item.status !== Site.STATUS_TERMINATED) throw new Error("終了済み現場だけ再有効化できます。");
+    item.status = Site.STATUS_ACTIVE;
+    item.statusChangeSource = "REACTIVATION";
+    item.statusChangeReason = "";
+  }
+  if (editMode === "UPDATE" && !props.lifecycleMode && item.status !== Site.STATUS_ACTIVE) {
     throw new Error("終了済み現場の通常情報は変更できません。");
   }
   return await props.beforeEdit(editMode, item);
@@ -49,6 +62,12 @@ async function handleCreate(draft) {
 }
 
 async function handleUpdate(draft) {
+  if (props.lifecycleMode) {
+    const { $auth } = useNuxtApp();
+    draft.statusChangedAt = new Date();
+    draft.statusChangedBy = $auth?.currentUser?.uid || "";
+    draft.statusChangeReason = draft.statusChangeReason?.trim?.() || "";
+  }
   return await draft.update();
 }
 </script>

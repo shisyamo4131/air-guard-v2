@@ -18,7 +18,14 @@
 | Site・Employee通常CRUD | 大筋一致 | 標準Manager/Class保存は存在するが、状態変更を拒否するRulesが残る | Siteは状態変更工程で必要なRulesを合わせる。Employee退職・訂正の専用保護と退職後の通常情報編集禁止は維持する |
 | Customer／Site／Employee archive | 高・要変更 | 専用Callableが独自envelopeを書いて原本をraw delete。標準Class.deleteを迂回し、原本delete・archive writeをRulesで拒否 | 各masterごとに入口、Classの従属検査、Rules、旧archive形式の互換性をまとめる。旧envelopeを標準restoreへ直接渡さない |
 | Restore | 提供範囲確認・archiveと同時検討 | client-adapterに標準restoreはあるが、対象masterの通常復旧入口は今回の検索で見つからない | 基盤の存在と製品UI提供を区別する。既存dataの有無・変換要否は未確認で、自動migrationしない |
-| Site手動終了・再開 | 高・要変更 | 専用editor→useSiteActions→Callable→server transaction。Rulesにもstatus変更拒否が残る | 手動入口・標準保存・Rulesを一体で整合。Classにはterminateが存在するが再開条件の完全一致は未確認。自動終了のsystem処理は維持 |
+| Site手動終了・再開 | SCR-03 prelocal実装 | 専用editorをSiteManagerへ接続し、Site schemaの状態遷移検査とRulesのactor／tenant／metadata境界を追加。手動Callable／専用actionは撤去し、自動終了のsystem処理は維持 | security review、直接test、Dev受入れ、Rules実行時構文確認を残す。package／data shape／migrationは変更しない |
+
+## SCR-03 Site手動終了・再開（2026-09-16、PRELOCAL）
+
+- 確認範囲: `components/Site/**`、`components/Sites/**`、Site pages、`schemas/Site.js`、`firestore.rules`、Site lifecycle Functions／API／composableを静的確認した。Installed packageのSiteは終了のみで再開条件を持たないため、root schema subclassで状態遷移・理由・actor UID・工期・予定条件を補完した。
+- 実装: 手動終了・再有効化をSiteManagerの標準`update()`へ接続し、標準UIのsubmit・loading・error・listener経路を利用する。TERMINATEDの通常編集禁止、終了時の予定条件、再有効化時のCustomer不変と新工期・理由、同一tenantの有効な本登録Userとactor UID境界を維持する。手動Callable、manual mapper、専用site action／function exportは撤去し、自動終了処理だけをFunctionsに残した。
+- 未完了: testerによる直接test、security review、Rulesの実行時構文確認、Local Emulator／UI／Dev受入れは未実施。schemaの予定確認は標準client update前の非atomicな事前検査であり、同時変更を完全に防止するものではない。
+- 影響: package／lock／node_modules、Firestore data shape、migration、remote data、外部環境、deployは変更していない。Rules差分はsecurity review承認前のprototypeであり、承認なしにrelease・deployしてはならない。
 | Employee退職・訂正 | 標準CRUD化の例外・既存Callable維持 | 2026-09-16コード確認: 退職Callableは予約と実Userを照合してUserなし／本登録を分岐し、仮登録・不整合を拒否する。訂正Callableは最新の完了済み退職・User連携なし・lockを検証する | [SCR-09の個別完了条件](../roadmaps/standard-crud-alignment.md#scr-09-employee退職誤退職訂正の目的と完了条件)に従い、既存証拠と不足を照合する。標準toTerminatedへの置換、Userなしの別保存経路、package改修を前提にしない |
 | 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | 高・要変更 | Operation専用ManagerとsaveOperationが残る。Rulesはlock中update・lock変更・articles/調整値変更を拒否。Callableにもrole認可が残る | OperationResultsを共有する画面、標準OperationResult/OperationBilling、Rules、正規callerの撤去とtestを同じ工程で整合。経理画面へのアクセス制限は維持 |
 | 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
@@ -34,7 +41,7 @@
 実績化の現行判定はSCR-02で標準syncへ整合済み。下表に残る旧Generator→saveOperation記述は2026-09-15棚卸し時点の履歴であり、現行経路ではない。SCR-04は独立範囲のみを扱い、標準sync・通知不変・旧convert撤去を二重計上しない。
 
 - Master通常保存: `components/Customer/Manager/index.vue`、`components/Site/Manager/index.vue`、`components/Employee/Manager/index.vue`、`components/Outsourcer/Manager/index.vue`と各複数形Manager。専用archiveは[Customer](../../functions/modules/customer/archiveCustomer.js)、[Site](../../functions/modules/sites/archiveSite.js)、[Employee](../../functions/modules/employees/archiveEmployee.js)。[Rules](../../firestore.rules)のCustomers/Employees/Sitesおよびarchive matchを照合した。
-- Site状態更新: [useSiteActions](../../composables/application/site/useSiteActions.js)のterminate/reactivate、[server lifecycle](../../functions/modules/sites/lifecycle.js)。Employeeの専用入口は[LifecycleActions](../../components/Employee/LifecycleActions.vue)。installed Schemasの`src/Employee.js`のbeforeUpdate/toTerminatedは、状態更新拒否とUser削除を含む。
+- Site状態更新: [SiteManager](../../components/Site/Manager/index.vue)からSite schemaの標準`update()`へ接続し、Rulesでtenant／actor UID／状態metadata境界を保護する。自動終了だけは[scheduled lifecycle](../../functions/modules/sites/autoTermination.js)に残す。Employeeの専用入口は[LifecycleActions](../../components/Employee/LifecycleActions.vue)。installed Schemasの`src/Employee.js`のbeforeUpdate/toTerminatedは、状態更新拒否とUser削除を含む。
 - 請求・lock: [OperationBilling Manager](../../components/OperationBilling/Manager/index.vue)、[useOperationSubmission](../../composables/application/operation/useOperationSubmission.js)、[operationWriteContract](../../functions/shared/operationWriteContract.js)、[Rules](../../firestore.rules)のisValidOperationResultClientCreate/Update/Delete。installed Schemasの`src/OperationBilling.js`の_shouldCheckLock/delete/toggleLockと`src/OperationResult.js`のhookを照合した。
 - 顧客請求: [customerBillingHandlers](../../handlers/customerBillingHandlers.js)、01-05で撤去した旧`updateBillingPaymentDate`のGit履歴、RulesのBillings match。installed Schemasの`src/Billing.js`に確定後update/deleteを一律拒否するhookは今回見つからない。
 - 実績化: `components/OperationResult/Generator/index.vue`、installed Schemasの`src/SiteOperationSchedule.js`の`syncToOperationResult`。同ID実績作成と予定更新を同じtransactionで行う。旧composableと旧convertは撤去済み。

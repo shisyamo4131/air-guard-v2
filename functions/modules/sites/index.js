@@ -14,8 +14,4 @@ export {
 export {
   autoTerminateSite,
   isAutoTerminationDue,
-  parseReactivateSiteInput,
-  parseTerminateSiteInput,
-  reactivateSite,
-  terminateSite,
 } from "./lifecycle.js";
