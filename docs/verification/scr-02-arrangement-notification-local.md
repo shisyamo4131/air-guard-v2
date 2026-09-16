@@ -49,18 +49,25 @@
 - 予定が翌日開始の配置通知は1件で、その通知はstatus LEAVED、実績側は当日開始だった。関連予定は翌日開始、勤務実績は通知の実績日（予定より1日前）と一致し、既存勤務実績も存在した。
 - この1件は配置通知と実績が整合しており、今回の導入で新たにずれた未処理dataではないため、SCR-02のmigration/repairは不要と判断した。これはread-only確認であり、Dev反映・Dev受入れ・FCM配信の証拠ではない。
 
+### 2026-09-16 最終Dev候補と反映
+
+- 最終候補はcommit `f3b1e01891f6a14605d17b2e7fb5c67daabec15a`。domain-fullは1434/1434、Local Emulatorは180/180、Local UI build、`generate:dev`、project docs、diff-checkがそれぞれexit 0だった。
+- Codex専用Local UIではVueの`Extraneous non-props attributes (class)`警告がなく、左右paneが利用可能高まで表示され、再取得・旧再読込buttonがないことを確認した。未確定dataが0件だったため、実data状態の左右独立scroll、固定された確定操作、既存通知行の鉛筆は未確認とした。
+- GitHub Actions run `35066835154`はHosting・Functions・Firestore Rulesを選択し、Dev生成、鍵なし認証、dry-run、実deployをすべて成功した。Dev HostingはHTTP 200、`Cache-Control: no-cache, no-store, must-revalidate`を返し、local/remote `main`は上記commitで一致した。data migration・repair・削除は行っていない。
+- 上下番確定を実行できる対象dataが2026-09-17まで発生しないため、会社管理者によるDev受入れは`Pending`とする。対象data発生後に左右独立scroll、固定された確定操作、既存通知行の鉛筆、上下番確定と再表示を確認し、その結果が届くまでSCR-02は完了扱いにしない。
+
 以前の直接対象testも成功済みである。`operation-datetime` 1/1、`operation-write` 30/30、`operation-submission` 18/18、`role-presets-parity` 4/4、最終`operation-editor` 38/38を確認した。
 
 ## 省略したgateと未検証範囲
 
-- Local Emulator full suiteはT19で成功済みであり、今回の省略gateではない。Dev候補での再実行要否は、後続の製品差分とrelease判断に従う。
-- `local-ui-build`は未実行。利用者環境でLocal UIを確認済みであり、verification policyのomittable gateとして省略した。
-- Dev/Prodへの反映・受入れ、FCM delivery、Notificationsの実配信、backendでの日付算術、別actorによる本人遷移、Dev受入れは未検証である。Dev dataはread-onlyで確認したが、write・migration・repairは実施していない。
+- Local Emulator full suiteはT19・T21に加え、最終Dev候補でも180/180、exit 0を確認した。
+- `local-ui-build`は初回Local工程では省略したが、最終Dev候補では実行してexit 0を確認した。
+- DevへのHosting・Functions・Firestore Rules反映は完了したが、対象data不足により会社管理者の上下番確定受入れは`Pending`である。Prod、FCM delivery、Notificationsの実配信、backendでの日付算術、別actorによる本人遷移は未検証である。Dev dataのmigration・repairは実施していない。
 - dashboard本人向け表示は会社管理者accountでは表示されず、TESTERによる独立確認はない。上記の本人確認と混同しない。
-- build、generate、deploy、data migration、data repairは実施していない。
+- 最終候補のbuild、`generate:dev`、Dev deployは実施済み。data migrationとdata repairは実施していない。
 
 ## 外部作用、rollback、次の承認境界
 
-今回のLocal検証はlocalhost上の画面・自動testに限定し、Dev/Prod、remote data、FCM、既存dataへの外部作用はない。失敗時はSCR-02のcode/test差分をレビュー済みの変更前状態へ戻す。既存dataのrollbackやmigration rollbackは不要である。
+Local検証はlocalhost上の画面・自動testに限定した。後続のDev releaseはHosting・Functions・Firestore Rulesを反映したが、remote dataのmigration・repair・削除、FCM実配信、Prod操作は行っていない。rollbackは反映前commit `65529ef1dc6e51550c2dd4184be783be5c5b71cb`を基準とするrevert releaseであり、data rollbackは不要である。
 
-Local検証は完了したが、SCR-02はDev受入れ前のため得点0を維持し、状態は`In Progress（Local完了・Dev待ち）`とする。次の承認境界は、利用者review後の選定completion gate確認とDev反映・会社管理者受入れであり、別承認なしに実行しない。
+Local検証とDev反映は完了したが、SCR-02は会社管理者による上下番確定のDev受入れ前であるため得点0を維持し、状態は`Pending（Dev反映済み・2026-09-17以降の受入れ待ち）`とする。受入れ結果が届くまで再deployや同一gateの再実行は行わず、失敗が判明した場合だけ原因に対応する検証へ戻る。

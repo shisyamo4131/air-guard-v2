@@ -1,12 +1,12 @@
 # 現在の製品作業と再開案内
 
-2026-09-16現行更新: SCR-02の今回追加修正（標準sync接続、通知不変、OperationResult Rules整合、旧convert撤去）はユーザーcode review待ちで、Local Emulator/UI・domain-full・build未実行。SCR-04はPlannedのままで、SCR-02の実績化範囲を二重計上しない。
+2026-09-16現行更新: SCR-02の今回追加修正（標準sync接続、通知不変、OperationResult Rules整合、旧convert撤去）は固定commit `f3b1e01891f6a14605d17b2e7fb5c67daabec15a`としてDevへ反映済み。Local検証とDev deployは成功し、上下番確定を実行できる対象dataが2026-09-17まで発生しないため、会社管理者によるDev受入れを`Pending`とする。SCR-04はPlannedのままで、SCR-02の実績化範囲を二重計上しない。
 
 この文書は現在の製品作業・未決事項・次の操作から正本へ進む案内です。通常startupは[文書案内](../README.md)と[project coordination](../runbooks/project-coordination.md)に従います。Git・remote・dataの現在状態は実targetで別途確認し、過去の実行記録を現在値として使いません。
 
 ## 現在の作業
 
-- 現在のSCR-02追加差分はユーザーcode review待ちであり、targeted domain testのみ実行済み。最終確定中の別予定選択・再読込・再submit・作業員鉛筆を抑止し、対象固定・成功時対象のみ解除・失敗時選択保持を実装した。Local Emulator/UI、domain-full、build、Dev受入れは未実行。以下の過去記録にあるSCR-02の別修正のLocal/Dev成功証拠を今回差分へ流用しない。
+- 現在のSCR-02追加差分はユーザーcode review、domain-full 1434/1434、Local Emulator 180/180、Local UI build、`generate:dev`、GitHub Actions run `35066835154`によるHosting・Functions・Firestore RulesのDev反映まで成功した。Dev HostingはHTTP 200と`no-cache, no-store, must-revalidate`を確認済み。対象dataがまだないため、実data状態の左右独立scroll、固定された確定操作、作業員鉛筆、上下番確定と再表示の会社管理者Dev受入れだけを`Pending`として残す。
 
 - 棚卸し解消の継続先は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)。解消順、状態、次checkpointは同roadmapを正とし、既存phaseとの関係も同書から確認します。
 - SCR-01「Billings入金予定日」は標準Manager／Class保存、Rules整合、旧Function撤去、Local自動検証、Dev反映・受入れまで完了し、同ロードマップで10点を加点済みです。SCR-02「配置通知の状態更新・編集」は標準Manager／Class接続を完了し、Schemas `3.0.0-dev.3`をroot/Functionsへ導入しました。PostAdoption、直接対象test、TESTERのLocal UI確認、ユーザー本人の遷移確認、domain-full 1433/1433、Local Emulator 180/180、最終Local T21は成功しました。GitHub ActionsによるDevのHosting/Functions反映と会社管理者によるDev UI表示も成功し、DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認してmigration/repair不要と判断しました。未確定dataが0件のため確定操作のDev受入れは未完了です。Generatorのscroll補正とsource regression test（TESTER最終39/39、review finding 0件）は完了し、Local UIも利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格としました。release merge commit `05600c5dd8f7a5f55afae94832dd8f7b246fa531`のGitHub Actions run `35046048154`はsuccessとなり、HostingのみをDevへ反映しました。Dev URLはHTTP 200・final URI一致・no-store/must-revalidate/no-cacheで、会社管理者Chromeの対象3画面表示を確認しました。未確定現場稼働は0件のため今回のscroll補正のDev再受入れは未完了です。現在はDev補正反映済み・Dev再受入れ待ち、得点0です。[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)と[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)を参照してください。
@@ -22,9 +22,7 @@
 
 ## 次の作業
 
-ユーザーのcode review完了後、TESTERへ具体的なLocal Emulator全件／対象UI項目を渡し、WaitThreadsで結果を回収する。その後、固定候補の確認を経てDevへ進む。今回の追加修正についてLocal実行・domain-full・build・Dev受入れはまだ行わない。
-
-次は[標準CRUD整合ロードマップの受入れ前UI補正checkpoint](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)に従い、対象dataを用意できた後、会社管理者で同範囲を再受入れする。既存のDev反映とDev UI表示、今回の補正反映は成功済みだが、未確定dataが0件のため確定操作のDev受入れは未完了である。Local UIでは利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格としたため、対象dataを用意できた後に同範囲を確認する。得点加点はDev受入れまで行わない。Prod、FCM実配信、backend日付算術、dashboard本人表示は未実施または未検証であり、Rules、実data、package publishは別の承認境界に残す。
+2026-09-17以降に上下番確定を実行できる対象dataが発生した後、会社管理者がDevで、左右独立scroll、固定された確定操作、既存通知行の鉛筆、上下番確定と再表示を確認する。受入れ結果が届くまで状態は`Pending`、得点は0のままとし、同じreleaseの再deployやLocal全件再実行は行わない。失敗が判明した場合だけ、原因に対応する検証と修正へ戻る。Prod、FCM実配信、backend日付算術、dashboard本人表示は対象外のまま維持する。
 
 ### 既存FGA工程の参照（2026-09-15時点）
 
