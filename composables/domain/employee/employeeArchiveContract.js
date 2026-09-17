@@ -1,5 +1,5 @@
 import { plain } from "../shared/valueContract.js";
-import { isEmployeeUxActorAllowed } from "../../../utils/auth/policies/employeeActorPolicy.js";
+import { isEmployeeNormalUxActorAllowed } from "../../../utils/auth/policies/employeeActorPolicy.js";
 
 // Client-only UX gating and request normalization. Functions reauthorize and
 // validate the latest Employee and its references before archiving.
@@ -13,34 +13,16 @@ export const archiveIdentifier = (value) =>
 
 /** Client display/interaction gate only; Functions authorization is authoritative. */
 export const isEmployeeArchiveUxActorAllowed = (identity, actorUser) =>
-  isEmployeeUxActorAllowed({ ...identity, actorUser }, false) &&
-  (actorUser.isAdmin === true || actorUser.roles.includes("manager"));
+  isEmployeeNormalUxActorAllowed({ ...identity, actorUser });
 
 export function parseEmployeeArchiveInput(input) {
   const exact =
     plain(input) &&
-    Object.keys(input).length === 3 &&
-    ["employeeId", "reason", "operationId"].every((key) =>
+    Object.keys(input).length === 1 &&
+    ["employeeId"].every((key) =>
       Object.hasOwn(input, key));
-  if (
-    !exact ||
-    !archiveIdentifier(input.employeeId) ||
-    !archiveIdentifier(input.operationId) ||
-    typeof input.reason !== "string"
-  ) {
+  if (!exact || !archiveIdentifier(input.employeeId)) {
     throw new TypeError("invalid employee archive request");
   }
-  const reason = input.reason.trim();
-  if (
-    !reason.length ||
-    reason.length > 200 ||
-    /[\u0000-\u001f\u007f]/u.test(reason)
-  ) {
-    throw new TypeError("invalid employee archive reason");
-  }
-  return {
-    employeeId: input.employeeId,
-    operationId: input.operationId,
-    reason,
-  };
+  return { employeeId: input.employeeId };
 }

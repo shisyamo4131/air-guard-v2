@@ -9,18 +9,15 @@ defineOptions({ inheritAttrs: false });
 const props = defineProps({
   beforeEdit: { type: Function, default: () => true },
   customInput: { type: [Object, Function], default: null },
+  archiveMode: { type: Boolean, default: false },
   modelValue: {
     type: Object,
     default: () => new Employee(),
     validator: (value) => value instanceof Employee,
   },
 });
-const emit = defineEmits(["created", "updated"]);
+const emit = defineEmits(["created", "updated", "delete"]);
 const { attrs } = useBaseManager("EmployeeManager");
-
-function rejectDirectDelete() {
-  throw new Error("従業員は直接削除できません。");
-}
 
 function resolveCustomInput({ editMode }) {
   if (props.customInput) {
@@ -32,7 +29,9 @@ function resolveCustomInput({ editMode }) {
 }
 
 async function beforeEdit(editMode, item) {
-  if (editMode === "DELETE") return rejectDirectDelete();
+  if (editMode === "DELETE" && !props.archiveMode) {
+    throw new Error("従業員のアーカイブは詳細画面から実行してください。");
+  }
   const proceed = await props.beforeEdit(editMode, item);
   if (proceed === false) return false;
   if (
@@ -51,6 +50,10 @@ async function handleCreate(draft) {
 async function handleUpdate(draft) {
   return await draft.update();
 }
+
+async function handleDelete(draft) {
+  return await draft.delete();
+}
 </script>
 
 <template>
@@ -65,13 +68,14 @@ async function handleUpdate(draft) {
     }"
     :before-edit="beforeEdit"
     :custom-input="resolveCustomInput"
-    disable-delete
-    hide-delete-btn
+    :disable-delete="!props.archiveMode"
+    :hide-delete-btn="!props.archiveMode"
     :handle-create="handleCreate"
     :handle-update="handleUpdate"
-    :handle-delete="rejectDirectDelete"
+    :handle-delete="handleDelete"
     @create="emit('created', $event)"
     @update="emit('updated', $event)"
+    @delete="emit('delete', $event)"
   >
     <template #activator="slotProps">
       <slot name="activator" v-bind="slotProps" />

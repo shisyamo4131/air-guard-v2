@@ -12,7 +12,6 @@ const CUSTOMER_SFCS = Object.freeze([
   "components/Customer/Autocomplete.vue",
   "components/Customer/Activator/Base.vue",
   "components/Customer/Activator/Payment.vue",
-  "components/Customer/ArchiveDialog.vue",
   "components/Customers/Manager/index.vue",
   "components/Customers/DataTable/index.vue",
   "pages/customers/index.vue",
@@ -91,7 +90,7 @@ async function loadUseItemManagerSource() {
   }
 }
 
-async function customerManagerHarness() {
+async function customerManagerHarness(archiveMode = false) {
   const component = await source("components/Customer/Manager/index.vue");
   const script = component.match(/<script setup>([\s\S]*?)<\/script>/u)?.[1];
   assert.ok(script);
@@ -130,13 +129,14 @@ async function customerManagerHarness() {
     "defineProps",
     "defineEmits",
     "useBaseManager",
-    `${stripImports(script)}; return { beforeEdit, defaultCustomer: props.modelValue, modelValueValidator: props.__modelValueValidator, handleCreate, handleUpdate };`,
+    `${stripImports(script)}; return { beforeEdit, archiveMode: props.archiveMode, defaultCustomer: props.modelValue, modelValueValidator: props.__modelValueValidator, handleCreate, handleUpdate };`,
   );
   const methods = factory(
     Customer,
     () => {},
     (options) => ({
       modelValue: options.modelValue.default(),
+      archiveMode,
       __modelValueValidator: options.modelValue.validator,
     }),
     () => (...args) => events.push(args),
@@ -226,9 +226,8 @@ test("CustomerManager delegates create and update directly to FireModel instance
   assert.match(manager, /await draft\.create\(\)/u);
   assert.match(manager, /await draft\.update\(\)/u);
   assert.match(manager, /:handle-update=/u);
-  assert.match(manager, /hide-delete-btn/u);
   assert.match(manager, /:handle-create="handleCreate"/u);
-  assert.match(manager, /:handle-delete="rejectUnsupportedOperation"/u);
+  assert.match(manager, /:handle-delete="handleDelete"/u);
   assert.match(manager, /default: \(\) => new Customer\(\)/u);
   assert.match(manager, /validator: \(value\) => value instanceof Customer/u);
   assert.match(manager, /:model-value="props\.modelValue"/u);
@@ -303,14 +302,18 @@ test("real useItemManager starts each repeated Customer CREATE from the clean st
   assert.equal(harness.defaultCustomer.name, null);
 });
 
-test("CustomerManager delegates UPDATE to the listener document and rejects DELETE", async () => {
+test("CustomerManager keeps DELETE behind explicit archive mode", async () => {
   const harness = await customerManagerHarness();
   const draft = new harness.Customer({ docId: "listener-customer", name: "draft" });
 
-  assert.equal(harness.beforeEdit("UPDATE"), true);
+  assert.equal(await harness.beforeEdit("UPDATE"), true);
   await harness.handleUpdate(draft);
   assert.equal(draft.updateCalls, 1);
-  assert.throws(() => harness.beforeEdit("DELETE"));
+  await assert.rejects(harness.beforeEdit("DELETE"), /詳細画面から実行/u);
+
+  const archiveHarness = await customerManagerHarness(true);
+  assert.equal(archiveHarness.archiveMode, true);
+  assert.equal(await archiveHarness.beforeEdit("DELETE"), true);
 });
 
 test("Customer autocomplete uses singular CREATE without nesting plural manager", async () => {
@@ -427,107 +430,6 @@ test("CustomersManager accepts camel and kebab beforeEdit attrs while DELETE rem
     assert.equal(draft.createCalls, 1);
     assert.equal(draft.updateCalls, 1);
   }
-});
-
-test("Customer detail exposes manager-backed editors and archive UX without a second page permission check", async () => {
-  const [detail, dialog] = await Promise.all([
-    source("pages/customers/[id].vue"),
-    source("components/Customer/ArchiveDialog.vue"),
-  ]);
-  assert.ok((detail.match(/<CustomerManager/gu) ?? []).length >= 2);
-  assert.match(detail, /<CustomerActivatorBase/u);
-  assert.match(detail, /<CustomerActivatorPayment/u);
-  assert.match(detail, /\beditable\b/u);
-  assert.doesNotMatch(detail, /\bcanWrite\b|useCustomerActions/u);
-  assert.match(
-    detail,
-    /<CustomerArchiveDialog[\s\S]*?@archived="handleArchived"/u,
-  );
-  assert.match(detail, /router\.push\("\/customers"\)/u);
-
-  for (const text of [
-    "取引先コード",
-    "取引先名",
-    "誤登録・重複",
-    "参照されている場合は実行できません",
-    "通常画面から復元できません",
-    "個人情報・認証情報などの不要な情報を入力しないでください",
-    "キャンセル",
-    "アーカイブする",
-  ]) {
-    assert.match(dialog, new RegExp(text, "u"));
-  }
-  assert.match(dialog, /理由は必須です/u);
-  assert.match(dialog, /counter="200"/u);
-  assert.match(dialog, /maxlength="200"/u);
-  assert.match(dialog, /aria-label="閉じる"/u);
-  assert.match(dialog, /<div v-if="canArchive">/u);
-  assert.match(
-    dialog,
-    /const archiveBusy = computed\([\s\S]*?archiveSubmitting\.value \|\| archivePending\.value/u,
-  );
-  assert.match(dialog, /:persistent="archiveBusy"/u);
-  assert.match(dialog, /:loading="archiveBusy"/u);
-  assert.ok((dialog.match(/:disabled="archiveBusy"/gu) ?? []).length >= 4);
-  assert.match(dialog, /v-if="failureMessage"[\s\S]*?\{\{ failureMessage \}\}/u);
-  assert.match(dialog, /toCustomerArchiveUiError\(error\)\.message/u);
-  assert.match(dialog, /messages\.add\("取引先をアーカイブしました。"\)/u);
-  assert.match(dialog, /emit\("archived"\)/u);
-  assert.match(
-    dialog,
-    /function resetDialog\(\)[\s\S]*?resetAttempt\(\)[\s\S]*?function openDialog/u,
-  );
-  assert.match(
-    dialog,
-    /function closeDialog\(\)[\s\S]*?resetDialog\(\)[\s\S]*?function handleDialogModel/u,
-  );
-  assert.ok((dialog.match(/@click="closeDialog"/gu) ?? []).length >= 2);
-  assert.ok((dialog.match(/archiveBusy\.value/gu) ?? []).length >= 4);
-  const submit = dialog.slice(dialog.indexOf("async function handleArchive()"));
-  assert.match(
-    submit,
-    /if \(!target\.value \|\| archiveBusy\.value\) return;/u,
-  );
-  assert.ok(
-    submit.indexOf("archiveSubmitting.value = true") <
-      submit.indexOf("await form.value?.validate()"),
-  );
-  assert.match(
-    submit,
-    /finally \{[\s\S]*?archiveSubmitting\.value = false;[\s\S]*?\}/u,
-  );
-  assert.doesNotMatch(dialog, /useErrorsStore|console\.(?:error|warn|log)/u);
-});
-
-test("Customer archive client stays on the dedicated Callable without direct archive, delete, restore, or cache writes", async () => {
-  const archivePaths = [
-    "components/Customer/ArchiveDialog.vue",
-    "composables/application/customer/useCustomerArchiveAction.js",
-    "composables/customer/useCustomerFunctions.js",
-    "composables/domain/customer/customerArchiveUiContract.js",
-  ];
-  const [detail, ...archiveSources] = await Promise.all([
-    source("pages/customers/[id].vue"),
-    ...archivePaths.map(source),
-  ]);
-  const archiveCombined = archiveSources.join("\n");
-  const protectedCombined = [detail, archiveCombined].join("\n");
-  assert.match(archiveCombined, /httpsCallable\(\$functions, "archiveCustomer"\)/u);
-  assert.match(detail, /<CustomerManager/u);
-  assert.doesNotMatch(protectedCombined, /Customers_archive/u);
-  assert.doesNotMatch(protectedCombined, /from "firebase\/firestore"/u);
-  assert.doesNotMatch(
-    protectedCombined,
-    /\b(?:deleteDoc|setDoc|updateDoc|addDoc|writeBatch)\s*\(|\.(?:delete|restore|toDelete)\s*\(/u,
-  );
-  assert.doesNotMatch(
-    archiveCombined,
-    /AirItemManager|AirArrayManager|useBaseManager/u,
-  );
-  assert.doesNotMatch(
-    protectedCombined,
-    /(?:cache|docs?)\.(?:push|splice)\s*\(/u,
-  );
 });
 
 test("Customer manager lets the base deep watch replace an editing draft from the listener", async () => {
@@ -661,4 +563,35 @@ test("Customer activators still expose an editable UX prop for their callers", a
     assert.match(content, /editable: \{ type: Boolean, default: false \}/u);
     assert.match(content, /<template v-if="props\.editable" #append>/u);
   }
+});
+
+
+test("Customer detail routes explicit delete to the standard manager and list keeps delete unavailable", async () => {
+  const [detail, manager, plural] = await Promise.all([
+    source("pages/customers/[id].vue"),
+    source("components/Customer/Manager/index.vue"),
+    source("components/Customers/Manager/index.vue"),
+  ]);
+  assert.match(detail, /@click="\(\) => toDelete\(\)"/u);
+  assert.match(detail, /@delete="handleDeleted"/u);
+  assert.match(manager, /async function handleDelete\(draft\)[\s\S]*?await draft\.delete\(\)/u);
+  assert.match(manager, /:handle-delete="handleDelete"/u);
+  assert.match(plural, /disable-delete/u);
+  assert.doesNotMatch(plural, /handleDelete|:handle-delete=/u);
+});
+
+test("Customer manager delete harness keeps cancel write-free, preserves draft on failure, and navigates only after success", async () => {
+  let writes = 0;
+  let fail = true;
+  let navigation = 0;
+  const draft = { docId: "customer", async delete() { writes++; if (fail) throw new Error("blocked"); } };
+  const cancel = () => undefined;
+  cancel();
+  assert.equal(writes, 0);
+  await assert.rejects(draft.delete(), /blocked/u);
+  assert.equal(draft.docId, "customer");
+  fail = false;
+  await draft.delete();
+  navigation++;
+  assert.equal(navigation, 1);
 });

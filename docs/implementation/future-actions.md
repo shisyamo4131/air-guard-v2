@@ -1,7 +1,7 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-09-09
+- 最終更新日: 2026-09-17
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
@@ -15,6 +15,8 @@
 Local completed、Resolved、Superseded等は記録された限定条件のまま読む。製品全体の完了やDev受入れを意味せず、本文の残作業・未確認点と[roadmap](../roadmaps/README.md)を照合する。
 
 ### Open
+
+[FUT-0196](#fut-0196-住所自動入力を日本郵便の住所データへ切り替える)
 
 [FUT-0195](#fut-0195-取引先請求一覧の指定年月データの表示遅延を改善する)
 
@@ -983,16 +985,16 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 必要なテスト: ACTIVE→TERMINATED、候補group・Chip・識別情報、終了済み選択確認、単発残工事、一般master編集拒否、限定訂正、strict actor・reason・新工期による再有効化、Customer変更境界、Agreement非自動復帰、archive/restore拒否。
 - ユーザー判断が必要な事項: なし。CONF-0048の新規選択不可はCONF-0135でsupersedeされ、ADR 0054で方針確定済み。
 
-## FUT-0063 Site archiveと参照guardを競合安全にする
+## FUT-0063 Site archiveと参照guardを競合安全にする（Historical）
 
-- 状態: Open
+- 状態: Superseded（2026-09-16、SCR-07標準化）
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021
 - 対象ファイル・シンボル: schemas `Site.hasMany/logicalDelete`、client adapter `hasChild/delete/restore`、Site delete UI
 - 確認済み実装事実: schedule/result/arrangement notificationだけをtransaction外queryで確認してarchiveする。adapterにrestore APIがあるがUIは復元不能と表示し、restore入口はない。
 - 想定影響と発生条件: 確認後の新規参照とのrace、guard外参照の孤立、誤削除時の運用不能、説明と実装の不一致が起き得る。
 - 未確認点・仮説: 実装前inventoryで確定する全参照集合、各writerでlive Site存在を同じatomic boundaryへ強制できるか、既存archiveの実data状態は未確認。
-- 推奨する将来対応: ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite` Callable、全業務参照の同一transaction確認、全参照writerのlive Site存在barrier、version付き監査snapshotと冪等性を実装する。generic delete／restoreと物理deleteは使用せず、全barrierが揃うまでarchiveを有効化しない。
+- 推奨していた将来対応（Historical）: ADR 0051に従う専用`archiveSite` Callable、全業務参照確認、live Site存在barrier、監査snapshot、冪等性。SCR-07で採用せず、現行はSchemaのhasMany確認と標準`Site.delete()`を使う。restore・保持・物理削除は既存FUT-0146で扱う。
 - 必要なテスト: actor matrix、ACTIVE／TERMINATED、各hasManyとguard外参照、same-ID archive、同時参照作成、同一／別operation再試行、generic delete／restore非到達、欠損Siteを読む下流。
 - ユーザー判断が必要な事項: なし。CONF-0049とADR 0051で通常終了、誤登録archive、通常restore、保持の方針は確定済み。緊急restore、保持期限、削除・匿名化が必要になった場合は別checkpointで判断する。
 
@@ -2853,3 +2855,14 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 完了条件・検証: 同じ年月・件数・環境条件で改修前後の表示時間を比較し、初回表示と年月切替を確認する。表示対象年月、一覧内容・金額の正確性、0件、取得失敗、年月を続けて切り替えた場合の表示整合を維持する。許容する待ち時間は現状計測後に合意し、未計測の改善率や目標秒数を作らない。
 - 既存項目との関係: 請求稼働一覧の作成・集約問題を扱うFUT-0033とは対象現象を分けて記録する。同一原因が確認された場合に統合・相互参照を判断する。
 - 今回の範囲: 要改修事項の記録のみ。優先順位・着手時期は未指定。実装、実データ取得、Dev操作は行わず、着手時に対象・計測条件・検証・復旧方法を具体化する。
+
+## FUT-0196 住所自動入力を日本郵便の住所データへ切り替える
+
+- 状態: Open（要改修）
+- 報告日: 2026-09-17、利用者報告。
+- 報告内容・対応方針: 現在Geocoding APIを使っている住所自動入力について、利用規約に抵触する可能性があるとの懸念が示された。将来、日本郵便の住所データを使う方法へ切り替える。
+- 確認状態: 規約違反の有無、該当条項、現在の住所自動入力の実行経路は本件では未調査。利用者の懸念を確定した規約違反として扱わない。既存の[住所・郵便番号・geocoding調査](address-geocoding.md)は郵便番号からの住所入力と住所からの座標取得を別経路として記録しているため、着手時に現行component・依存package・APIの実経路を確認する。
+- 着手時の確認: 日本郵便の採用データ・利用条件・取得方法・更新頻度を一次資料で確認し、配布データの取込みかAPI等の利用かを具体化する。対象画面、共通component、既存住所への影響、保存済みデータの扱い、切替・復旧方法を整理する。座標取得機能の継続・変更は住所自動入力と分けて判断し、本件からGeocoding API全体の廃止を推論しない。
+- 完了条件案: 対象となる住所自動入力を日本郵便の住所データに基づく経路へ切り替え、採用方式の利用条件を確認した根拠を残す。通常検索、該当なし、複数候補、取得失敗、手入力・修正、既存住所の保持を検証する。具体的な受入れ条件は改修着手時に確定する。
+- 既存項目との関係: 住所field・郵便番号正規化のFUT-0142、個人住所・座標の外部送信のFUT-0143と関連するが、本件は住所自動入力のデータ提供元切替として区別する。
+- 今回の範囲: 将来の要改修事項の記録のみ。優先順位・着手時期は未指定。現行branchの製品改修scopeやrelease判断へ追加せず、実装・規約調査・外部接続・データ移行は後続工程とする。

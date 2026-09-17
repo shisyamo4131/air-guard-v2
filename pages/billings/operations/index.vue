@@ -101,8 +101,6 @@ function handleClickUpdate(item) {
             :model-value="dateRange.from.value"
             @date-range="dateRange = $event"
           />
-          <v-spacer />
-          <v-btn icon="mdi-plus" @click="() => tableProps.toCreate()" />
         </v-toolbar>
         <v-toolbar>
           <div class="px-4 flex-grow-1 d-flex ga-4">

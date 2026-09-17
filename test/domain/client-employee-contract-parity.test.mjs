@@ -400,35 +400,33 @@ test("client insurance legacy defaults and existing maps match Functions", () =>
 });
 
 test("client archive gating and request normalization match Functions contract", () => {
-  assert.equal(
-    clientArchive.isEmployeeArchiveUxActorAllowed(identity, {
-      ...actor,
-      roles: ["manager"],
-    }),
-    serverArchive.archiveActorAllowed(identity, {
-      ...actor,
-      roles: ["manager"],
-    }),
-  );
+  for (const roles of [[], ["unknown"], ["manager"], ["human-resource"]]) {
+    const current = { ...actor, roles };
+    assert.equal(clientArchive.isEmployeeArchiveUxActorAllowed(identity, current), true);
+    assert.equal(serverArchive.archiveActorAllowed(identity, current), true);
+  }
+  assert.equal(clientArchive.isEmployeeArchiveUxActorAllowed(identity, { ...actor, isAdmin: true, roles: [] }), true);
+  assert.equal(serverArchive.archiveActorAllowed(identity, { ...actor, isAdmin: true, roles: [] }), true);
+  assert.equal(clientArchive.isEmployeeArchiveUxActorAllowed({ ...identity, isSuperUser: true }, { ...actor, roles: [] }), true);
+  assert.equal(serverArchive.archiveActorAllowed({ ...identity, isSuperUser: true }, { ...actor, roles: [] }), true);
+  for (const change of [{ docId: "other" }, { companyId: "other" }, { disabled: true }, { isTemporary: true }]) {
+    const current = { ...actor, ...change };
+    assert.equal(clientArchive.isEmployeeArchiveUxActorAllowed(identity, current), false);
+    assert.equal(serverArchive.archiveActorAllowed(identity, current), false);
+  }
   for (const value of ["employee", "../employee", "", "x".repeat(129)]) {
     assert.equal(
       clientArchive.archiveIdentifier(value),
       serverArchive.archiveIdentifier(value),
     );
   }
-  const input = {
-    employeeId: "employee",
-    operationId: "operation",
-    reason: " 合成理由 ",
-  };
+  const input = { employeeId: "employee" };
   assert.deepEqual(
     clientArchive.parseEmployeeArchiveInput(input),
     serverArchive.parseEmployeeArchiveInput(input),
   );
 
   for (const invalid of [
-    { ...input, reason: " " },
-    { ...input, reason: "x".repeat(201) },
     { ...input, employeeId: "../employee" },
     { ...input, extra: true },
   ]) {

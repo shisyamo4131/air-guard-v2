@@ -130,11 +130,8 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
             </WorkersManager>
           </v-col>
           <v-col cols="12">
-            <OperationRowsManager
-              :document-id="docId"
-              kind="result"
-              group="articles"
-              :disabled="doc.isLocked"
+            <OperationArticlesManager
+              :doc="doc"
               label="稼働外売上"
             />
           </v-col>

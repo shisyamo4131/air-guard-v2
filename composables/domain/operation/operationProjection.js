@@ -1,4 +1,4 @@
-import { SiteOperationSchedule, OperationResult, ArticleDetail } from "@shisyamo4131/air-guard-v2-schemas";
+import { SiteOperationSchedule, OperationResult } from "@shisyamo4131/air-guard-v2-schemas";
 import { equal, plain, rawForClass } from "../shared/valueContract.js";
 import { operationDateTime } from "./operationDateTime.js";
 import { WORKER_PARENT_FIELDS } from "./operationCommandContract.js";
@@ -37,9 +37,8 @@ export function applyOperationProjection(raw, command) {
   if (kind !== "schedule" && typeof raw.isLocked !== "boolean") invalid();
   if (kind === "result" && raw.isLocked) invalid();
   if (action === "delete") return null;
-  if (action === "lock") return { ...raw, isLocked: changes.desiredLocked };
-  if (["notify", "agreement"].includes(action)) return raw;
-  if (!["workers", "articles"].includes(action)) return calculateOperation(raw, kind, (model) => Object.assign(model, changes)).value;
+  if (action === "notify") return raw;
+  if (action !== "workers") return calculateOperation(raw, kind, (model) => Object.assign(model, changes)).value;
   const array = raw[command.array];
   if (!Array.isArray(array) || command.position > array.length || (command.rowAction !== "add" && command.position === array.length)) invalid();
   const next = [...array];
@@ -48,7 +47,7 @@ export function applyOperationProjection(raw, command) {
     if (command.destination >= array.length) invalid();
     next.splice(command.destination, 0, next.splice(command.position, 1)[0]);
   } else {
-    const Schema = action === "articles" ? ArticleDetail : (kind === "schedule" ? SiteOperationSchedule : OperationResult).classProps[command.array].customClass;
+    const Schema = (kind === "schedule" ? SiteOperationSchedule : OperationResult).classProps[command.array].customClass;
     let previous = array[command.position];
     if (command.rowAction === "add") {
       if (action === "workers") {
@@ -56,7 +55,7 @@ export function applyOperationProjection(raw, command) {
         const index = isEmployee ? 0 : Math.max(0, ...array.filter((row) => row.id === changes.id).map((row) => row.index)) + 1;
         if (isEmployee && array.some((row) => row.id === changes.id)) invalid();
         previous = operationDateTime(new Schema({ ...rawForClass(raw), id: changes.id, isEmployee, index, ...(kind === "schedule" ? { siteOperationScheduleId: command.documentId, hasNotification: false } : {}) })).toObject();
-      } else previous = new Schema().toObject();
+      }
     }
     const model = operationDateTime(new Schema(rawForClass(previous)));
     const before = model.toObject();

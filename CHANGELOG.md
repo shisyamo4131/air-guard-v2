@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- 2026-09-17、SCR-03〜10の最終product contentをcommit `1250f8ff8ef5fb1043d00b990bb8680fd53cadb0`へ固定した。Customerの通常基本情報・請求条件UPDATEからDELETEを分離し、明示archive buttonだけをarchive-mode Managerへ接続した。Customer fix reviewとfinal product content security reviewはfinding 0。利用者環境Localでは通常dialogにdelete項目がなく、明示archive確認dialogだけが開くことを非破壊確認した。Dev受入れ待ち・SCR-03/06/07/10の得点0は維持する。[最終receipt](docs/verification/scr-03-10-user-local-acceptance-2026-09-17.md)
+
+- 2026-09-17、利用者が準備したimport-only Emulator・Local server・signed-in ChromeでSCR-03 Site終了/再開、SCR-06 Customer archive、SCR-07 Site archive、SCR-10 Employee archiveを確認した。SCR-05は登録button非表示の限定UI証拠のみで、取極め・調整・lock・稼働外売上は未確認。拒否時のdialog維持・対象残存・archive成功表示なし、保存後の一覧・終了後reload反映を確認した。SCR-03/06/07/10はLocal検証済み・Dev受入れ待ち、SCR-05はImplementation（prelocal・検証継続/待ち）、得点0であり、既存import data、User/Auth、Dev/Prod、migration、repairは変更していない。[利用者環境Local受入れ receipt](docs/verification/scr-03-10-user-local-acceptance-2026-09-17.md)
+
+- 2026-09-17 SCR-10-Aをprelocal実装。Employee archiveはread-only preflight後に標準Manager／Schema archiveへ進み、有効な認証済み本登録User・同一tenant・role不問の境界へ統一した。tenant allowlistとadmin/manager限定を撤去し、direct SDKによるpreflight／hasMany迂回とpreflight後のraceは受容する。User/Auth・reservation・lifecycle保護は維持する。Local Emulator、browser、build、Dev受入れ、製品完了・得点加算は未実施。
+
 - 2026-09-16 Employee archiveをCallable事前検証後のブラウザ標準保存とし、検証から保存までの稀な競合を受容する方針を記録した。誤退職訂正完了の履歴だけでは拒否せず、User連携・退職状態等は検査する。server-adapter改修と将来の無効化→archive→物理削除は後続事項で、製品変更は未実施。
 
 - 2026-09-16 Employee退職・誤退職訂正を標準CRUD化の例外として明確化し、User連携の有無を内部で検証する既存Callable経路を維持する方針へ仕様・ADR・SCR-09を整合した。既存の保護・操作履歴・再開処理を維持し、有効な証拠と照合して不足だけを対応する。文書変更のみで、製品動作・Rules・dataは変更していない。

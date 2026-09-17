@@ -2,11 +2,11 @@
 
 - 状態: In progress
 - 開始日: 2026-09-15
-- 現在の進捗: 10%
+- 現在の進捗: 20%
 - 目的: 通常業務CRUDを既存Air ManagerとSchemasクラスの標準機能へ委譲し、重複する専用保存・検査・状態管理とRulesを簡素化する。[棚卸し](../implementation/operation-crud-simplification-inventory.md#2026-09-15の実装棚卸し)の差を解消し、以下の目的に対応した成果を工程ごとに確認する。
 - 開始基準: local main `048e44e9cfd4ca887ec328e7e835c291579e68af`と、同基準で調査した2026-09-15の棚卸し。
-- 作業branch: `codex/scr02-worker-result-edit-action`（SCR-02全体の作業branchとして利用者承認済み）。本書の棚卸し解消を範囲とし、checkpointごとに差分・検証・Git統合を閉じる。
-- 成果範囲: SCR-01を完了。入金予定日を標準Manager／Class保存へ移し、Rulesを整合して旧専用経路とremote Functionを撤去した。Local自動検証と画面確認、GitHub ActionsによるDev反映、会社管理者によるDev受入れまで完了した。package変更、data migration、既存documentの一括操作は行っていない。
+- 作業branch: `codex/scr03-10-standard-crud-prelocal`。本書の棚卸し解消を範囲とし、checkpointごとに差分・検証・Git統合を閉じる。
+- 成果範囲: SCR-01とSCR-02を完了。SCR-01は入金予定日を標準Manager／Class保存へ移し、Rulesを整合して旧専用経路とremote Functionを撤去した（package変更なし）。SCR-02は配置通知の状態更新・編集と上下番確定の受入れを完了し、Schemas `3.0.0-dev.3`をroot/Functionsのconsumerへ導入済みである。ただし今回のSCR-02 closeoutでSchemas source packageを変更・新規公開したものではない。いずれもdata migration、既存documentの一括操作は行っていない。
 - 要件の正本: [標準CRUDと後続処理](../specification.md#標準crudと後続処理)、[画面別lock](../specification.md#稼働実績ロックと画面別操作)、[archive・restore](../specification.md#ドキュメントのアーカイブと物理削除)。本書で新しい機能要件を追加しない。
 
 ## SCR全体の目的と完了判定
@@ -21,7 +21,7 @@
 
 各工程の完了時は、対象操作ごとに「標準機能へ委譲した責務」「撤去した専用経路・重複処理」「残した独自処理と必要な理由」を実装差分・reviewで確認する。Manager／Classを呼ぶ形だけに変え、同じ独自制御を別の場所へ移しただけでは目的達成としない。動作test・Dev受入れと、この責務整理の確認を両方満たす。
 
-SCR-03〜SCR-10の個別目的・完了条件は、1工程ずつの質疑で確定した。SCR-02のPendingと既存受入れ記録、各工程の状態・得点は今回の文書整理で変更しない。
+SCR-03〜SCR-10の個別目的・完了条件は、1工程ずつの質疑で確定した。SCR-02は2026-09-17の利用者Dev受入れにより完了し、10点を加点する。SCR-04以降の状態・得点は変更しない。
 
 ## 既存計画との関係
 
@@ -40,15 +40,15 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 | マイルストーン | 重み | 得点 | 状態 | 完了条件・対象となる確認 |
 |---|---:|---:|---|---|
 | SCR-01 Billings入金予定日 | 10 | 10 | Completed | 提供済み編集をManager／Classへ接続し、Rulesと旧比較testを整合。保存・再表示・失敗、tenant境界を検証する |
-| SCR-02 配置通知の状態更新・編集 | 10 | 0 | Pending（Dev反映済み・2026-09-17以降の会社管理者受入れ待ち） | 通知個別編集と最終確定を標準Manager／Schemasへ整合し、最終確定で通知を変更せず、既存通知のactual値を実績へ反映する。旧convert経路を撤去済み。LocalとDev反映は成功し、対象data発生後の上下番確定・再表示を残す |
-| SCR-03 Site手動終了・再開 | 10 | 0 | Planned | [個別完了条件](#scr-03-site手動終了再開の目的と完了条件)に従い、Air Manager／Schema標準更新への委譲、不要経路撤去、Rules簡素化、現行業務条件の維持を確認する |
+| SCR-02 配置通知の状態更新・編集 | 10 | 10 | Completed | 通知個別編集と最終確定を標準Manager／Schemasへ整合し、最終確定で通知を変更せず、既存通知のactual値を実績へ反映する。旧convert経路を撤去済み。Local検証、Dev反映、利用者による左右独立scroll・固定操作・既存通知行の鉛筆・上下番確定と再表示の受入れを完了した |
+| SCR-03 Site手動終了・再開 | 10 | 0 | Local検証済み・Dev受入れ待ち | [個別完了条件](#scr-03-site手動終了再開の目的と完了条件)に従い、Air Manager／Schema標準更新への委譲、不要経路撤去、Rules簡素化、現行業務条件の維持を確認する。利用者環境Local受入れは[receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)で確認済みだが、Dev受入れ完了までは得点0を維持する |
 | SCR-04 予定から実績化 | 10 | 0 | Planned | [個別完了条件](#scr-04-予定から実績化の目的と完了条件)に従い、SCR-02の成果を5つの目的と照合し、残る差分だけを解消する。未対応部分がなければ追加改修せず、必要な検証・受入れ証拠の充足を確認して完了判断する |
-| SCR-05 稼働請求・実績lock・稼働外売上 | 10 | 0 | Planned | [個別完了条件](#scr-05-稼働請求実績lock稼働外売上の目的と完了条件)に従い、提供済み操作をAir Manager／Schemaへ委譲する。現行の入力・計算・画面別操作制限を維持し、不要経路撤去・Rules簡素化・後続反映を確認する |
-| SCR-06 Customer archive整合 | 10 | 0 | Planned | [個別完了条件](#scr-06-customerアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、不要経路撤去・Rules簡素化・通常CRUD維持を確認する。既存archiveは変換せず保持し、復元画面と旧形式の復元対応は後続とする |
-| SCR-07 Site archive整合 | 10 | 0 | Planned | [個別完了条件](#scr-07-siteアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、不要経路撤去・Rules簡素化・通常CRUDと終了再開の維持を確認する。既存archiveは保持し、復元対応は後続とする |
-| SCR-08 提供済み請求操作の標準CRUD整合 | 10 | 0 | Planned | [個別完了条件](#scr-08-提供済み請求操作の目的と完了条件)に従い、SCR-01等の成果を再利用し、残る提供済み操作だけを標準化する。未対応がなければ追加改修せず証拠を照合する。未提供の確定・編集・削除画面は後続とする |
-| SCR-09 Employee退職・誤退職訂正の専用経路維持 | 10 | 0 | Planned | [個別完了条件](#scr-09-employee退職誤退職訂正の目的と完了条件)に従い、既存Callableの分岐・検証・履歴・再開とRulesの保護を維持する。有効な既存証拠を照合し、不足だけを確認・修正する |
-| SCR-10 Employee archive整合 | 10 | 0 | Planned | [個別完了条件](#scr-10-employeeアーカイブの目的と完了条件)に従い、Callable事前検証、ブラウザ標準archive、旧保存処理整理、Rules整合と許可・拒否・失敗を確認する。復元は後続とする |
+| SCR-05 稼働請求・実績lock・稼働外売上 | 10 | 0 | Implementation（prelocal・検証継続/待ち） | [個別完了条件](#scr-05-稼働請求実績lock稼働外売上の目的と完了条件)に従い、提供済み操作をAir Manager／Schemaへ委譲する。今回の利用者環境では登録button非表示の限定UI証拠のみ確認し、取極め・調整・lock・稼働外売上は未確認。詳細は[receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)と旧receiptを参照し、得点0を維持する |
+| SCR-06 Customer archive整合 | 10 | 0 | Local検証済み・Dev受入れ待ち | [個別完了条件](#scr-06-customerアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、通常basic/payment UPDATEからDELETEを分離した最終修正とreviewをreceiptで確認済み。既存archiveは変換せず保持し、得点0とDev受入れ待ちは維持する |
+| SCR-07 Site archive整合 | 10 | 0 | Local検証済み・Dev受入れ待ち | [個別完了条件](#scr-07-siteアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、利用者環境Local確認は[receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)で確認済み。既存archiveは保持し、得点0とDev受入れ待ちは維持する |
+| SCR-08 提供済み請求操作の標準CRUD整合 | 10 | 0 | Implementation（prelocal・検証待ち） | 現提供範囲はpaymentDueDateAtのみで、既存標準Manager／Schemaが充足することを確認した。BankAccount／PaymentMethod／WorkerOrder画面は未提供のため対象外。direct tests 2+13+16を確認し、Local／Dev受入れまでは完了としない |
+| SCR-09 Employee退職・誤退職訂正の専用経路維持 | 10 | 0 | Implementation（prelocal・検証待ち） | 既存退職／誤退職訂正Callableを維持し、変更不要であることを確認した。direct tests 7+14+18+4+3=46を確認し、Local／Dev受入れまでは完了としない |
+| SCR-10 Employee archive整合 | 10 | 0 | Local検証済み・Dev受入れ待ち | Callableはread-only preflight（User連携・予約・processing lock・LifecycleOperations/Head整合）に限定し、成功後だけEmployeeManager→Schema/ClientAdapterのraw same-ID archiveへ委譲する。利用者環境Local確認は[receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)で確認済みだが、得点0とDev受入れ待ちは維持する。復元・保持・物理削除は後続とする |
 
 SCR番号は2026-09-15時点の改修優先順位に合わせて付番し直した。SCR-01から順に各項目の現状と影響を確認して進める。新しい依存や影響が判明した場合は、その理由を示して優先順位を見直す。SCR-04とSCR-05など共有Rulesを扱う変更は並列編集せず、前工程との依存を確認する。既存の大項目も、独立して受入れ可能なら操作単位へ分け、配点は親項目の合計を維持する。
 
@@ -80,6 +80,7 @@ SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路
 - 目的: Siteの手動終了・再開をAir Manager経由でSchemaの標準更新へ委譲し、専用保存経路と重複する検査・状態管理を解消する。
 - 対象: 提供済みの手動終了・再開と、それに必要なManager、Schemaクラス、Rules、不要になった専用経路の整理。
 - 維持: 現行の終了・再開の業務条件・入力項目、終了後の通常編集条件、自動終了の条件・実行タイミング。SiteのアーカイブはSCR-07で扱う。
+- 現行実装事実: 状態遷移の終端で`statusChangedAt = new Date()`を保存する。これは端末時刻の現行契約であり、server時刻化をSCR-03の残作業とはしない。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)の2026-09-17補足を参照する。
 
 ### 完了条件
 
@@ -131,13 +132,14 @@ SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路
 | 動作と後続反映 | 各提供操作の保存・再表示・listener反映・失敗時の表示と非成功扱いを確認する。共有する稼働実績画面への影響と、既存の請求・勤怠等への後続反映を確認し、保存成功と後続処理完了を区別する |
 | 最終受入れ | 各目的へ実装差分・独立review・必要な検証・対象範囲のDev受入れを対応付け、標準機能への委譲と撤去の証拠が揃ってから完了判断する。有効な既存証拠は再利用し、不足・失効した確認を追加する |
 
-対象が広いため、実装着手時は独立して検証・受入れできる操作単位へ分け、共有Rules・callerへの影響、対象file、互換性、rollback、検証範囲を具体化する。必要なpackage変更・公開やDev操作は既存の承認境界に従う。稼働外売上の権限に関する既存の未決事項は、本合意を権限変更の回答へ読み替えず、現行提供操作を維持する。今回の文書化ではSCR-05のPlanned・得点0を維持する。
+対象が広いため、実装着手時は独立して検証・受入れできる操作単位へ分け、共有Rules・callerへの影響、対象file、互換性、rollback、検証範囲を具体化する。必要なpackage変更・公開やDev操作は既存の承認境界に従う。稼働外売上の権限に関する既存の未決事項は、本合意を権限変更の回答へ読み替えず、現行提供操作を維持する。SCR-05はImplementation（prelocal・検証継続/待ち）・得点0で、登録button非表示以外の取極め・調整・lock・稼働外売上は未確認である。
 
 ## SCR-06 Customerアーカイブの目的と完了条件
 
 - 合意: 2026-09-16の質疑で確定。目的は提供済みCustomerアーカイブをAir ManagerからSchemaの標準削除処理へ接続し、hasManyによる従属確認へ委譲することである。
 - 対象: 既存のCustomerアーカイブ操作、新たに保存する標準archive形式、必要なRules整合、不要になった専用経路・重複処理の撤去。
 - 範囲外: 復元画面の追加、旧形式archiveの復元対応、既存archiveの一括変換。過去の独自形式のdataは変換・削除せず保持する。通常CRUDと既存の業務上の提供条件を維持する。
+- 最終実装事実: `1250f8ff8ef5fb1043d00b990bb8680fd53cadb0`で通常basic/payment UPDATEからDELETEを分離し、明示archive buttonだけをarchive-mode Managerへ接続した。CustomerManagerのcreated／updated／delete event forwardingも明示化した。fix reviewとfinal product content security reviewはfinding 0。Local確認済みだが、Dev受入れ・得点0は維持する。
 
 ### 完了条件
 
@@ -154,7 +156,7 @@ SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路
 
 Customerの復元画面と旧形式archiveの復元対応は、SCR-06から分離した後続事項として本節に保持する。後続工程では標準形式と旧形式を区別し、対象data・互換性・必要な変換方法・検証・復旧を具体化してから対応する。今回は後続工程の着手時期・提供範囲を確定せず、復元済み・復元可能と保証しない。
 
-着手時は対象file、共有caller、既存archiveへの影響、切替えの互換性、rollback、検証範囲を具体化する。既存dataの保持と標準処理が両立しない箇所が判明した場合、無断変換や独自経路の追加で埋めず、該当点を報告する。今回の文書化ではSCR-06のPlanned・得点0を維持する。
+着手時は対象file、共有caller、既存archiveへの影響、切替えの互換性、rollback、検証範囲を具体化する。既存dataの保持と標準処理が両立しない箇所が判明した場合、無断変換や独自経路の追加で埋めず、該当点を報告する。SCR-06はLocal検証済み・Dev受入れ待ち・得点0とし、Dev受入れまで完了扱いにしない。
 
 ## SCR-07 Siteアーカイブの目的と完了条件
 
@@ -177,7 +179,7 @@ Customerの復元画面と旧形式archiveの復元対応は、SCR-06から分�
 
 Siteの復元画面・旧形式archiveの復元対応は本節に後続事項として保持し、SCR-07の完了条件へ含めない。後続工程で標準形式と旧形式、対象data、互換性、必要な変換・検証・復旧方法を具体化する。今回の合意だけで既存dataを移行せず、復元可能とも保証しない。
 
-着手時はSite固有の従属定義、共有caller、既存archiveへの影響、対象file、互換性、rollbackと検証範囲を確認する。既存data保持と標準処理が両立しない箇所は、無断変換や独自経路の追加で埋めず報告する。今回の文書化ではSCR-07のPlanned・得点0を維持する。
+着手時はSite固有の従属定義、共有caller、既存archiveへの影響、対象file、互換性、rollbackと検証範囲を確認する。既存data保持と標準処理が両立しない箇所は、無断変換や独自経路の追加で埋めず報告する。SCR-07はLocal検証済み・Dev受入れ待ち・得点0とし、Dev受入れまで完了扱いにしない。
 
 ## SCR-08 提供済み請求操作の目的と完了条件
 
@@ -199,7 +201,7 @@ Siteの復元画面・旧形式archiveの復元対応は本節に後続事項と
 
 未提供の請求確定・編集・削除画面は本節に後続事項として保持する。後続工程で提供操作、必要な表示・入力、確定時のissuer snapshot、確定後CRUDと元実績を削除しない条件を現行仕様と照合し、具体的な実装・検証範囲を定める。今回の対象外とすることは既存の請求仕様の撤回や実装済みとの判断を意味しない。未決の入金dataモデルも自動採用しない。
 
-着手時は現在の提供範囲と有効な証拠を確認する。残る改修が必要な場合だけ対象file、互換性、rollback、検証・受入れ範囲を具体化し、SCR-01等と同じ成果を二重計上しない。今回の文書化ではSCR-08のPlanned・得点0を維持する。
+着手時は現在の提供範囲と有効な証拠を確認する。残る改修が必要な場合だけ対象file、互換性、rollback、検証・受入れ範囲を具体化し、SCR-01等と同じ成果を二重計上しない。SCR-08はImplementation（prelocal・検証待ち）・得点0で、変更不要のdirect evidenceを確認済みだがLocal／Dev前のため完了としない。
 
 ## SCR-09 Employee退職・誤退職訂正の目的と完了条件
 
@@ -215,7 +217,7 @@ Siteの復元画面・旧形式archiveの復元対応は本節に後続事項と
 | 専用境界 | 必要なCallable、Rulesのclient直接変更拒否、認証・tenant・予約・lock・操作履歴を維持する。標準CRUDへの置換や保護の撤去を成果条件にしない。通常編集とarchiveは本工程へ混ぜない |
 | 証拠と最終判断 | 既存の有効なtest・review・対象範囲のDev受入れ証拠を条件ごとに照合し、不足・失効だけを確認・修正する。差分がなければ追加改修せず証拠の充足で判断する。既存実装の存在やコード読取りだけで完了としない |
 
-着手時に有効な既存証拠と不足を一覧化し、必要な改修がある場合だけ対象file・互換性・rollbackと検証範囲を定める。既存の退職・訂正操作、actor、保存形式、Authの処理順を作り直す工程ではない。再雇用、archive・restore、別package変更、実data操作は自動的に含めない。今回の文書反映は製品完了の証拠ではなく、SCR-09のPlanned・得点0とSCR-02のPendingを維持する。
+着手時に有効な既存証拠と不足を一覧化し、必要な改修がある場合だけ対象file・互換性・rollbackと検証範囲を定める。既存の退職・訂正操作、actor、保存形式、Authの処理順を作り直す工程ではない。再雇用、archive・restore、別package変更、実data操作は自動的に含めない。SCR-09はImplementation（prelocal・検証待ち）・得点0で、既存Callable維持とdirect evidenceを確認済みだがLocal／Dev前のため完了としない。SCR-02は完了済みであり、SCR-04以降へ実績化範囲を二重計上しない。
 
 ## SCR-10 Employeeアーカイブの目的と完了条件
 
@@ -238,7 +240,7 @@ Siteの復元画面・旧形式archiveの復元対応は本節に後続事項と
 | Rulesと既存操作 | ブラウザの標準archiveに必要なRulesを整合し、認証・同一tenantとUser/Auth固有の保護を維持する。Employeeの通常編集、退職・誤退職訂正へ回帰を起こさない |
 | 検証と最終判断 | 上記の許可・拒否、hasManyによる従属あり拒否、同IDの標準archiveと原本削除、一覧・詳細への反映、検証失敗・保存失敗時の表示と成功扱いしない動作を確認する。有効な既存証拠は再利用し、不足・失効した範囲だけを追加検証する。対象のreview・必要な検証・Dev受入れ証拠が揃ってから製品完了を判断する |
 
-着手時に対象file・現行経路・有効な証拠を照合し、client・Callable・Rulesの互換性とrollback単位を具体化する。復元対応、server-adapter改修、将来の段階的削除は本工程の完了条件に含めない。今回の文書整理は実装開始・Dev操作・data移行の承認ではなく、Planned・得点0を維持する。
+着手時に対象file・現行経路・有効な証拠を照合し、client・Callable・Rulesの互換性とrollback単位を具体化する。復元対応、server-adapter改修、将来の段階的削除は本工程の完了条件に含めない。SCR-10はLocal検証済み・Dev受入れ待ち・得点0で、preflight後の標準保存、direct SDK bypassの明示受容、grant／新管理documentなしの判断を採用済みとする。
 
 ## 影響確認から次の1件を選ぶ
 
@@ -303,14 +305,23 @@ code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-
 
 ## 次の作業
 
-2026-09-16訂正: 今回の標準CRUD・通知不変・旧convert撤去・OperationResult標準sync整合はSCR-02へ含める。追加修正はcommit `f3b1e01891f6a14605d17b2e7fb5c67daabec15a`でDevへ反映済みだが、対象data発生後の会社管理者受入れを残すためSCR-02は0点のままとする。SCR-04はPlannedのまま維持し、SCR-02で整合した実績化範囲を再実装・二重計上しない。
+### SCR-03〜10の現時点ファクト（2026-09-17）
 
-SCR-02の最終Dev候補はユーザーcode review、domain-full 1434/1434、Local Emulator 180/180、Local UI build、`generate:dev`を成功し、commit `f3b1e01891f6a14605d17b2e7fb5c67daabec15a`へ固定した。GitHub Actions run `35066835154`はHosting・Functions・Firestore RulesをDevへ反映し、全stepが成功した。Dev URLはHTTP 200と`no-cache, no-store, must-revalidate`を返した。対象dataが2026-09-17まで発生しないため、実data状態の左右独立scroll、固定された確定操作、既存通知行の鉛筆、上下番確定と再表示の会社管理者Dev受入れを`Pending`とする。migration/repairはなく、受入れ完了まで得点0を維持する。詳細は[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)を参照する。SCR-04の標準実績化とは分離し、同じ実装を二重計上しない。
+- SCR-03／SCR-06／SCR-07／SCR-10はLocal検証済み・Dev受入れ待ち、SCR-05は登録button非表示の限定UI証拠のみでImplementation（prelocal・検証継続/待ち）とし、いずれも得点は0。利用者環境Localの操作事実は[receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)を正とし、Dev受入れ・製品完了・得点加算とは分ける。SCR-02はCompleted・10点である。
+- SCR-04はPlanned・得点0。SCR-02で整合した標準実績化を二重計上しない。
+- SCR-08は、現提供範囲のpaymentDueDateAtが既存標準Manager／Schemaで充足することを確認した。BankAccount／PaymentMethod／WorkerOrder画面は未提供で対象外。direct tests 2+13+16はすべてexit 0だが、Local／Dev前のため完了扱いにしない。
+- SCR-09は、既存退職／誤退職訂正Callableを維持し変更不要であることを確認した。direct tests 7+14+18+4+3=46はすべてexit 0だが、Local／Dev前のため完了扱いにしない。
+- SCR-05は登録button非表示の限定UI証拠のみで、取極め・調整・lock・稼働外売上は未確認。旧receiptの限定証拠を再利用し、SCR-05全体のLocal受入れ完了とは扱わない。SCR-10はLocal検証済み・Dev受入れ待ち・得点0。Callableはread-only preflightに限定し、正規画面では拒否・失敗時に標準保存へ進まない。direct SDKはpreflightを迂回し得るが、アプリ想定外経路まで保証しないことを明示受容し、one-time grant・追加role・新管理documentは設けない。
+- 2026-09-17の専用snapshotによるLocal verificationは[SCR Local verification receipt](../verification/scr-local-verification-2026-09-17.md)、利用者環境によるSCR-03/06/07/10の追加Local受入れとSCR-05の限定UI証拠は[新receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)を参照する。SCR-03/06/07/10はLocal検証済み・Dev受入れ待ち、SCR-05はImplementation（prelocal・検証継続/待ち）、SCR-04/08/09に今回追加UI evidenceはなく、SCR-09 callableと既存受入れは維持する。SCR-03〜10の得点・製品完了状態・進捗20%は変更しない。
+
+2026-09-17訂正: 2026-09-16時点では対象data不足により会社管理者Dev受入れをPendingとしていたが、利用者から「Local受入れ検証、コード検証: 完了」「上下番確定処理画面の確認事項: 確認OK（Dev受入れOK）」の確定報告を受領した。これによりSCR-02をCompleted・10点へ更新する。SCR-04はPlanned・得点0のまま維持し、SCR-02で整合した実績化範囲を再実装・二重計上しない。
+
+SCR-02の最終Dev候補はユーザーcode review、domain-full 1434/1434、Local Emulator 180/180、Local UI build、`generate:dev`を成功し、commit `f3b1e01891f6a14605d17b2e7fb5c67daabec15a`へ固定した。GitHub Actions run `35066835154`はHosting・Functions・Firestore RulesをDevへ反映し、全stepが成功した。2026-09-17に利用者からLocal受入れ・コード検証の完了と、上下番確定処理画面の確認OK（Dev受入れOK）の確定報告を受領し、SCR-02を完了した。Dev受入れで確認した左右独立scroll、固定された確定操作、既存通知行の鉛筆、上下番確定と再表示を記録する。migration/repairはなく、Prod、FCM実配信、backend日付算術、dashboard本人表示は未実施のまま維持する。詳細は[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)を参照する。SCR-04の標準実績化とは分離し、同じ実装を二重計上しない。
 
 ### SCR-02受入れ前 UI layout regression 補正
 
-Dev受入れで、上下番確定処理画面の内容が縦方向に増えるとスクロールできず、「上下番を確定する」buttonが画面外へ出る問題を確認した。これはSCR-02の通知状態・package契約の変更とは分離した既存UI layout regressionとして扱い、SCR-02のDev再受入れ前に解消した。Generatorを単一DOM rootとし、外側columnから共通two-pane rowまで`overflow-hidden`と`min-height: 0`を連続させ、既存List/Detail本文の独立scroll境界と右toolbar/actionsの外側配置を維持した。source regression testは左右独立scroll、右actions固定、外側columnとalert→row順序を固定する。手動の再取得buttonは廃止し、配置通知は選択時の自動取得とlistenerを表示正本とする。最終候補とDev反映の結果は上記および[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)を正とし、対象data発生後に確定操作を再受入れする。
+Dev受入れで、上下番確定処理画面の内容が縦方向に増えるとスクロールできず、「上下番を確定する」buttonが画面外へ出る問題を確認した。これはSCR-02の通知状態・package契約の変更とは分離した既存UI layout regressionとして扱い、SCR-02のDev再受入れ前に解消した。Generatorを単一DOM rootとし、外側columnから共通two-pane rowまで`overflow-hidden`と`min-height: 0`を連続させ、既存List/Detail本文の独立scroll境界と右toolbar/actionsの外側配置を維持した。source regression testは左右独立scroll、右actions固定、外側columnとalert→row順序を固定する。手動の再取得buttonは廃止し、配置通知は選択時の自動取得とlistenerを表示正本とする。最終候補、Dev反映、利用者受入れの結果は上記および[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)を正とする。
 
 最有力の直接原因は、`44a3aa0b0c210984a334a761cecb9ed969afe7df`で旧`TemplatesFixedHeightContainer`の固定高と`overflowY:auto`を削除した後、`df00e543ffe29ab4ae3cdc9a27f90fa285f9dddb`で追加されたGenerator内のflex rowに`min-height:0`等の縮小制約がなく、固定viewport、AirArrayManagerの`overflow-hidden`、Detail cardの本文領域が組み合わさって内部scroll境界を失ったことにある。release commit `8d2dbf16a7d77642d7166d18d02b6b2f917e89e4`のDetail変更は編集buttonのdisabled条件だけで、このregressionの導入元ではない。
 
-完成条件は、短いviewport、alert有無、schedule未選択／選択後、worker／security report等の縦長内容で、headerと確定buttonが常時到達可能、ListとDetail本文が独立してscrollし、狭い横幅の既存挙動を維持すること。画面全体scrollの単純復活だけでは完了としない。source regression testとreviewは完了したが、実data状態のDev再受入れは`Pending`のためSCR-02を0点のまま保持する。
+完成条件は、短いviewport、alert有無、schedule未選択／選択後、worker／security report等の縦長内容で、headerと確定buttonが常時到達可能、ListとDetail本文が独立してscrollし、狭い横幅の既存挙動を維持すること。画面全体scrollの単純復活だけでは完了としない。source regression test、review、Local確認、利用者のDev受入れ報告が揃ったためSCR-02のこの補正範囲も完了とする。

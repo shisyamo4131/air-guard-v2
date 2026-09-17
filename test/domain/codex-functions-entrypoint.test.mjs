@@ -3,9 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const PUBLIC_CALLABLES = [
-  "archiveCustomer",
   "archiveEmployee",
-  "archiveSite",
   "changeAdminUser",
   "checkEmailAvailability",
   "checkUserPreRegistration",
@@ -20,12 +18,10 @@ const PUBLIC_CALLABLES = [
   "listLifecycleOperations",
   "rebuildAllHistories",
   "rebuildSecurityReportIndexes",
-  "reactivateSite",
   "reinstateEmployee",
   "setupUserAccount",
   "saveOperation",
   "terminateEmployee",
-  "terminateSite",
   "updateCompanyArrangement",
   "updateCompanyBilling",
   "updateCompanyOperations",

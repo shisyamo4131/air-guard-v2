@@ -38,7 +38,6 @@ test("Employee lifecycle UI has no direct Firestore lifecycle mutation", async (
     ".toTerminated(",
     "dateOfTermination =",
     "reasonOfTermination =",
-    "toDelete",
   ]) {
     assert.equal(source.includes(forbidden), false, forbidden);
   }

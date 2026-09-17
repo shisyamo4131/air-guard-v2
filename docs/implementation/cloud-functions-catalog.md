@@ -8,6 +8,8 @@
 
 > 2026-09-12 FGA-04追記: `createEmployee`、`updateEmployeeBasic`、`updateEmployeeNationality`、`updateEmployeeSecurity`、`updateEmployeeCertifications`、`transitionEmployeeInsurance`は、通常Employee保存をmodel直接保存へ戻したためLocal sourceの公開entryから撤去した。以下の件数と一覧は2026-08-20時点の調査記録であり、現在のdeployment surfaceの確定には使用しない。Dev上の旧6 Function削除は[FGA-04反映記録](../verification/fga-04-employee-manager-lww-dev.md#削除後の確認)で完了を確認済み。本書の整理でlive remoteを再取得したものではない。
 
+> 2026-09-16 SCR-07追記: `archiveSite` CallableはSite標準archive移行に伴いLocal sourceの`functions/apis/index.js`から撤去した。旧Callable・独自envelope・strict actor・監査保存はHistoricalであり、live remoteの撤去状態は未確認である。
+
 ## 現行対象の確認先
 
 現在の反映範囲・完了状態は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)と対象機能の検証記録へ照合する。新しいreleaseでは[Dev runbook](../runbooks/dev-deployment.md)に従いactual sourceと対象環境を確認し、当時のexport一覧・件数・optionsを現在の稼働一覧として使わない。
@@ -160,3 +162,7 @@ scheduled handlerはerrorを吸収する。onUpdateCustomerも内部同期error�
 Firebase CLI、deploy、emulator、外部API、secret/env、実dataを使用していない。実deploy済みfunction一覧、Google Cloud側runtime overrides、IAM/invoker/App Check enforcement、retry policy、logs/metrics、traffic、cold start、quotaは未確認である。各handlerの業務algorithm、全error path、下流trigger完了順は既存個別文書の範囲を超えて再読していない。
 
 </details>
+
+## 2026-09-16 local source補正
+
+上記は2026-08-20時点のHistorical調査表であり、当時存在した`terminateSite`／`reactivateSite` Callable行と当時計数は履歴として保持する。現行local sourceではSCR-03により手動2 Callableとそのmanual mappingを撤去済みで、公開scheduled exportは`runDailySiteTermination`（内部module helperは`sitesAutoTermination`）である。Dev／remote deploymentの現行export一覧は本書だけでは確認していない。

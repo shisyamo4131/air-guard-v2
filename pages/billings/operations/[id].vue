@@ -92,10 +92,8 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
             </OperationBillingManager>
           </v-col>
           <v-col v-if="doc.isBillable" cols="12">
-            <OperationRowsManager
-              :document-id="docId"
-              kind="billing"
-              group="articles"
+            <OperationArticlesManager
+              :doc="doc"
               label="稼働外売上"
             />
           </v-col>

@@ -1,17 +1,17 @@
 import { Employee, Certification, Insurance } from "@shisyamo4131/air-guard-v2-schemas";
-import { BASIC_FIELDS, NATIONALITY_FIELDS, SECURITY_FIELDS, DATE_FIELDS, CERTIFICATION_FIELDS, INSURANCE_KINDS, EmployeeOperationError, employeeAllowed, plain, rawForClass } from "./employeeContract.js";
+import { BASIC_FIELDS, NATIONALITY_FIELDS, SECURITY_FIELDS, DATE_FIELDS, CERTIFICATION_FIELDS, INSURANCE_KINDS, EmployeeOperationError, identifier, plain, rawForClass } from "./employeeContract.js";
 import { insuranceVersions, validateInsuranceRaw } from "./employeeInsuranceContract.js";
 
 export const archiveIdentifier = (value) => typeof value === "string" && value.length > 0 && value.length <= 128 && value.trim() === value && !/[\/\u0000-\u001f\u007f]/u.test(value);
-export const archiveActorAllowed = (identity, actorUser) => employeeAllowed({ ...identity, actorUser }, false)
-  && (actorUser.isAdmin === true || actorUser.roles.includes("manager"));
+export const archiveActorAllowed = (identity, actorUser) =>
+  identifier(identity?.uid) && identifier(identity?.companyId)
+  && actorUser?.docId === identity.uid && actorUser?.companyId === identity.companyId
+  && actorUser.disabled === false && actorUser.isTemporary === false;
 export const archiveFail = (code = "failed-precondition", message = "従業員情報や参照情報を確認できないため、アーカイブできません。") => { throw new EmployeeOperationError(code, message); };
 const exact = (value, keys) => plain(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
 export function parseEmployeeArchiveInput(input) {
-  if (!exact(input, ["employeeId", "reason", "operationId"]) || !archiveIdentifier(input.employeeId) || !archiveIdentifier(input.operationId) || typeof input.reason !== "string") archiveFail("invalid-argument");
-  const reason = input.reason.trim();
-  if (!reason.length || reason.length > 200 || /[\u0000-\u001f\u007f]/u.test(reason)) archiveFail("invalid-argument");
-  return { employeeId: input.employeeId, operationId: input.operationId, reason };
+  if (!exact(input, ["employeeId"]) || !archiveIdentifier(input.employeeId)) archiveFail("invalid-argument");
+  return { employeeId: input.employeeId };
 }
 export function archiveTimestamp(value) {
   return value !== null && typeof value === "object" && !(value instanceof Date) && typeof value.toDate === "function"
@@ -59,9 +59,9 @@ export function validateEmployeeArchiveRaw(raw, employeeId) {
   return raw; // validation candidates never become the copied snapshot
 }
 export function validateEmployeeArchiveEnvelope(envelope, employeeId) {
-  if (!exact(envelope, ["schemaVersion", "employee", "audit"]) || envelope.schemaVersion !== 1 || !exact(envelope.audit, ["operationId", "reason", "actorUid", "archivedAt"]) || !archiveIdentifier(envelope.audit.actorUid) || !archiveTimestamp(envelope.audit.archivedAt)) archiveFail("already-exists", "同じIDのアーカイブを確認できません。");
-  const parsed = parseEmployeeArchiveInput({ employeeId, operationId: envelope.audit.operationId, reason: envelope.audit.reason });
-  if (parsed.reason !== envelope.audit.reason) archiveFail("already-exists");
+  if (!exact(envelope, ["schemaVersion", "employee", "audit"]) || envelope.schemaVersion !== 1 || !exact(envelope.audit, ["operationId", "reason", "actorUid", "archivedAt"]) || !archiveIdentifier(envelope.audit.operationId) || !archiveIdentifier(envelope.audit.actorUid) || typeof envelope.audit.reason !== "string" || !archiveTimestamp(envelope.audit.archivedAt)) archiveFail("already-exists", "同じIDのアーカイブを確認できません。");
+  const reason = envelope.audit.reason.trim();
+  if (!reason.length || reason.length > 200 || /[\u0000-\u001f\u007f]/u.test(reason) || reason !== envelope.audit.reason) archiveFail("already-exists");
   validateEmployeeArchiveRaw(envelope.employee, employeeId);
   return envelope;
 }

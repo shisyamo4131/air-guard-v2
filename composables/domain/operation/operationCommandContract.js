@@ -2,17 +2,12 @@ import { expectedFields } from "../shared/valueContract.js";
 
 export const OVERVIEW_FIELDS = Object.freeze(["siteId", "securityType", "dateAt", "dayType", "shiftType", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes", "requiredPersonnel", "qualificationRequired", "workDescription", "remarks"]);
 export const WORKER_FIELDS = Object.freeze(["id", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes", "isQualified", "isOjt"]);
-export const ADJUSTED_FIELDS = Object.freeze(["useAdjusted", "adjustedQuantityBase", "adjustedOvertimeMinutesBase", "adjustedQuantityQualified", "adjustedOvertimeMinutesQualified", "adjustedUnitPriceBase", "adjustedOvertimeUnitPriceBase", "adjustedUnitPriceQualified", "adjustedOvertimeUnitPriceQualified"]);
 export const WORKER_PARENT_FIELDS = Object.freeze(["siteId", "dateAt", "shiftType", "startTime", "endTime", "isStartNextDay", "breakMinutes", "regulationWorkMinutes"]);
 
 export function operationExpectedKeys(command) {
   const { action, changes } = command;
   if (action === "create") return [];
   if (["workers", "notify"].includes(action)) return ["operationResultId", "siteId", "dateAt", "employees", "outsourcers"];
-  if (action === "articles") return ["articles"];
-  if (action === "adjusted") return [...ADJUSTED_FIELDS];
-  if (action === "agreement") return ["siteId", "dateAt", "shiftType", "agreement", "billingDateAt"];
-  if (action === "lock") return ["isLocked"];
   if (action === "order") return ["siteId", "dateAt", "shiftType", "displayOrder", "operationResultId"];
   if (action === "delete") return ["siteId", "employees", "outsourcers", "articles", "operationResultId", "siteOperationScheduleId", "updatedAt"];
   const fields = new Set(Object.keys(changes));

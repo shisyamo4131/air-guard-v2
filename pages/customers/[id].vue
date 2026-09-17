@@ -56,7 +56,7 @@ function handleClickUpdateSite(item) {
   router.push(`/sites/${item.docId}`);
 }
 
-function handleArchived() {
+function handleDeleted() {
   router.push("/customers");
 }
 
@@ -88,10 +88,21 @@ onUnmounted(unsubscribe);
                   @click:edit="toUpdate"
                 >
                   <template #actions>
-                    <CustomerArchiveDialog
-                      :customer="customerInstance"
-                      @archived="handleArchived"
-                    />
+                    <CustomerManager
+                      :model-value="customerInstance"
+                      archive-mode
+                      @delete="handleDeleted"
+                    >
+                      <template #activator="{ toDelete }">
+                        <v-btn
+                          color="error"
+                          prepend-icon="mdi-archive-arrow-down-outline"
+                          text="アーカイブ"
+                          variant="outlined"
+                          @click="() => toDelete()"
+                        />
+                      </template>
+                    </CustomerManager>
                   </template>
                 </CustomerActivatorBase>
               </template>

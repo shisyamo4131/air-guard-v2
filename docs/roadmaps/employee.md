@@ -17,7 +17,11 @@
 
 EMP-01〜09は2026-09-07までの完了記録であり、得点と受入れ証拠を保持する。後続の通常保存・認可・Manager構成は[現行仕様](../specification.md#employeeの操作権限と保持)、適用状態は[FGAロードマップ](foundational-governance-alignment.md)、実装差は[Employee実装記録](../implementation/employee-master.md#fga-04での情報分類)を正とする。
 
-以下の工程表・操作表・互換性節にある所有fieldの部分保存、旧専用Callable、局所競合拒否、通常情報の7actor限定、旧Manager撤去はEMP当時の契約である。FGA-04後の通常document保存へ再適用しない。保険世代値と複数端末の保護限界は[保険実装記録](../implementation/employee-insurance.md#fga-04後の保存と検証境界)を参照する。archive、退職・誤退職訂正、User/Authの専用境界、tenant開放・data補完・purgeの別承認は維持する。
+2026-09-17時点のSCR-10 Employee archive prelocalは、本ロードマップのEMP得点を変更しない別工程である。現行入口はread-only Callable preflight後の標準`Employee.delete()`で、復元・purge・remote反映は未提供・未確認である。詳細は[標準CRUD整合ロードマップ](standard-crud-alignment.md)と[Employee実装記録](../implementation/employee-master.md)を正とする。
+
+以下の工程表・操作表・互換性節にある所有fieldの部分保存、旧専用Callable、局所競合拒否、通常情報の7actor限定、旧Manager撤去はEMP当時の契約である。FGA-04後の通常document保存へ再適用しない。保険世代値と複数端末の保護限界は[保険実装記録](../implementation/employee-insurance.md#fga-04後の保存と検証境界)を参照する。SCR-10の現行archive契約は本文冒頭と標準CRUDロードマップを正とし、過去のtenant開放・data補完・purge記録を現在のallowlistやactor条件として扱わない。
+
+## Historical: EMP-01〜09完了記録
 
 ## 正本と維持する境界
 
@@ -65,9 +69,9 @@ EMP-05計画・初回終了時点の履歴: 内部順序はreader/参照契約�
 | EMP-06 一覧・検索・User画面 | 10 | 10 | Completed | EMP-08で認可取得失敗のerror・再読込を是正して再受入れした。以下の成果と[最終検証](../verification/employee-08-local.md)を照合済み。 在職/退職一覧を専用の認可付き購読とlatest-wins sessionへ移し、空・loading・error/再読込、作成導線を確定挙動へ揃えた。User panelは既存UWBの仮User作成・削除を維持して専用dialogへ移し、到達するEmployee CRUDからAirItemManager/AirArrayManagerと旧model保存依存を除去した。統括退職をstrict preset検証後だけclient/serverで許可し、直接permission・未知role・本人等の拒否を維持した。[検証記録](../verification/employee-06-local.md)を参照。 |
 | EMP-07 独立課題の一括確認・修正 | 5 | 5 | Completed | Employee関連FUTを現在仕様・到達経路・EMP-02〜06実装・対象272件と全domain 1501件へ照合した。EMP-08を阻害する未修正問題は確認されず、製品code・UIを変更せず、将来workflow・privacy/監査・purge・全Manager・EMP-09のDev/data確認へ分類した。[検証記録](../verification/employee-07-independent-issues.md)を参照。 |
 | EMP-08 Local統合確認 | 5 | 5 | Completed | 全目的と最終diff、必須gate、独立review、直接回帰、専用Emulator、利用者Chrome、clean source専用build、cleanupを対応づけた。初回reviewの2製品不具合と現行文書の矛盾を是正し、先送りせず再受入れした。[最終記録](../verification/employee-08-local.md)を参照。 |
-| EMP-09 Dev反映・受入れ | 5 | 5 | Completed | bounded Dev release後、会社管理者の合成Employee作成、基本・国籍・警備員登録・資格・3保険編集、退職・復帰と、経理accountの一覧・詳細閲覧およびwrite導線非表示を確認した。通常archive APIのtenant allowlistは空のままarchiveを実行せず、User／Authenticationも作成・削除していない。[Dev受入れ結果](../implementation/master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果) |
+| EMP-09 Dev反映・受入れ | 5 | 5 | Completed（Historical） | bounded Dev release後、会社管理者の合成Employee作成、基本・国籍・警備員登録・資格・3保険編集、退職・復帰と、経理accountの一覧・詳細閲覧およびwrite導線非表示を確認した。当時のarchive API tenant allowlistは空のままarchiveを実行せず、User／Authenticationも作成・削除していない。[Dev受入れ結果](../implementation/master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果) |
 
-重み合計は100として確定した。全項目readはroleなし等の過剰readを許可しない。EMP-02で原本/archiveの認可と直接client CUD拒否を揃え、未移行editorはlocal read-onlyとする。混在payloadでも迂回できないことを確認し、EMP-03/04で専用writer完成後に再開する。EMP-05でreader互換と参照保護・archiveを確認し、EMP-06でUser shellと統括退職actorを整え、EMP-09でbounded Dev反映と権限別受入れを完了した。通常archive APIのtenant allowlist開放、実data補完、migration、Prodは別承認のままである。
+重み合計は100として確定した。以下はEMP当時の完了記録であり、SCR-10-Aの現行actor・allowlist契約を定めない。全項目readはroleなし等の過剰readを許可しない。EMP-02で原本/archiveの認可と直接client CUD拒否を揃え、未移行editorはlocal read-onlyとする。混在payloadでも迂回できないことを確認し、EMP-03/04で専用writer完成後に再開する。EMP-05でreader互換と参照保護・archiveを確認し、EMP-06でUser shellと統括退職actorを整え、EMP-09でbounded Dev反映と権限別受入れを完了した。
 
 ## EMP-09 Dev受入れ完了（2026-09-07）
 
@@ -120,7 +124,7 @@ EMP-05計画・初回終了時点の履歴: 内部順序はreader/参照契約�
 
 ## 検証選択と現在の次作業
 
-現在の製品作業は[FGAロードマップ](foundational-governance-alignment.md)と[再開案内](../implementation/current-coordinator-handoff.md)へ進む。EMP-08・09の証拠はマイルストーン表を参照する。通常archive APIのtenant開放、旧client全件確認、remote実data補完、migration、Prodは別承認なしに進めない。
+現在の製品作業は[FGAロードマップ](foundational-governance-alignment.md)と[再開案内](../implementation/current-coordinator-handoff.md)へ進む。EMP-08・09の証拠はマイルストーン表を参照する。SCR-10は有効な認証済み本登録Userの同一tenant境界へ統一したprelocal実装・検証待ちであり、remote実data補完、migration、Prodは別承認なしに進めない。
 
 新しい変更の検証は[検証policy](../../governance/verification-policy.json)と[開発workflow](../runbooks/development-workflow.md)から実diffのclass unionで選ぶ。当時のgate集合を新しい変更への固定必須集合として複写しない。結果・exit・失効・省略理由を各completion reportへ記録する。
 
@@ -371,7 +375,7 @@ EMP-02の許可3actor/閲覧7actor/拒否actor、ACTIVE/RESIGNED、same-ID作成
 
 checkpoint: EMP-01-REACCEPT。baselineはprimary `C:\Users\seven\projects\AirGuard\air-guard-v2`、branch `codex/employee-master-roadmap`、`3759b703dd433db1e06176e3c30b12ac5535d7bc`。開始時のtracked/untracked/staged差分はなく、live remoteは未確認である。利用者の「EMP-01を開始」により、完了判定撤回後の採用済み仕様・対象・工程境界・受入条件を再照合した。製品code・Rules・schema・package・実data・environmentは変更せず、EMP-02以降の再受入れと専用UI buildは開始しない。
 
-[現行仕様](../specification.md#employeeの操作権限と保持)、ADR 0018・0020・0031・0055〜0060、[Employee設計契約](../implementation/employee-master.md#emp-01最終案の位置付け)、本書の工程表・受入れmatrixを確認した。通常編集3actor、原本/archive read 7actor、退職後通常編集禁止、archive実行2actor、専用operation・独立draft・所有field保存、局所期待値・保険別世代、保険field不存在時の初回作成、住所/座標失敗契約、表示名・code・作成導線、archive/参照保護とpurgeの工程分離は一致している。ADR 0056・0057の古い判断には0058・0060による置換先が明記され、新しい業務判断を要する矛盾はなかった。
+[現行仕様](../specification.md#employeeの操作権限と保持)、ADR 0018・0020・0031・0055〜0060、[Employee設計契約](../implementation/employee-master.md#emp-01最終案の位置付け)、本書の工程表・受入れmatrixを確認した。通常編集3actor、原本/archive read 7actor、退職後通常編集禁止、SCR-10 archiveの有効な認証済み本登録User・同一tenant境界、専用operation・独立draft・所有field保存、局所期待値・保険別世代、保険field不存在時の初回作成、住所/座標失敗契約、表示名・code・作成導線、archive/参照保護とpurgeの工程分離は一致している。ADR 0056・0057の古い判断には0058・0060による置換先が明記され、新しい業務判断を要する矛盾はなかった。
 
 次工程reviewでは、EMP-02へ渡す入力・保存・認可・競合・失敗時・test前提が既に確定し、EMP-03〜05の工程境界とも一致することを確認した。EMP-01は利用者回答、仕様/ADR/設計反映、独立review、文書検証という完了条件を満たすためCompleted、得点0→10、EMP全体0%→10%へ戻す。これは製品runtime、EMP-02〜05、専用UI、Dev/remote/実dataの成功を示さない。新しい仕様・ADR・data契約・実装変更はなく、roadmapとCHANGELOGだけを現在状態へ整合する。rollbackはこの2文書のcorrective commitとし、製品実装やdataを戻さない。
 

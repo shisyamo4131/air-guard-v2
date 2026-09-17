@@ -5,14 +5,14 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { operationUxAllowed } from "@/utils/auth/policies/operationActorPolicy";
 import { confirmTerminatedScheduleSite } from "@/composables/application/siteOperationSchedule/confirmTerminatedSite";
 
-export function useOperationSubmission({ billing = false, concurrent = false } = {}) {
+export function useOperationSubmission({ concurrent = false } = {}) {
   const auth = useAuthStore(), { $firestore, $functions } = useNuxtApp();
   const busy = ref(false), uncertain = ref(false), message = ref("");
   let generation = 0, active = 0;
   let confirmationSignature = null;
   const confirmations = new Set();
   const scope = () => `${auth.companyId}/${auth.uid}`;
-  const allowed = computed(() => auth.isSuperUserClaimValid === true && operationUxAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser }, auth.user?.toObject?.() || auth.user, { billing }));
+  const allowed = computed(() => auth.isSuperUserClaimValid === true && operationUxAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser }, auth.user?.toObject?.() || auth.user));
   function clearConfirmations() { confirmationSignature = null; confirmations.clear(); }
   function reset() { generation++; active = 0; busy.value = false; uncertain.value = false; message.value = ""; clearConfirmations(); }
   function verify(owner, ticket) { if (ticket !== generation || owner !== scope() || !allowed.value) throw new Error("操作の対象が変わりました。"); }

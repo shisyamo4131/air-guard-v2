@@ -8,7 +8,7 @@
 import { useRoute } from "vue-router";
 import { useEmployeeDetailRead } from "@/composables/application/employee/useEmployeeDetailRead";
 import { User } from "@/schemas";
-import EmployeeArchiveDialog from "@/components/Employee/ArchiveDialog.vue";
+import { useEmployeeArchive } from "@/composables/application/employee/useEmployeeArchive";
 import EmployeeBaseInput from "@/components/Employee/CustomInput/Base.vue";
 import EmployeeNationalityInput from "@/components/Employee/CustomInput/Nationality.vue";
 import EmployeeSecurityGuardInput from "@/components/Employee/CustomInput/SecurityGuard.vue";
@@ -18,17 +18,41 @@ const route = useRoute();
 const { doc, users: userDocs, userError, loading, error, missing, canRead, excludeArchived } = useEmployeeDetailRead(() => String(route.params.id || ""));
 const user = new User();
 const showResignedAlert = computed(() => doc.value?.employmentStatus === "RESIGNED");
-function archived(id) { excludeArchived(id); return navigateTo("/employees"); }
+const employeeId = computed(() => String(route.params.id || ""));
+const archive = useEmployeeArchive(employeeId, doc);
+function archived() { excludeArchived(employeeId.value); return navigateTo("/employees"); }
+async function preflightAndDelete(toDelete) {
+  if (await archive.preflight()) toDelete();
+}
 </script>
 
 <template>
   <v-container>
-    <EmployeeArchiveDialog :employee-id="String(route.params.id || '')" :employee="doc" @archived="archived" />
+    <v-alert v-if="archive.message.value" type="warning" class="mb-3">{{ archive.message.value }}</v-alert>
     <v-progress-linear v-if="loading" indeterminate />
     <v-alert v-if="error || userError" type="error">{{ error || userError }}</v-alert>
     <v-alert v-else-if="missing" type="info">従業員情報が存在しません。</v-alert>
     <v-alert v-else-if="!canRead && !loading" type="info">従業員情報を閲覧できません。</v-alert>
     <v-row v-if="doc">
+      <v-col cols="12">
+        <EmployeeManager
+          :model-value="doc"
+          archive-mode
+          label="従業員のアーカイブ"
+          @delete="archived"
+        >
+          <template #activator="{ toDelete }">
+            <v-btn
+              color="error"
+              variant="outlined"
+              text="従業員をアーカイブ"
+              :loading="archive.busy.value"
+              :disabled="!archive.canStart.value"
+              @click="() => preflightAndDelete(toDelete)"
+            />
+          </template>
+        </EmployeeManager>
+      </v-col>
       <!-- 非在職アラート -->
       <v-col cols="12" v-if="showResignedAlert">
         <v-alert type="error"> この従業員は現在在職していません。 </v-alert>

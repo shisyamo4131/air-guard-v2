@@ -10,31 +10,42 @@
 
 2026-09-16現行補正: SCR-02の今回差分で、GeneratorはSchemas `SiteOperationSchedule.syncToOperationResult`へ接続済み。最終確定はArrangementNotificationを作成・更新せず、既存通知のactual値を読むだけである。旧`useOperationGenerator`、`saveOperation`の`convert`、notification expectation比較は撤去済み。OperationResult Rulesは同一tenantの有効な本登録Userへ通常read/writeを許可し、field・lock・worker・docIdの業務検証はSchemas／正規applicationへ委譲する。SCR-04へ二重計上しない。
 
+## 2026-09-17 Local verification closeout（score変更なし）
+
+専用snapshotによる実行件数、UI smoke、System/system欠落による阻害、cleanup、未検証範囲は[SCR Local verification receipt](../verification/scr-local-verification-2026-09-17.md)に固定した。利用者環境でのSCR-03/06/07/10追加Local受入れとSCR-05の登録button非表示の限定UI証拠は[新receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)に固定した。SCR-03/06/07/10はLocal検証済み・Dev受入れ待ち、SCR-05はImplementation（prelocal・検証継続/待ち）、取極め・調整・lock・稼働外売上は未確認、いずれも得点0。SCR-04/08/09に今回追加UI evidenceはなく、SCR-09 callable挙動と既存受入れ記録を維持する。
+
 基準はlocal mainの`048e44e9cfd4ca887ec328e7e835c291579e68af`。対象は今回確定したarchive・状態変更・請求・実績lock・実績化・通知・後続Triggerである。実コードとinstalledクラスを読取り、同じ基準でmasterと請求を独立調査した。remote適用状態、実data、画面実操作、送信、runtime testは未確認。以下の優先度は改修順の判断であり、不具合の深刻度や実装承認ではない。
 
 | 対象 | 判定 | 現在の実装と仕様との差 | 最小の改修単位・維持条件 |
 |---|---|---|---|
 | Customer通常CRUD・取引状態／Outsourcer通常CRUD・取引状態 | 維持 | 単数・複数ManagerがClass.create/updateへ接続済み | 既存の標準保存を作り直さない。Outsourcerで未提供のarchive/restoreを自動追加しない |
 | Site・Employee通常CRUD | 大筋一致 | 標準Manager/Class保存は存在するが、状態変更を拒否するRulesが残る | Siteは状態変更工程で必要なRulesを合わせる。Employee退職・訂正の専用保護と退職後の通常情報編集禁止は維持する |
-| Customer／Site／Employee archive | 高・要変更 | 専用Callableが独自envelopeを書いて原本をraw delete。標準Class.deleteを迂回し、原本delete・archive writeをRulesで拒否 | 各masterごとに入口、Classの従属検査、Rules、旧archive形式の互換性をまとめる。旧envelopeを標準restoreへ直接渡さない |
+| Customer／Site／Employee archive | SCR-06 Customer・SCR-07 Site・SCR-10 EmployeeはLocal検証済み・Dev受入れ待ち | Customer／Siteは標準Class.deleteへ移行し、Employeeはread-only preflight後に標準Class.deleteへ接続。Customerは通常basic/payment UPDATEからarchive入口を分離し、既存archive形式は保持 | 利用者環境LocalでCustomer／Siteの拒否・標準archive、Customer通常dialogのDELETE非表示、Employeeのpreflight拒否・標準archiveを確認済み。final product contentの一般code/security reviewはfinding 0。Dev受入れ、旧形式保持の継続確認、受容済みrace/direct SDK riskの別境界は残す |
 | Restore | 提供範囲確認・archiveと同時検討 | client-adapterに標準restoreはあるが、対象masterの通常復旧入口は今回の検索で見つからない | 基盤の存在と製品UI提供を区別する。既存dataの有無・変換要否は未確認で、自動migrationしない |
-| Site手動終了・再開 | 高・要変更 | 専用editor→useSiteActions→Callable→server transaction。Rulesにもstatus変更拒否が残る | 手動入口・標準保存・Rulesを一体で整合。Classにはterminateが存在するが再開条件の完全一致は未確認。自動終了のsystem処理は維持 |
+| Site手動終了・再開 | SCR-03 Local検証済み・Dev受入れ待ち | 専用editorをSiteManagerへ接続し、Site schemaの状態遷移検査とRulesのactor／tenant／metadata境界を追加。手動Callable／専用actionは撤去し、自動終了のsystem処理は維持 | 利用者環境Localで終了後のreload保持と再開直後の表示を確認済み。final product contentのsecurity reviewはfinding 0。再開後reload、Dev受入れ、Rules実行時構文確認を残す。package／data shape／migrationは変更しない |
+
+## SCR-03 Site手動終了・再開（2026-09-16、PRELOCAL）
+
+- 確認範囲: `components/Site/**`、`components/Sites/**`、Site pages、`schemas/Site.js`、`firestore.rules`、Site lifecycle Functions／API／composableを静的確認した。Installed packageのSiteは終了のみで再開条件を持たないため、root schema subclassで状態遷移・理由・actor UID・工期・予定条件を補完した。
+- 実装: 手動終了・再有効化をSiteManagerの標準`update()`へ接続し、標準UIのsubmit・loading・error・listener経路を利用する。TERMINATEDの通常編集禁止、終了時の予定条件、再有効化時のCustomer不変と新工期・理由、同一tenantの有効な本登録Userとactor UID境界を維持する。手動Callable、manual mapper、専用site action／function exportは撤去し、自動終了処理だけをFunctionsに残した。
+- 未完了: Rulesの実行時構文確認、Dev受入れは未実施。利用者環境Localでは終了後のreload保持と再開直後の表示をreceiptで確認し、再開後reloadは未確認。final product contentのsecurity review（`SCR-03-10-FINAL-SECURITY-14`）はfinding 0。schemaの予定確認は標準client update前の非atomicな事前検査であり、同時変更を完全に防止するものではない。
+- 影響: package／lock／node_modules、Firestore data shape、migration、remote data、外部環境、deployは変更していない。Rules実行時確認とDev受入れ前のため、承認なしにrelease・deployしてはならない。
 | Employee退職・訂正 | 標準CRUD化の例外・既存Callable維持 | 2026-09-16コード確認: 退職Callableは予約と実Userを照合してUserなし／本登録を分岐し、仮登録・不整合を拒否する。訂正Callableは最新の完了済み退職・User連携なし・lockを検証する | [SCR-09の個別完了条件](../roadmaps/standard-crud-alignment.md#scr-09-employee退職誤退職訂正の目的と完了条件)に従い、既存証拠と不足を照合する。標準toTerminatedへの置換、Userなしの別保存経路、package改修を前提にしない |
-| 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | 高・要変更 | Operation専用ManagerとsaveOperationが残る。Rulesはlock中update・lock変更・articles/調整値変更を拒否。Callableにもrole認可が残る | OperationResultsを共有する画面、標準OperationResult/OperationBilling、Rules、正規callerの撤去とtestを同じ工程で整合。経理画面へのアクセス制限は維持 |
+| 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | SCR-05 Implementation（prelocal・検証継続/待ち） | 標準OperationBillingManager／ArticleDetailsManagerとroot OperationBilling schemaへ移行。旧Operation専用Manager、result/articles Callable経路、請求専用Functions分岐を撤去。Rulesはlock中updateを許可し、updateのisLocked型を要求 | 利用者環境Localでは登録button非表示だけを確認（既存receiptを参照）。取極め・調整・lock・稼働外売上、operation direct test、SFC runtime、Rules Emulator、Dev受入れ、live Site agreement検証は未確認 |
 | 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
 | Billings入金予定日 | SCR-01 Completed | 詳細画面はManager/Classの標準update、Rulesはtenant共通の既存update、旧PaymentDateEditor・Callable・expected比較はsourceとDevから撤去済み。標準保存、listener再表示、日付条件・解除、背景writerとの併存をLocal確認し、Devの会社管理者画面で変更・解除・再表示・既存表示維持を受け入れた | 残作業なし。失敗経路は自動test成功を受入証拠とし、backend停止時の画面確認は完了条件外 |
 | 請求確定・確定後の編集削除 | 中・未提供UIを含む | 顧客請求のC/U/D handlerがunsupported。詳細の編集入口は入金予定日。Billingにstatus/confirmはあるが確定画面・issuer snapshot保存経路は今回未確認 | 「既存確定ロックの撤去」と誤分類しない。提供UI・標準保存・Rulesを実装する単位。現在の入金予定日編集から分ける |
 | 予定から実績化 | 高・要変更 | Generator→SiteOperationSchedule.syncToOperationResult。既存通知のactual値を読み、通知なしは予定値fallback。最終確定では通知を作成・更新しない | 標準sync、OperationResults作成Rules、既存通知の実勤務時間反映・予定との紐付けを整合。旧convert callerと通知期待値比較は撤去済み |
 | 配置通知作成 | 維持 | schedule.notifyでClassから通知documentを生成し予定側状態を同じtransactionで更新 | 後続通知生成と送信までclientへ移さない |
-| 配置確認・上番・下番／通知編集 | SCR-02 In Progress（Dev補正反映済み・Dev再受入れ待ち） | 単数・本人向けManagerはAir ManagerとArrangementNotificationの標準`update()`／遷移methodへ接続し、旧expected比較・patch transaction・再読込経路を撤去した。Schemas `3.0.0-dev.3`をroot/Functionsへ導入し、notify生成の`actualIsStartNextDay` parityをsaveOperationにも反映した。直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21、TESTERの会社管理者Local UI、ユーザー本人の遷移確認は成功した。DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した。Dev受入れでは上下番確定画面の縦長内容で確定buttonへ到達できない既存UI layout regressionを確認したが、Generator共通rowのscroll境界補正とsource regression test（TESTER最終39/39、review finding 0件）は完了し、Local UIも利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格とした | Devへ対象dataを用意できた後、同じUI条件を会社管理者で再受入れする |
+| 配置確認・上番・下番／通知編集 | SCR-02 Completed（Dev受入れ完了） | 単数・本人向けManagerはAir ManagerとArrangementNotificationの標準`update()`／遷移methodへ接続し、旧expected比較・patch transaction・再読込経路を撤去した。Schemas `3.0.0-dev.3`をroot/Functionsへ導入し、notify生成の`actualIsStartNextDay` parityをsaveOperationにも反映した。直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21、TESTERの会社管理者Local UI、ユーザー本人の遷移確認、Generator共通rowのscroll境界補正、source regression test、利用者によるDev受入れを完了した。DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した | Prod、FCM実配信、backend日付算術、dashboard本人表示は未検証のまま後続範囲とする |
 | Notifications生成・FCM・結果記録／実績から請求勤怠等の反映 | 維持 | ArrangementNotifications→Notifications→FCMの二段階Trigger、OperationResultのC/U/D→各projection同期が存在 | 新しい専用層を増やさず既存Triggerを維持。保存完了と後続反映完了を区別して検証する |
 
 ### 主な一次根拠
 
 実績化の現行判定はSCR-02で標準syncへ整合済み。下表に残る旧Generator→saveOperation記述は2026-09-15棚卸し時点の履歴であり、現行経路ではない。SCR-04は独立範囲のみを扱い、標準sync・通知不変・旧convert撤去を二重計上しない。
 
-- Master通常保存: `components/Customer/Manager/index.vue`、`components/Site/Manager/index.vue`、`components/Employee/Manager/index.vue`、`components/Outsourcer/Manager/index.vue`と各複数形Manager。専用archiveは[Customer](../../functions/modules/customer/archiveCustomer.js)、[Site](../../functions/modules/sites/archiveSite.js)、[Employee](../../functions/modules/employees/archiveEmployee.js)。[Rules](../../firestore.rules)のCustomers/Employees/Sitesおよびarchive matchを照合した。
-- Site状態更新: [useSiteActions](../../composables/application/site/useSiteActions.js)のterminate/reactivate、[server lifecycle](../../functions/modules/sites/lifecycle.js)。Employeeの専用入口は[LifecycleActions](../../components/Employee/LifecycleActions.vue)。installed Schemasの`src/Employee.js`のbeforeUpdate/toTerminatedは、状態更新拒否とUser削除を含む。
+- Master通常保存: `components/Customer/Manager/index.vue`、`components/Site/Manager/index.vue`、`components/Employee/Manager/index.vue`、`components/Outsourcer/Manager/index.vue`と各複数形Manager。Customer／Site／Employee archiveは標準Schema／ClientAdapterへ接続し、Employeeだけread-only preflightを先行する。[Rules](../../firestore.rules)のCustomers/Employees/Sitesおよびarchive matchを照合した。
+- Site状態更新: [SiteManager](../../components/Site/Manager/index.vue)からSite schemaの標準`update()`へ接続し、Rulesでtenant／actor UID／状態metadata境界を保護する。自動終了だけは[scheduled lifecycle](../../functions/modules/sites/autoTermination.js)に残す。Employeeの専用入口は[LifecycleActions](../../components/Employee/LifecycleActions.vue)。installed Schemasの`src/Employee.js`のbeforeUpdate/toTerminatedは、状態更新拒否とUser削除を含む。
 - 請求・lock: [OperationBilling Manager](../../components/OperationBilling/Manager/index.vue)、[useOperationSubmission](../../composables/application/operation/useOperationSubmission.js)、[operationWriteContract](../../functions/shared/operationWriteContract.js)、[Rules](../../firestore.rules)のisValidOperationResultClientCreate/Update/Delete。installed Schemasの`src/OperationBilling.js`の_shouldCheckLock/delete/toggleLockと`src/OperationResult.js`のhookを照合した。
 - 顧客請求: [customerBillingHandlers](../../handlers/customerBillingHandlers.js)、01-05で撤去した旧`updateBillingPaymentDate`のGit履歴、RulesのBillings match。installed Schemasの`src/Billing.js`に確定後update/deleteを一律拒否するhookは今回見つからない。
 - 実績化: `components/OperationResult/Generator/index.vue`、installed Schemasの`src/SiteOperationSchedule.js`の`syncToOperationResult`。同ID実績作成と予定更新を同じtransactionで行う。旧composableと旧convertは撤去済み。
@@ -47,13 +58,13 @@
 
 既存testには旧専用経路・client write拒否を期待するものがある。後続実装では`operation-write`、`operation-submission`、`billing-payment-date`、`client-billing-contract-parity`、各master archive、`employee-schema-compatibility`、`operation-result-projections`およびlocal harnessを対象に、旧期待値と新仕様を区別して更新する。今回testは存在・参照の確認だけで、runtime検証は実行していない。製品code、Rules、package、実data、remoteは変更していない。
 
-## SCR-02 Dev補正反映済み・Dev再受入れ待ちの実装状態（2026-09-16）
+## SCR-02 Dev受入れ完了の実装状態（2026-09-17）
 
 単数の配置通知編集、本人向け確認・上番・下番を`AirItemManager`／`AirArrayManager`へ接続し、編集対象`ArrangementNotification`の標準`update()`／`toConfirmed()`／`toArrived()`／`toLeaved()`等へ保存を委譲するcodeとtestを準備した。本人向け複数Managerは選択したlistener由来documentを追跡し、同documentのlistener更新時だけ編集中draft全体を最新instanceで置き換える。別documentだけの更新ではdraftを置き換えない。
 
 旧`useNotificationEditor`、`usePersonalNotification`、client／Functionsの`notificationStateContract`は到達元とtestを更新して削除した。`operationCommandContract`／`operationWriteContract`の`notificationExpectation`等は実績化で使用中のため維持する。Firestore Rules、配置通知の作成・状態変更Trigger、Notifications作成、FCM送信・結果記録には製品差分を加えていない。
 
-自動test codeは、標準クラスの4遷移、実勤務時刻・日跨ぎ・勤務時間、manager接続、同一tenant Rules、CONFIRMED／ARRIVED／LEAVED進入時のNotifications生成、同status非生成、`shouldNotify=false`を対象に更新した。listenerによる編集中draft全体の置換、別document更新時の入力維持、失敗時のdialog・入力保持、loadingと連打抑止はTESTERのLocal UIで確認した。Schemas `3.0.0-dev.3`はsource tag・release evidence・registry・root/Functionsのversion、resolved、integrity、installed sourceが一致し、`PostAdoption`は成功した。saveOperationのnotify生成分岐にも`actualIsStartNextDay`の実勤務値引継ぎを反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21は成功した。TESTERは会社管理者Local UIでLEAVED通知の取消、必須field validation、一時値保存、listener反映、reload保持、baseline復元を確認し、ユーザー本人は一方向遷移とLEAVED時の「閉じる」のみ表示を確認した。GitHub ActionsによるDevのHosting/Functions反映と会社管理者によるDev UI表示は成功したが、未確定dataが0件のため確定操作のDev受入れは未完了である。DEV read-only確認では配置通知2579件の必要最小fieldを取得し、翌日開始1件と関連予定・勤務実績の整合を確認したためmigration/repair不要と判断した。writeは0件である。Dev受入れ中に上下番確定画面の縦長内容で確定buttonへ到達できない既存UI layout regressionを確認したため、Generator共通rowへ`overflow-hidden`と`min-height: 0`を追加した。source regression testは左右独立scroll、右toolbar/actions固定、外側columnとalert→reload→row順序を固定し、TESTER最終39/39、review finding 0件である。Local UIは利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格とした。Dev再受入れは未実施で、SCR-02はDev補正反映済み・Dev再受入れ待ち、得点0である。[Local検証記録](../verification/scr-02-arrangement-notification-local.md)と[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)を参照する。
+自動test codeは、標準クラスの4遷移、実勤務時刻・日跨ぎ・勤務時間、manager接続、同一tenant Rules、CONFIRMED／ARRIVED／LEAVED進入時のNotifications生成、同status非生成、`shouldNotify=false`を対象に更新した。listenerによる編集中draft全体の置換、別document更新時の入力維持、失敗時のdialog・入力保持、loadingと連打抑止はTESTERのLocal UIで確認した。Schemas `3.0.0-dev.3`はsource tag・release evidence・registry・root/Functionsのversion、resolved、integrity、installed sourceが一致し、`PostAdoption`は成功した。saveOperationのnotify生成分岐にも`actualIsStartNextDay`の実勤務値引継ぎを反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21は成功した。TESTERは会社管理者Local UIでLEAVED通知の取消、必須field validation、一時値保存、listener反映、reload保持、baseline復元を確認し、ユーザー本人は一方向遷移とLEAVED時の「閉じる」のみ表示を確認した。GitHub ActionsによるDevのHosting/Functions反映と会社管理者によるDev UI表示は成功した。DEV read-only確認では配置通知2579件の必要最小fieldを取得し、翌日開始1件と関連予定・勤務実績の整合を確認したためmigration/repair不要と判断した。writeは0件である。Dev受入れ中に上下番確定画面の縦長内容で確定buttonへ到達できない既存UI layout regressionを確認したため、Generator共通rowへ`overflow-hidden`と`min-height: 0`を追加した。source regression testは左右独立scroll、右toolbar/actions固定、外側columnとalert→reload→row順序を固定し、TESTER最終39/39、review finding 0件である。Local UIの左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達、および利用者のDev受入れ報告によりSCR-02を完了した。[Local検証記録](../verification/scr-02-arrangement-notification-local.md)と[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)を参照する。
 
 ## SCR-01-01 保存契約の調査結果（2026-09-15）
 
@@ -163,10 +174,10 @@ remote反映とpost-checkの詳細は[SCR-01 Dev release記録](../verification/
 ## 確認済み実装事実（2026-09-14の記録）
 
 1. 現場稼働予定の単数・複数Managerは09で`AirItemManager`／`AirArrayManager`へ戻し、`SiteOperationSchedule` modelの作成・更新・削除を使う。請求には`OperationManager`／`OperationArrayManager`と`saveOperation`が残る。
-2. 予定の配置作業員は09で親`SiteOperationSchedule` modelの追加・変更・削除と`update()`へ戻した。実績詳細の作業員は07で通常client保存へ移行済みだが、稼働外売上は表示・操作・Callable経路を変更していない。
+2. 予定の配置作業員は09で親`SiteOperationSchedule` modelの追加・変更・削除と`update()`へ戻した。実績詳細の作業員は07で通常client保存へ移行済みである。稼働外売上はSCR-05で標準`ArticleDetailsManager`へ接続した。
 3. 過去実装では作業員配列を`WorkersManager`／`AirArrayManager`の`v-model`で編集し、submit完了時に親`OperationResult.update()`を実行していた。直近実装で追加された`useOperationResultWriter`とEmployee存在確認transactionはこの復元経路に不要であり、FGA-06-RESULT-CALLABLE-RESTORE-07で撤去した。
-4. `functions/shared/operationWriteContract.js`が`create`、`duplicate`、`overview`、`workers`、`articles`、`order`、`delete`、`notify`、`convert`、`agreement`、`adjusted`、`lock`を一つのcommand契約へ集約する。
-5. `functions/modules/operations/saveOperation.js`には予定commandとSite `scheduleRevision`処理が互換用に残るが、09の正規予定画面からは到達しない。予定から実績への確定と請求の取極め・調整・lockは引き続きserver入口を使う。
+4. （履歴）`functions/shared/operationWriteContract.js`は旧時点で`agreement`、`adjusted`、`lock`等を含む一つのcommand契約へ集約していた。SCR-05後の現行Functions契約は`schedule`／`result`の標準操作と通知の残存経路に限定し、稼働請求専用actionは受け付けない。
+5. `functions/modules/operations/saveOperation.js`には予定commandとSite `scheduleRevision`処理が互換用に残るが、09の正規予定画面からは到達しない。SCR-05後は稼働請求の取極め・調整・lockをこのserver入口へ接続しない。
 6. Firestore Rulesは`SiteOperationSchedules`と`ArrangementNotifications`を同一tenantの有効な本登録Userによる通常read/writeへ開き、Site revision、maintenance、live Site、通常field形状を重複検査しない。未認証、User不在、仮登録、無効User、claim不正、他tenantは拒否する。`OperationResults`の個別境界は08までの実装を維持する。
 7. `saveOperation`の実績`create`・`overview`・`workers`・`delete`は正規画面から到達しない旧互換経路であり、入力契約で拒否する。予定の旧分岐は正規画面から外れた互換codeとして残す。実績複製、稼働外売上、請求、予定から実績への確定は変更せず、従来経路を維持する。
 
@@ -247,7 +258,16 @@ checkpointは後続07と同じDev release・受入れで完了した。schema変
 - Rulesは予定と配置通知をtenant共通の通常read/writeへ簡素化し、Site revision、maintenance、live Site、field形状、実績化済み状態の重複検査を撤去した。identityとtenant境界、nested pathの既定拒否は維持する。
 - 予定から実績への確定、請求、実績複製、稼働外売上、schema package、data shape、migration、Dev・Prodは変更しない。
 - Dev受入れで、上下番確定の左一覧と右詳細・日報写真が表示されず、外枠のManagerだけが表示される不具合を確認した。原因は予定Managerの明示的な`table`表示口と汎用転送の同名表示口の重複であり、汎用転送から`table`を除外するLocal補正と回帰testを追加した。
-- 対象test 36/36件、全domain 1,434/1,434件、buildはexit status 0。補正版commit `12f05e5a`をGitHub ActionsでHostingへDev再反映した。配置管理・上下番確定処理そのものの再受入れは未実施であり、エラー解消済みとは扱わない。
+- （2026-09-16時点の記録）対象test 36/36件、全domain 1,434/1,434件、buildはexit status 0。補正版commit `12f05e5a`をGitHub ActionsでHostingへDev再反映した。当時は配置管理・上下番確定処理そのものの再受入れが未実施だった。2026-09-17の利用者報告により、上下番確定処理のSCR-02重複範囲は解消済みであり、配置管理の受入れだけが現行の残存範囲である。
+
+## SCR-05 稼働請求・実績lock・稼働外売上 prelocal実装（2026-09-16）
+
+- 稼働請求詳細の基本情報・取極め・請求明細は標準`OperationBillingManager`へ接続し、稼働外売上は標準`ArticleDetailsManager`を使う`OperationArticlesManager`へ移行した。子配列の追加・更新・削除は親documentのcloneへ反映して`OperationBilling`／`OperationResult.update()`で保存する。
+- `OperationResult`はlock中のUI編集を拒否し、`OperationBilling`はlock中も請求編集を許可する。稼働請求の作成・削除は引き続きUIで提供しない。article行の`ArticleDetail`／`articleId`形状と既存の表示・入力・取消・保存失敗時の入力保持を維持する前提である。
+- 旧`OperationManager`、`OperationArrayManager`、`OperationRowsManager`、`OperationEditor`、`useOperationEditor`は正規callerがなくなったため撤去した。`saveOperation`のFunctions契約・dispatchから稼働請求専用の`overview`／`articles`／`agreement`／`adjusted`／`lock`経路と、正規callerのない実績`articles`経路を外し、予定・実績の残存操作と複製・通知経路は維持した。`saveOperation`本体とentrypointは、残存する予定・実績commandのため維持する。
+- RulesはOperationResultsの同一tenant境界と、OperationBillingのlock中updateを妨げない境界へ整合した。OperationResultのlock拒否はSchema／UI側で維持する。
+- OperationBillingの標準updateは、installed ClientAdapterの実在する`runTransaction`／`fetchDoc({ transaction })`／`update({ transaction })` APIを使い、Siteのlive agreement readとOperationResults writeを同一transactionへ渡す。OperationResultの通常更新は既存の標準update経路を維持する。runtime／Emulatorでの同時変更受入れは未確認である。
+- 状態はImplementation（prelocal・検証継続/待ち）。利用者環境Localでは登録button非表示だけを確認し、取極め・調整・lock・稼働外売上は未確認。schema、data shape、migration、既存data一括変更、remote、Dev／Prodも未確認であり、SCR-05の得点0を維持する。
 
 ## 未確認事項
 

@@ -12,7 +12,15 @@
 
 EmployeeはCallableでUser連携・予約・退職状態・処理中と履歴の整合性を事前検証し、許可後にブラウザのSchema標準archiveへ接続する。検証後から保存までにUser連携等が生じる可能性を利用者が低いと判断して受容したため、検証と保存のatomicityを完了条件にしない。専用Callable内で標準archiveまで完結させる案は採用しない。正規退職の保持、User連携あり拒否、訂正完了の履歴のみでは拒否しない条件は[現行仕様](../specification.md#employeeの操作権限と保持)を正とする。
 
-server-adapterにはhasManyの項目名不一致とtransaction外読取りがあり、改修はFUT-0144で後続とする。復元画面・旧形式対応もSCR-10の後続とし、稀な競合を受容することを自動復旧の提供済み保証に読み替えない。既存User/Auth操作の認可は維持する。今回は仕様と計画・将来課題の記録だけで、code・Rules・data・packageを変更しない。実装時は事前検証の許可／拒否、標準保存、失敗、tenant境界、履歴保持を確認し、文書rollbackは今回所有差分だけを戻す。
+server-adapterにはhasManyの項目名不一致とtransaction外読取りがあり、改修はFUT-0144で後続とする。復元画面・旧形式対応もSCR-10の後続とし、稀な競合を受容することを自動復旧の提供済み保証に読み替えない。既存User/Auth操作の認可は維持する。これは2026-09-16時点の仕様・計画・将来課題だけを記録した当時の判断であり、同日時点ではcode・Rules・data・packageを変更しなかった。実装時は事前検証の許可／拒否、標準保存、失敗、tenant境界、履歴保持を確認し、文書rollbackは当時の所有差分だけを戻す。
+
+## 2026-09-17改訂：SCR-10 prelocal実装とdirect SDK境界
+
+SCR-10では、既存Callableをread-only preflightへ縮小し、User連携・予約・処理中lock・LifecycleOperationsとHeadの整合、ACTIVE状態、同ID archive衝突を確認した後、正規画面のEmployeeManagerからSchema／ClientAdapter標準archiveへ進む方式を実装した。preflight拒否・失敗、または標準保存失敗は成功扱いにしない。完了済み誤退職訂正履歴だけでは拒否せず、既存履歴とUser/Authを削除しない。
+
+検証と標準保存の間のraceは今回も許容する。正規画面を使わないdirect SDK操作はpreflightを迂回し得るが、アプリが想定しない経路まで保証しない。このリスクに対するone-time grant、追加の管理document、追加roleは設けず、既存の認証・同一tenant境界、User/Auth保護を維持する。標準archiveの同IDraw移動と従属確認はSchema／ClientAdapterとRulesへ委譲し、既存archive dataは変換しない。
+
+影響範囲はEmployee archiveの正規UI、preflight Callable、Rules、関連文書に限定し、退職・誤退職訂正、`statusChangedAt = new Date()`、restore・purge、package・migration・remote反映は変更しない。rollbackはSCR-10所有差分を戻して正規archive入口を停止するが、既に移動したarchive dataをcode rollbackだけで復元しない。検証境界は自動test、Rules実行時検証、Local Emulator／UI、security review、Dev受入れであり、これら未完了のため製品完了・得点変更とは扱わない。
 
 ## 2026-09-15改訂：標準archive・restoreの採用
 

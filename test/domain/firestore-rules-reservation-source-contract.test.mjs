@@ -109,7 +109,10 @@ test("Billing uses an explicit tenant update boundary outside the fallback", asy
     /match \/Companies\/\{companyId\}\/OperationResults\/\{docId\} \{([\s\S]*?)\n    \}/u,
   )?.[1];
   assert.ok(operationResultBody, "OperationResults must have an explicit document match");
-  assert.match(operationResultBody, /allow read, write: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+  assert.match(operationResultBody, /allow read: if isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+  assert.match(operationResultBody, /allow create:/u);
+  assert.match(operationResultBody, /allow update:/u);
+  assert.match(operationResultBody, /allow delete:/u);
   assert.doesNotMatch(source, /isValidOperationResultClient(?:Create|Update|Delete)/u);
   assert.doesNotMatch(source, /isValidSiteReferenceCreate|hasExistingCustomerReferenceAfter|liveSiteExistsAfter/u);
   assert.doesNotMatch(source, /isValid(?:Site|Customer)ReferenceUpdate/u);
@@ -126,7 +129,7 @@ test("Billing uses an explicit tenant update boundary outside the fallback", asy
   );
   assert.match(
     source,
-    /function isValidSiteUpdate\(companyId, docId\)[\s\S]*?resource\.data\.status == 'ACTIVE'[\s\S]*?request\.resource\.data\.status == 'ACTIVE'[\s\S]*?request\.resource\.data\.docId == docId[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid[\s\S]*?hasValidSiteCustomerUpdate\(companyId\)/u,
+    /function isValidSiteUpdate\(companyId, docId\)[\s\S]*?request\.resource\.data\.docId == docId[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid[\s\S]*?resource\.data\.status == 'ACTIVE'[\s\S]*?request\.resource\.data\.status == 'ACTIVE'[\s\S]*?hasValidSiteCustomerUpdate\(companyId\)/u,
   );
   assert.match(
     source,
@@ -143,10 +146,7 @@ test("Billing uses an explicit tenant update boundary outside the fallback", asy
   assert.doesNotMatch(siteCustomerHelpers, /hasCurrentSiteCustomerSnapshot/u);
   assert.doesNotMatch(siteCustomerHelpers, /keys\(\)\.hasOnly/u);
   assert.doesNotMatch(siteCustomerHelpers, /request\.time/u);
-  assert.match(
-    source,
-    /!changed\.hasAny\(\['status'\]\)/u,
-  );
+  assert.match(source, /!changed\.hasAny\(\['customerId'\]\)/u);
   assert.doesNotMatch(siteCustomerHelpers, /!changed\.hasAny\([^)]*agreementsV2/u);
 });
 

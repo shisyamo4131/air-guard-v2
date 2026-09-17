@@ -189,7 +189,7 @@ onUnmounted(() => {
   detailReadSession.dispose();
 });
 
-function handleArchived() {
+function handleDeleted() {
   navigateTo("/sites");
 }
 </script>
@@ -231,7 +231,22 @@ function handleArchived() {
         <span v-if="doc.code">コード: {{ doc.code }}</span>
         <span>{{ doc.fullAddress || "住所未設定" }}</span>
         <v-spacer />
-        <SiteArchiveDialog :site="doc" @archived="handleArchived" />
+        <SiteManager
+          :model-value="doc"
+          archive-mode
+          label="現場のアーカイブ"
+          @delete="handleDeleted"
+        >
+          <template #activator="{ toDelete }">
+            <v-btn
+              color="error"
+              prepend-icon="mdi-archive-arrow-down-outline"
+              text="アーカイブ"
+              variant="outlined"
+              @click="() => toDelete()"
+            />
+          </template>
+        </SiteManager>
         <SiteEditorTerminate v-if="isActive" :site="doc">
           <template #activator="{ open, disabled }">
             <v-btn color="warning" variant="outlined" :disabled="disabled" @click="open">現場を終了</v-btn>

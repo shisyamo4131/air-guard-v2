@@ -1,7 +1,7 @@
 <script setup>
 /*****************************************************************************
  * @file components/Customer/Manager/index.vue
- * @description AirItemManagerを使った取引先通常作成・更新コンポーネント
+ * @description AirItemManagerを使った取引先通常CRUD・明示的アーカイブコンポーネント
  *****************************************************************************/
 import { Customer } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
@@ -9,6 +9,7 @@ import { useBaseManager } from "@/composables/useBaseManager";
 defineOptions({ inheritAttrs: false });
 
 const props = defineProps({
+  archiveMode: { type: Boolean, default: false },
   modelValue: {
     type: Object,
     default: () => new Customer(),
@@ -16,17 +17,13 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["created"]);
+const emit = defineEmits(["created", "updated", "delete"]);
 
 const { attrs } = useBaseManager("CustomerManager");
 
-function rejectUnsupportedOperation() {
-  throw new Error("この画面では指定された取引先操作を実行できません。");
-}
-
-function beforeEdit(editMode) {
-  if (editMode === "DELETE") {
-    return rejectUnsupportedOperation();
+async function beforeEdit(editMode) {
+  if (editMode === "DELETE" && !props.archiveMode) {
+    throw new Error("取引先のアーカイブは詳細画面から実行してください。");
   }
   return true;
 }
@@ -37,6 +34,10 @@ async function handleUpdate(draft) {
 
 async function handleCreate(draft) {
   return await draft.create();
+}
+
+async function handleDelete(draft) {
+  return await draft.delete();
 }
 </script>
 
@@ -51,12 +52,14 @@ async function handleCreate(draft) {
       'aria-label': $attrs.label,
     }"
     :before-edit="beforeEdit"
-    disable-delete
-    hide-delete-btn
+    :disable-delete="!props.archiveMode"
+    :hide-delete-btn="!props.archiveMode"
     :handle-create="handleCreate"
     :handle-update="handleUpdate"
-    :handle-delete="rejectUnsupportedOperation"
+    :handle-delete="handleDelete"
     @create="emit('created', $event)"
+    @update="emit('updated', $event)"
+    @delete="emit('delete', $event)"
   >
     <template #activator="slotProps">
       <slot name="activator" v-bind="slotProps" />

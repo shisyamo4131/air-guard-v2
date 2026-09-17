@@ -31,6 +31,8 @@ service cloud.firestore {
     function hasActiveRegisteredUser() {
       return hasValidIdentityClaims()
         && exists(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.docId is string
+        && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.docId == request.auth.uid
         && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.companyId is string
         && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.companyId == request.auth.token.companyId
         && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.isTemporary is bool
@@ -160,8 +162,7 @@ service cloud.firestore {
         && user.isTemporary is bool
         && user.isTemporary == false
         && user.disabled is bool
-        && user.disabled == false
-        && user.isAdmin is bool;
+        && user.disabled == false;
     }
 
     function canWriteSite(companyId) {
@@ -237,14 +238,45 @@ service cloud.firestore {
 
     function isValidSiteUpdate(companyId, docId) {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return resource.data.status == 'ACTIVE'
-        && request.resource.data.status == 'ACTIVE'
-        && request.resource.data.docId is string
+      return request.resource.data.docId is string
         && request.resource.data.docId == docId
         && request.resource.data.uid is string
         && request.resource.data.uid == request.auth.uid
-        && !changed.hasAny(['status'])
-        && hasValidSiteCustomerUpdate(companyId);
+        && (
+          (resource.data.status == 'ACTIVE'
+            && request.resource.data.status == 'ACTIVE'
+            && !changed.hasAny([
+              'status', 'statusChangedAt', 'statusChangedBy',
+              'statusChangeSource', 'statusChangeReason'
+            ])
+            && hasValidSiteCustomerUpdate(companyId))
+          || isValidSiteLifecycleUpdate(companyId)
+        );
+    }
+
+    function isValidSiteLifecycleUpdate(companyId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let common = request.resource.data.statusChangedAt is timestamp
+        && request.resource.data.statusChangedBy is string
+        && request.resource.data.statusChangedBy == request.auth.uid
+        && request.resource.data.statusChangeReason is string
+        && request.resource.data.statusChangeReason.size() > 0
+        && request.resource.data.statusChangeReason.size() <= 200;
+      let terminate = resource.data.status == 'ACTIVE'
+        && request.resource.data.status == 'TERMINATED'
+        && request.resource.data.statusChangeSource == 'MANUAL'
+        && common
+        && hasValidSiteCustomerUpdate(companyId)
+        && !changed.hasAny(['constructionPeriodStartAt', 'constructionPeriodEndAt', 'customerId']);
+      let reactivate = resource.data.status == 'TERMINATED'
+        && request.resource.data.status == 'ACTIVE'
+        && request.resource.data.statusChangeSource == 'REACTIVATION'
+        && common
+        && request.resource.data.constructionPeriodStartAt is timestamp
+        && request.resource.data.constructionPeriodEndAt is timestamp
+        && hasValidSiteCustomerUpdate(companyId)
+        && !changed.hasAny(['customerId']);
+      return terminate || reactivate;
     }
 
     function isSystemMaintenanceOff() {
@@ -345,28 +377,45 @@ service cloud.firestore {
     // 有効な認証済み本登録Userへ、同一tenant内の通常業務CRUDを許可する。
     // schemaと業務validationは保存境界で担い、Rulesではactorのuidを検証する。
     // 作成時は同ID archive不存在を維持する。
-    // 削除はclientへ許可しない。
+    // archiveは同一transaction内のraw copy + live deleteだけを許可する。
     match /Companies/{companyId}/Customers/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if isAuthenticated()
                     && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
                     && request.resource.data.uid == request.auth.uid
                     && !exists(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId));
       allow update: if isAuthenticated()
                     && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
                     && request.resource.data.uid == request.auth.uid;
-      allow delete: if false;
+      allow delete: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
+                    && !exists(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId))
+                    && existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId))
+                    && getAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId)).data == resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(docId));
     }
 
     // --- Rules for 'Customers_archive' subcollection under 'Companies' ---
-    // archiveはroot documentとnested pathを含めclientへ公開しない。
+    // archiveのread/update/deleteは拒否し、raw archiveの同時createだけを許可する。
+    match /Companies/{companyId}/Customers_archive/{docId} {
+      allow read, update, delete: if false;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
+                    && exists(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(docId))
+                    && get(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(docId)).data == request.resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(docId));
+    }
     match /Companies/{companyId}/Customers_archive/{document=**} {
       allow read, write: if false;
     }
 
     // --- Rules for 'Employees' subcollection under 'Companies' ---
     // 通常Employeeは同一tenantの有効な本登録Userへrole非依存で許可する。
-    // 退職・archive・User/Authは専用操作を維持し、client deleteは許可しない。
+    // archiveは同一transactionのraw moveだけを許可し、User/Auth保護と通常更新境界を維持する。
     match /Companies/{companyId}/Employees/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if isAuthenticated()
@@ -379,16 +428,27 @@ service cloud.firestore {
                     && resource.data.employmentStatus == 'ACTIVE'
                     && request.resource.data.uid == request.auth.uid
                     && preservesEmployeeLifecycleFields();
-      allow delete: if false;
+      allow delete: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
+                    && !exists(/databases/$(database)/documents/Companies/$(companyId)/Employees_archive/$(docId))
+                    && existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Employees_archive/$(docId))
+                    && getAfter(/databases/$(database)/documents/Companies/$(companyId)/Employees_archive/$(docId)).data == resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Employees/$(docId));
     }
 
     // --- Rules for 'Employees_archive' subcollection under 'Companies' ---
-    // Employees_archiveコレクションはCompaniesコレクションのサブコレクション。
-    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Employees_archive ドキュメントのみ Read/Write を許可。
+    // Employees_archiveは同一tenantの認証済みEmployee actorだけreadし、
+    // active Employeeとの同一ID raw moveのcreateだけを許可する。
     match /Companies/{companyId}/Employees_archive/{docId} {
       allow read: if isAuthenticated() && canReadEmployee(companyId);
-      allow write: if false;
+      allow update, delete: if false;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
+                    && exists(/databases/$(database)/documents/Companies/$(companyId)/Employees/$(docId))
+                    && get(/databases/$(database)/documents/Companies/$(companyId)/Employees/$(docId)).data == request.resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Employees/$(docId));
     }
 
     // --- Rules for 'mets' subcollection under 'Companies' ---
@@ -402,7 +462,24 @@ service cloud.firestore {
     // --- Rules for 'OperationResults' subcollection under 'Companies' ---
     // 同一tenantの有効な本登録Userによる通常CRUDを許可する。
     match /Companies/{companyId}/OperationResults/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if isAuthenticated()
+        && userCompanyId() == companyId
+        && request.resource.data.docId == docId
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.isLocked is bool
+        && request.resource.data.isLocked == false;
+      allow update: if isAuthenticated()
+        && userCompanyId() == companyId
+        && resource.data.docId == docId
+        && request.resource.data.docId == docId
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.isLocked is bool;
+      allow delete: if isAuthenticated()
+        && userCompanyId() == companyId
+        && resource.data.docId == docId
+        && resource.data.isLocked is bool
+        && resource.data.isLocked == false;
     }
 
     // --- Rules for 'SecurityReportIndexes' subcollection under 'Companies' ---
@@ -445,6 +522,7 @@ service cloud.firestore {
     // 読取りは既存の同一tenant境界を維持する。作成・更新は同一tenantの
     // 有効な認証済み本登録Userへ許可する。
     // customerIdなしの仮Siteを許可し、設定後のunsetは拒否する。
+    // archiveは同一transaction内のraw copy + live deleteだけを許可する。
     match /Companies/{companyId}/Sites/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if isSystemMaintenanceOff()
@@ -454,14 +532,26 @@ service cloud.firestore {
       allow update: if isSystemMaintenanceOff()
                     && canWriteSite(companyId)
                     && isValidSiteUpdate(companyId, docId);
-      allow delete: if false;
+      allow delete: if isSystemMaintenanceOff()
+                    && canWriteSite(companyId)
+                    && !exists(/databases/$(database)/documents/Companies/$(companyId)/Sites_archive/$(docId))
+                    && existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Sites_archive/$(docId))
+                    && getAfter(/databases/$(database)/documents/Companies/$(companyId)/Sites_archive/$(docId)).data == resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Sites/$(docId));
     }
 
     // --- Rules for 'Sites_archive' subcollection under 'Companies' ---
-    // archiveの読取りは同一tenantに維持し、client writeは全て拒否する。
+    // archiveのread/update/deleteは拒否し、raw archiveの同時createだけを許可する。
     match /Companies/{companyId}/Sites_archive/{docId} {
-      allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow write: if false;
+      allow read, update, delete: if false;
+      allow create: if isSystemMaintenanceOff()
+                    && canWriteSite(companyId)
+                    && exists(/databases/$(database)/documents/Companies/$(companyId)/Sites/$(docId))
+                    && get(/databases/$(database)/documents/Companies/$(companyId)/Sites/$(docId)).data == request.resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Sites/$(docId));
+    }
+    match /Companies/{companyId}/Sites_archive/{document=**} {
+      allow read, write: if false;
     }
 
     // --- Rules for 'SiteOperationSchedules' subcollection under 'Companies' ---

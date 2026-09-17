@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
@@ -18,19 +18,32 @@ test("Site detail identifies lifecycle state and keeps normal editors read-only 
   assert.match(source, /<SiteEditorReactivate v-else/u);
 });
 
-test("Site lifecycle dialogs gate by state and submit only exact callable inputs", async () => {
+test("Site lifecycle editors gate by state and use standard Manager input", async () => {
   const terminate = await read("components/Site/Editor/Terminate.vue");
-  assert.match(terminate, /!canWrite\.value \|\| props\.site\.status !== "ACTIVE"/u);
-  assert.match(terminate, /terminate\(\{ siteId: props\.site\.docId, reason: normalized \}\)/u);
-  assert.match(terminate, /maxlength="200"/u);
-  assert.match(terminate, /getSiteOperationErrorMessage/u);
+  assert.match(terminate, /<SiteManager/u);
+  assert.match(terminate, /lifecycle-mode="TERMINATE"/u);
+  assert.match(terminate, /custom-input="SiteLifecycleInput"/u);
+  assert.match(terminate, /props\.site\.status !== 'ACTIVE'/u);
 
   const reactivate = await read("components/Site/Editor/Reactivate.vue");
-  assert.match(reactivate, /!canWrite\.value \|\| props\.site\.status !== "TERMINATED"/u);
-  assert.match(reactivate, /reactivate\(\{[\s\S]*siteId: props\.site\.docId,[\s\S]*reason: normalized,[\s\S]*constructionPeriodStartDate: startDate\.value,[\s\S]*constructionPeriodEndDate: endDate\.value/u);
-  assert.match(reactivate, /startDate\.value > endDate\.value/u);
-  assert.match(reactivate, /取引先は変更せず/u);
-  assert.doesNotMatch(reactivate, /customerId\s*:/u);
+  assert.match(reactivate, /<SiteManager/u);
+  assert.match(reactivate, /lifecycle-mode="REACTIVATE"/u);
+  assert.match(reactivate, /custom-input="SiteLifecycleInput"/u);
+  assert.match(reactivate, /props\.site\.status !== 'TERMINATED'/u);
+});
+
+test("Site lifecycle custom input writes through AirItemManager updateProperties", async () => {
+  const manager = await read("components/Site/Manager/index.vue");
+  const lifecycle = await read("components/Site/CustomInput/Lifecycle.vue");
+  assert.match(manager, /ref="manager"/u);
+  assert.match(manager, /#input-default="inputAttrs"/u);
+  assert.match(manager, /manager\.value\?\.updateProperties\(changes\)/u);
+  assert.match(manager, /v-bind="\{ \.\.\.inputAttrs, updateProperties \}"/u);
+  assert.match(lifecycle, /updateProperties: \{ type: Function, required: true \}/u);
+  assert.match(lifecycle, /props\.updateProperties\(\{ constructionPeriodStartAt: \$event \}\)/u);
+  assert.match(lifecycle, /props\.updateProperties\(\{ constructionPeriodEndAt: \$event \}\)/u);
+  assert.match(lifecycle, /props\.updateProperties\(\{ statusChangeReason: \$event \}\)/u);
+  assert.doesNotMatch(lifecycle, /v-model="props\.item\.(?:constructionPeriodStartAt|constructionPeriodEndAt|statusChangeReason)"/u);
 });
 
 test("Terminated Site selection is visibly identified and requires explicit keep-terminated confirmation", async () => {
@@ -63,11 +76,17 @@ test("Terminated Site selection is visibly identified and requires explicit keep
   assert.match(terminatedPage, /router\.push\(`\/sites\/\$\{item\.docId\}`\)/u);
 });
 
-test("Site actions keep lifecycle calls inside the shared single-flight permission boundary", async () => {
-  const source = await read("composables/application/site/useSiteActions.js");
-  assert.match(source, /const siteFunctions = useSiteFunctions\(\)/u);
-  assert.match(source, /async function terminate\(\{ siteId, reason \}\)[\s\S]*executeSiteWrite\(SITE_WRITE_OPERATION\.TERMINATE[\s\S]*assertWritePermission\(\)[\s\S]*siteFunctions\.terminateSite\(\{ siteId, reason \}\)/u);
-  assert.match(source, /async function reactivate\([\s\S]*executeSiteWrite\(SITE_WRITE_OPERATION\.TERMINATE[\s\S]*assertWritePermission\(\)[\s\S]*siteFunctions\.reactivateSite/u);
+test("Site lifecycle actions do not use dedicated Callable methods", async () => {
+  const manager = await read("components/Site/Manager/index.vue");
+  assert.match(manager, /lifecycleMode/u);
+  assert.match(manager, /draft\.update\(\)/u);
+  assert.doesNotMatch(manager, /terminateSite|reactivateSite|httpsCallable/u);
+  await assert.rejects(
+    access(new URL("../../composables/application/site/useSiteActions.js", import.meta.url)),
+  );
+  await assert.rejects(
+    access(new URL("../../composables/site/useSiteFunctions.js", import.meta.url)),
+  );
 });
 
 test("Schedule input keeps confirmation metadata while normal saves use Air managers and the model", async () => {
@@ -77,14 +96,16 @@ test("Schedule input keeps confirmation metadata while normal saves use Air mana
   assert.match(input, /attachSiteScheduleConfirmation\(props\.item, \{[\s\S]*operationId: confirmationOperationId/u);
   assert.match(input, /onBeforeUnmount\(\(\) => clearSiteScheduleConfirmation\(props\.item\)\)/u);
 
-  const editor = await read("composables/application/operation/useOperationEditor.js");
   const submission = await read("composables/application/operation/useOperationSubmission.js");
-  assert.match(editor, /await confirmTerminatedScheduleSite/u);
   assert.match(submission, /await confirmTerminatedScheduleSite/u);
   assert.match(await read("components/SiteOperationSchedule/Manager/index.vue"), /<air-item-manager/u);
+  assert.match(await read("handlers/siteOperationScheduleHandlers.js"), /await item\.update\(\)/u);
   assert.match(await read("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js"), /await schedule\.update\(\)/u);
   assert.match(await read("composables/useSiteOperationScheduleDuplicator.js"), /instance\.duplicate\(selectedDates\.value\)/u);
   assert.match(await read("composables/application/operation/useOperationDuplicator.js"), /submission\.submit\(operations\)/u);
+  await assert.rejects(
+    access(new URL("../../composables/application/operation/useOperationEditor.js", import.meta.url)),
+  );
 
   const detail = await read("pages/sites/[id].vue");
   const arrangements = await read("components/Arrangements/Manager/index.vue");

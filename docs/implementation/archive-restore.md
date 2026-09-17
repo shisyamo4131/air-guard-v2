@@ -2,16 +2,28 @@
 
 ## 標準処理への切替えに残る実装差（2026-09-15）
 
-当面の方式は[共通仕様](../specification.md#ドキュメントのアーカイブと物理削除)で変更済み。今回の文書改訂では製品実装・Rules・dataを変更していない。
+当面の方式は[共通仕様](../specification.md#ドキュメントのアーカイブと物理削除)で変更済み。SCR-06でCustomerの標準Manager／Schema.deleteとRulesを適用した。既存archive dataは変更していない。
 
-- Customer／Site／Employeeは専用Callableでarchiveを作成し原本を削除している。保存dataはそれぞれ原本をcustomer／site／employeeに格納する独自envelopeで、標準adapterの元data移動と異なる。
+- CustomerはSCR-06、SiteはSCR-07で専用Callableを撤去し、標準adapterの元data移動へ切り替えた。EmployeeはSCR-10でCallableをread-only preflightへ縮小し、保存を標準adapterへ切り替える。Siteの旧Callable・独自envelopeはHistoricalであり、remote撤去状態は未確認である。
 - client-adapterのdeleteはクラスの従属検査後、元dataを同IDのarchiveへsetして原本をdeleteする。restoreはarchiveのdataをそのままactiveの同IDへsetするため、現在の独自envelopeを直接渡してはならない。
-- 切替え時にManager・Class接続、既存専用Callableとclient拒否Rules、既存archive形式の互換性、認証関連処理との分離、復旧入口を対象機能ごとに確認する。remoteのarchive有無・件数や変換要否は未確認であり、一括変換を承認済みと扱わない。
-- 標準処理は移動先の同ID存在を拒否せずsetする。衝突・再送の追加設計を採用済みと扱わず、削除機能全体の将来判断はFUT-0146へ集約する。
+- SCR-06ではManager・Class接続とRulesを確認し、既存archive形式は変換せず保持する。remoteのarchive有無・件数や変換要否は未確認であり、一括変換を承認済みと扱わない。
+- 標準処理は移動先の同ID存在を拒否せずsetする。Customerの標準archiveはSCR-06のRulesでraw同値とatomic pairを限定する。衝突・再送の追加設計を採用済みと扱わず、削除機能全体の将来判断はFUT-0146へ集約する。
+
+## Current SCR-06
+
+Customerの正規経路は単数Domain Managerの`toDelete`から`Customer.delete()`を呼び、Schemaの`hasMany`（`Sites.customerId`）で従属確認した後、ClientAdapterがraw同ID archive保存とlive削除を同一transactionで実行する。専用Callable、reason、監査envelope、Rulesへの従属queryは現行経路に含めない。旧形式archiveはHistoricalとして保持し、remote Functionの撤去状態は未確認である。
+
+## Current SCR-07
+
+Siteの正規経路は詳細画面のarchive mode `SiteManager`から`Site.delete()`を呼び、Schemaの`hasMany`（`SiteOperationSchedules.siteId`、`OperationResults.siteId`、`ArrangementNotifications.siteId`）で従属確認した後、ClientAdapterがraw同ID archive保存とlive削除を同一transactionで実行する。専用Callable、reason、監査envelope、Rulesへの従属queryは現行経路に含めない。旧形式archiveはHistoricalとして保持し、復元・物理削除の製品入口は提供しない。
+
+## Current SCR-10
+
+Employeeの詳細画面は専用Callableをread-only preflightとして呼び、User連携、Employee予約、processing lock、LifecycleOperationsとEmployeeLifecycleHeadsの整合、ACTIVE状態、maintenance、既存archive衝突を確認する。完了済みの誤退職訂正履歴だけでは拒否せず、最新Headが完了済みreinstatementを指す場合は許可する。preflight成功後に限り、`EmployeeManager`のarchive modeから`Employee.delete()`へ進み、Schemaの`hasMany`とClientAdapterがraw同ID archive保存・active削除を行う。Callableは保存せず、理由・operationId・独自envelopeも新規入力しない。既存archive dataは変換せず保持し、restore・purge・remote反映は未提供・未確認である。Rulesは同一tenant・認証・User/Auth保護を維持したatomic pairだけを許可する。direct SDK bypassと同時実行raceは今回の許容範囲であり、標準delete側の失敗は成功扱いにしない。
 
 以下は旧仕様下での実装記録・設計案。標準処理への移行条件として独自監査・barrier・purge案を再適用しない。
 
-## 共通仕様との対応（2026-09-06）
+## Historical: 旧方式の共通仕様との対応（2026-09-06）
 
 表は後続のEMP実装記録を反映して2026-09-12に整理した。環境状態は記録時点の証拠を参照し、live remoteを再確認したものではない。
 
@@ -22,7 +34,7 @@
 | 対象 | 実装記録 | 提供条件・残対応 |
 |---|---|---|
 | Customer | 専用archive Callable、live Siteマスター確認、version付き原本・監査、archive client read/CUD拒否 | OperationResults／Billingsはarchiveを妨げない。自動purge・通常restoreは提供しない |
-| Site | `functions/modules/sites/archiveSite.js`と`siteArchiveDocumentContract.js`。専用操作で同ID移動・監査・再送照合。archive readは同社の有効な本登録User、client CUD拒否 | トランザクション参照を走査しない。物理削除・通常restoreは未提供 |
+| Site | 旧`functions/modules/sites/archiveSite.js`と`siteArchiveDocumentContract.js`。専用操作で同ID移動・監査・再送照合 | Historical。現行SCR-07は標準Site.deleteへ移行し、既存archiveを変換・削除しない |
 | Employee | 専用archive、User/Auth・予約・lock・lifecycle確認、旧削除triggerの無作用化 | トランザクション参照と集約索引はarchive条件にしない。通常restore・purgeは未提供 |
 | Outsourcer | 通常製品でarchive・restore・物理削除を提供しない | 固有の非提供条件を維持する |
 | Article / generic adapter | 下記の旧共通基盤調査を参照 | metadata、参照検査、上書き、迂回、restoreの問題が未解決。新しい共通仕様の適用済み実装ではない |

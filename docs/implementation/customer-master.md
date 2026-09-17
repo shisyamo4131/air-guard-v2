@@ -18,21 +18,21 @@
 
 Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界のfile単位確認は[Article・Customer・Site pages deep review](article-customer-site-pages-deep-review.md)を、Customer componentの公開契約・Site作成からの候補選択境界は[Customer components deep review](customer-components-deep-review.md)を参照する。
 
-2026-08-11に採用したCustomerの通常CRUDに対する`customers:read`/`customers:write` server認可は、[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)とFGA-02-RULES-01で置き換えた。UIの作成・編集入口は既存のUX制御を維持するが、Rulesでは同一tenantの有効な本登録Userをroleによらず許可する。archiveはこの置換の例外であり、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)の専用認可を維持する。緊急restoreは通常UIから隔離した将来の運営者専用操作として別仕様・別認可を必要とし、物理deleteも提供しない。field分割は実需要が生じた場合だけ再検討する。
+2026-08-11に採用したCustomerの通常CRUDに対する`customers:read`/`customers:write` server認可は、[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)とFGA-02-RULES-01で置き換えた。UIの作成・編集・標準archive入口は既存のUX制御を維持するが、Rulesでは同一tenantの有効な本登録Userをroleによらず許可する。archiveは[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)改訂後の共通標準処理へ移行し、旧ADR 0046の専用認可・reason・監査envelopeはHistoricalとして扱う。緊急restoreは通常UIから隔離した将来操作であり、物理deleteも提供しない。
 
 | 入口 | 実装 | UIの入口条件 | Rulesの境界 |
 |---|---|---|---|
 | 一覧・作成 | `/customers` | `customers:write`を持つactorだけDrawer表示・route到達。到達後は再判定しない | 同一会社の有効な本登録User。作成はactor UID一致と同ID archive不存在を必須にする |
-| 詳細・更新 | `/customers/[id]` | 一覧と同じ`customers:write` route。到達後は再判定しない | 同一会社の有効な本登録Userとactor UID一致。client deleteは拒否 |
+| 詳細・更新・archive | `/customers/[id]` | 一覧と同じUX制御。到達後は再判定しない | 同一会社の有効な本登録User、maintenance停止、標準archiveのatomic pair。従属確認はSchema `hasMany` |
 | Autocomplete | `Customer/Autocomplete` | callerが`creatable`を表示した場合に単数Managerで作成。Manager内ではpermissionを再判定しない | 作成は一覧と同じ通常Rules |
 
-commit `79301b04ebaf5aab4898f1c122677780b11d9afc`では、一覧の行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡し、詳細へ遷移してfalseを返すことで内部dialogを抑止する。`CustomersManager`は一覧Createと選択dispatchを所有し、`CustomerManager`を呼ばない。Autocompleteは配列を所有せず新規単一instanceを生成するため、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)に従って`AirItemManager`を包む`CustomerManager`のCREATEを使用する。詳細の基本情報と支払条件は、同じ`CustomerManager`のUPDATEでfield集合だけを切り替える。通常data編集dialogは最大幅480pxとし、archiveは専用`CustomerArchiveDialog`へ委譲してgeneric deleteへ接続しない。
+commit `79301b04ebaf5aab4898f1c122677780b11d9afc`では、一覧の行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡し、詳細へ遷移してfalseを返すことで内部dialogを抑止する。`CustomersManager`は一覧Createと選択dispatchを所有し、`CustomerManager`を呼ばない。Autocompleteは配列を所有せず新規単一instanceを生成するため、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)に従って`AirItemManager`を包む`CustomerManager`のCREATEを使用する。詳細の基本情報・支払条件・archiveは、同じ`CustomerManager`の標準操作へ接続する。通常data編集dialogは最大幅480pxとし、archiveの従属確認はCustomer Schemaの`hasMany`へ委譲する。
 
-FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17では、`CustomerManager`独自の`operation` prop、単一`open`関数、`editor` slot上書き、編集中だけ固定するsnapshotを撤去した。ACTIVATOR-21でactivatorはbase `AirItemManager`のslot propsをそのままpass-throughし、callerが`toCreate`または`toUpdate`を直接呼ぶ構成へさらに簡素化した。UPDATE開始前のdoc ID検査と`disableUpdate`も置かず、保存時の標準契約へ委ねる。slot propsの`toDelete`はpass-throughされるが、製品のgeneric deleteは`beforeEdit`、disable・hide props、handlerで拒否する。Customerは段階移行中の例外として`includedKeys`を当面使用し、入力順はSchema定義順とする。既定editorのform validation、submit、mode管理を利用し、`useBaseManager`のattrsがbase Managerのerror・error clear・loading eventをアプリ標準のlogger、error message store、loading stateへ接続する。これは現行event契約に適合するため採用しており、`useBaseManager`の利用自体を全domain Managerへ強制するものではない。
+FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17では、`CustomerManager`独自の`operation` prop、単一`open`関数、`editor` slot上書き、編集中だけ固定するsnapshotを撤去した。ACTIVATOR-21でactivatorはbase `AirItemManager`のslot propsをそのままpass-throughし、callerが`toCreate`または`toUpdate`を直接呼ぶ構成へさらに簡素化した。Customerのarchiveは詳細画面のarchive modeだけで`toDelete`へ接続し、一覧Managerや通常のCustomerManager利用では入口を提供しない。Customerの通常CREATE・UPDATEは標準契約へ委ね、既定editorのform validation、submit、mode管理と`useBaseManager`のerror・loading経路を利用する。
 
-FGA-02-CUSTOMER-DIRECT-FIREMODEL-18では、両Managerの通常CREATE・UPDATEを編集対象Customer instanceの`create()`・`update()`へ直接接続した。ClientAdapterが`beforeCreate`／`beforeUpdate`、`beforeEdit`、Schema validation、会社prefix、`docId`・`uid`・`createdAt`・`updatedAt`、transactionによるdocument全体writeを担うため、同じ処理を複製していた`useCustomerActions`とCustomer専用writerを撤去した。ClientAdapter標準に従い管理日時はclientの`new Date()`で生成し、独自writerの`serverTimestamp()`は使用しない。Customer画面はDrawer・routeを`customers:write`のUX境界とし、到達後のManagerではpermissionを再検査しない。Autocompleteへの作成結果通知はCustomer instanceだけを渡し、作成開始時のtenant・actor scopeを保持する中継処理は置かない。Manager固有のerror classも設けず、通常の`Error`をbase Managerの標準error経路へ伝播する。
+FGA-02-CUSTOMER-DIRECT-FIREMODEL-18では、両Managerの通常CREATE・UPDATEを編集対象Customer instanceの`create()`・`update()`へ直接接続した。ClientAdapterがvalidation、会社prefix、管理field、document全体writeを担うため、同じ処理を複製していた専用writerを撤去した。SCR-06ではarchiveも同じ標準Manager／Schema経路へ接続した。
 
-Manager簡素化、FireModel直接接続、activator pass-throughを含むmerge commit `7d82996652d2d65448cf7eff9cd7e1ecc5457ae2`はGitHub Actions run #11でHostingへDev反映済みである。会社管理者の外部Chromeで一覧CREATE、詳細READ・UPDATE、listener反映、専用Callable archive、一覧消失を確認した。Autocomplete CREATEは到達可能な現行`creatable` callerがないためruntime未確認だが、source contractと自動testを満たす将来の未提供経路として区別し、現行Customer工程の完了を阻害しない。
+過去のManager簡素化・FireModel直接接続・activator pass-throughのDev記録は履歴である。現行SCR-06では詳細READ・UPDATE・標準archive入口を接続したが、runtime・Dev受入れは未確認である。Autocomplete CREATEは到達可能な現行`creatable` callerがないため未確認である。
 
 ## データ契約
 
@@ -41,7 +41,7 @@ Manager簡素化、FireModel直接接続、activator pass-throughを含むmerge 
 - 任意: `code`、`branchName`、`building`、`tel`、`fax`、`remarks`。`location` はhidden field。
 - token検索対象は `name` と `nameKana`。`code`、略称、支店名、住所、電話番号はtokenFieldsに含まれない。
 - 読み取り専用プロパティは `fullAddress` と `prefecture`。`fullAddress` は都道府県、市区町村、番地の結合で、建物名は含めない。
-- statusは `ACTIVE` と `TERMINATED`。schemaの`logicalDelete=true`とgeneric adapterには`Customers_archive/{docId}`へのcopy/deleteがあるが、製品のCustomer archiveには使用しない。[Customer archive safety](customer-archive-safety.md)を正とする専用Callable、参照barrier、Customer詳細の確認画面入口はCAS-02/03/04で実装し、CAS-05でDev反映・受入れ済みである。
+- statusは `ACTIVE` と `TERMINATED`。schemaの`logicalDelete=true`により標準adapterが`Customers_archive/{docId}`へraw copyしlive documentをdeleteする。Customerの旧専用Callable、参照barrier、確認画面はHistoricalであり、現行archiveは標準Manager／Schema `hasMany`へ委譲する。
 - `getPaymentDueDateAt(baseDate)` は締め基準月へ`paymentMonth`を加え、月末指定または指定日をJST基準で算出する。存在しない指定日は月末へ丸める。
 - 住所変更時はgeocodingを試みる。関数未注入、検索失敗、例外時も保存処理を中止せず`location=null`で継続する。緯度または経度が0の場合はtruthy判定により座標なしとして扱われる。
 
@@ -52,7 +52,7 @@ Manager簡素化、FireModel直接接続、activator pass-throughを含むmerge 
 - 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/contractStatus/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
 - `contractStatus`は基本情報editorで変更する。作成フォームには含めずACTIVEで作成する。詳細・一覧の状態表示はSchemaのtitleを使い、未知値は「不明」とする。
-- active Customerのclient deleteと`Customers_archive`のclient read/CUDはRulesで拒否する。参照確認、監査、同ID tombstoneを持つ専用archive Callableと参照writer barrierはCAS-02/03、理由・single-flight・安全なerror表示を持つ確認画面入口はCAS-04で実装し、CAS-05でDev反映・受入れ済みである。`canArchive`はbutton表示のUX判定にだけ使い、確定時はclientでrole・permission、User状態、special claimを再検査せずCallableへ渡す。破壊操作の対象取り違えを防ぐため、dialog操作中のtenant・actor UID、対象Customer、理由の同一性は維持し、入力検証、single-flight、idempotencyも残す。archive一覧とrestoreの画面入口はない。
+- active Customerの通常create/updateと標準archive deleteは、同一tenantの有効な本登録User、maintenance停止、actor UID、およびRulesのatomic archive境界に従う。archiveは標準Schemaの`hasMany`でSites参照を確認し、理由入力・専用Callable・監査envelope・client側role再検査は行わない。archive一覧とrestoreの画面入口はない。
 - 通常作成・更新はCustomer document全体をdraftとし、ClientAdapterが`docId`、`uid`、client `Date`による`createdAt`・`updatedAt`、`beforeCreate`／`beforeUpdate`、全Schema validationを適用してtransaction内の`set`でdocument全体を置換する。名称・住所等の派生fieldも同じdocumentに再生成する。
 - `CustomerManager`はlistener由来のCustomer instanceを`modelValue`へ直接渡す。編集中にlistenerが別のCustomer値を受信した場合も、base Managerの同期によりdraft全体が最新documentへ置き換わることを許容し、競合を理由とした拒否・警告・再読込要求は行わない。後にFirestore commitされたdocument全体を優先し、更新後の表示もlistener受信値を正本にする。Managerは通常保存のpermission・tenant・UIDを再判定せず、Rulesをserver境界とする。
 
@@ -80,20 +80,20 @@ Manager簡素化、FireModel直接接続、activator pass-throughを含むmerge 
 
 - draft作成時にinitial Customer copy、正式発行時にfull snapshotを固定する。発行済み再printはsnapshotを使い、master変更を反映しない。訂正はreason/history付きnew revisionとし、live Customer参照のPDFはdraftだけに限定する方針である。
 
-- schema上の直接`hasMany`とgeneric削除guardは`Sites.customerId`だけを対象とする。専用archive Callableはactual参照catalogとしてSites、OperationResults、Billingsをstatus限定なしで確認し、CAS-03 RulesとBilling server writerは3 collectionのcustomerId新規設定・変更へactive Customer document存在guardを適用する。これらはCAS-05でDev反映・受入れ済みである。
+- schema上の直接`hasMany`は`Sites.customerId`だけを対象とし、標準Customer.deleteの従属確認を担う。Rulesは同一tenant・maintenance停止・raw same-ID archiveとlive deleteのatomic boundaryだけを検査し、OperationResults／Billingsをarchiveの従属検査へ重複追加しない。remoteの適用状態は未確認である。
 - Billing作成時は現在のCustomer支払条件から`paymentDueDateAt`を算出してBillingへ保存する。その後のCustomer支払条件変更は既存Billingの期日を自動更新しない。
 - Billingは`customerId`を保持するがCustomer名称・住所のsnapshotは持たない。請求書PDF生成時は現在のCustomer masterを取得するため、名称・住所変更は過去Billingの再生成PDFにも反映され、Customerがarchive済み等で取得不能なら生成失敗になり得る。
 - Customer更新時の既存Functionは、`customerId`が一致するSiteの`customer`を同期する。ACTIVE限定ではない。Site経由の`cutoffDate`は新規Agreementの初期値へ、現在Customerの支払条件は新規Billingの期日へ流れる。Devの合成Siteで名称同期と新規Agreement初期締日を確認した。利用者指示により、請求機能の受入れは稼働実績管理改修後へ移し、今回の完了条件へ含めない。
 
 ## 削除・無効化
 
-- 契約終了・停止はTERMINATED、再開は`customers:write`によるACTIVE化とする。archiveは参照なし確認後の誤登録・重複だけに限定し、reason/actor/timeを保存する。通常User向けrestore・物理delete UIは設けない。
-- archiveはUser向けrecycle binではない。運営者はUser依頼に応じ監査付きで削除情報を確認でき、restoreは通常UIから隔離した緊急contingencyだけとする。active同IDがあればoverwriteせず拒否し、保持要件が決まるまで自動purgeしない。
-- archiveのexact actor、input、transaction、versioned envelope、参照writer barrier、client非公開、idempotency、rollbackは[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)と[実装設計](customer-archive-safety.md)で確定した。追加lock collectionは作らず、archive documentをsame-ID tombstoneとして使う。Callable・監査・冪等性はCAS-02、Rules・参照writer barrier・関連testはCAS-03、Customer詳細UIとlocal画面受入れはCAS-04で完了し、CAS-05でDev反映・受入れ済みである。
+- 契約終了・停止はTERMINATED、再開は`customers:write`によるACTIVE化とする。archiveは標準CustomerManagerのdelete経路で行い、Schema `hasMany`の参照確認に委譲する。通常User向けrestore・物理delete UIは設けない。
+- archiveはUser向けrecycle binではない。既存archiveは旧形式を含め保持し、復元・purgeは提供しない。SCR-06のruntime・Dev受入れは未確認である。
+- 旧CAS-02〜05のexact actor、reason、versioned envelope、参照writer barrier、専用Callable、監査・冪等性の記述はHistoricalであり、現行Customer archive契約ではない。
 
 - 取引状態の意味は[現行仕様](../specification.md#取引先現場取極め)を正とする。業務上の無効状態やlogical deleteと同一視しない。
-- 状態変更は基本編集から提供する。archiveは専用Callableとwrite actor限定の確認画面経路を実装し、CAS-05でDev反映・受入れ済みである。archive一覧、restore・物理deleteの製品経路は提供しない。
-- archive collectionのclient read/create/update/deleteはCAS-03 Rulesで全actorへ拒否し、CAS-05でDev反映・受入れ済みである。
+- 状態変更は基本編集から提供する。archiveは標準CustomerManagerのdelete経路から提供する。archive一覧、restore・物理deleteの製品経路は提供しない。SCR-06のruntime・Dev受入れは未確認である。
+- archive collectionはread/update/deleteを拒否し、createはraw同値のatomic pairだけをRulesで許可する。maintenance停止条件と同一tenant境界を維持する。
 
 ## Rules・tenant境界
 
@@ -125,5 +125,5 @@ Manager簡素化、FireModel直接接続、activator pass-throughを含むmerge 
 ## 未確認範囲
 
 - 他masterに残る汎用Air manager内部の全validation・表示実装。CustomerのAutocomplete内Createの単数Manager化と、一覧行選択を`CustomersManager`の`beforeEdit`へ渡す詳細navigationは実装済みである。Autocomplete Createは現行routeから到達する`creatable` callerがなくruntime未確認であり、将来到達可能なcallerを追加する時点で確認する。
-- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex。Customerの専用archiveはCAS-05とFGA-02最終Dev受入れで確認済みである。専用local FunctionsはCustomer同期triggerをexportせず、mock隔離testとremote trigger実行を区別する。
+- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex。Customerの旧専用archiveは履歴であり、SCR-06で標準Class.deleteへ移行した。標準archiveのruntime・Dev受入れは未確認である。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。

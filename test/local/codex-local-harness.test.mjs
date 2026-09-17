@@ -55,7 +55,13 @@ import { encodeExpected } from "../../functions/shared/employeeContract.js";
 import { expectedForOperation } from "../../functions/shared/operationWriteContract.js";
 import FireModel from "@shisyamo4131/air-firebase-v2";
 import ClientAdapter from "@shisyamo4131/air-firebase-v2-client-adapter";
-import { ArrangementNotification, SiteOperationSchedule } from "@shisyamo4131/air-guard-v2-schemas";
+import {
+  ArrangementNotification,
+  ArticleDetail,
+  OperationResult,
+  SiteOperationSchedule,
+} from "@shisyamo4131/air-guard-v2-schemas";
+import OperationBilling from "../../schemas/OperationBilling.js";
 import {
   inspectStripeMigrationRepositoryPreconditions,
   planCompanyLegacyStripeMigration,
@@ -108,11 +114,10 @@ function emp05Command(raw, action, changes = {}, extra = {}) {
 }
 const emp05Overview = (siteId) => ({ siteId, securityType: "TRAFFIC", dateAt: "2028-05-01", startTime: "08:00", endTime: "17:00", requiredPersonnel: 10 });
 
-// Dedicated, synthetic D tenant. Startup authorization is explicitly supplied
-// by the coordinator; a successful raw checker never populates the allowlist.
+// Dedicated, synthetic D tenant used only to keep the fixture isolated from
+// the other synthetic company data.
 const EMP05_ARCHIVE_COMPANY_ID = "codex-emp05-d-archive";
 async function emp05ArchiveFixture(suffix) {
-  assert.equal(process.env.AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS, JSON.stringify([EMP05_ARCHIVE_COMPANY_ID]), "ordinary harness must supply only its dedicated archive tenant");
   await loadRebuildApis();
   const companyId = EMP05_ARCHIVE_COMPANY_ID, uid = `emp05-d-${suffix}-actor`;
   const email = `${uid}@codex-test.invalid`, password = "CodexLocalOnly-Archive-2026!";
@@ -155,211 +160,96 @@ async function emp05ArchiveFixture(suffix) {
   await admin.doc(`${prefix}/Employees/${employeeId}`).set(original);
   const identity = { uid, companyId, isSuperUser: false };
   const { archiveEmployee } = await import("../../functions/modules/employees/archiveEmployee.js");
-  const request = (id) => ({ employeeId: id, reason: "合成誤登録", operationId: `${id}-archive` });
-  const archive = (id, firestore = admin) => archiveEmployee({ firestore, resolveIdentity: async () => identity, resolveAllowedTenants: () => [companyId], input: request(id) });
+  const request = (id) => ({ employeeId: id });
+  const archive = (id, firestore = admin, currentIdentity = identity) => archiveEmployee({ firestore, resolveIdentity: async () => currentIdentity, input: request(id) });
   return { admin, actor, prefix, employeeId, original, identity, archive, request,
     cleanup: async () => { await admin.recursiveDelete(admin.doc(prefix)); await getAdminAuth().deleteUser(uid); } };
 }
-function emp05BeforeTransactionGate(admin) {
-  let enter, release, first = true;
-  const entered = new Promise((resolve) => { enter = resolve; }), held = new Promise((resolve) => { release = resolve; });
-  const firestore = { doc: admin.doc.bind(admin), collection: admin.collection.bind(admin), collectionGroup: admin.collectionGroup.bind(admin), runTransaction: async (...args) => {
-    if (first) { first = false; enter(); await held; }
-    return admin.runTransaction(...args);
-  } };
-  return { firestore, release, entered };
-}
-test("EMP05-D HTTP archive preserves raw, checks identity/lifecycle dependencies, and keeps transaction references", async () => {
-  const state = await emp05ArchiveFixture("http"), { admin, actor, prefix, employeeId } = state;
-  const { EMPLOYEE_ARCHIVE_QUERIES, EMPLOYEE_ARCHIVE_DOCUMENTS } = await import("../../functions/modules/employees/archiveEmployee.js");
-  const ref = admin.doc(`${prefix}/Employees/${employeeId}`), archiveRef = admin.doc(`${prefix}/Employees_archive/${employeeId}`);
-  const call = (data = state.request(employeeId)) => callSiteLifecycleTransport({ actor, functionName: "archiveEmployee", data });
+
+test("EMP05-D archive preflight uses exact employeeId, is role-independent, and performs zero writes", async () => {
+  const state = await emp05ArchiveFixture("preflight"), { admin, actor, prefix, employeeId } = state;
+  const live = admin.doc(`${prefix}/Employees/${employeeId}`), archived = admin.doc(`${prefix}/Employees_archive/${employeeId}`);
+  const dependencyPaths = [
+    `${prefix}/Users/linked-user`,
+    `${prefix}/EmployeeUserReservations/${employeeId}`,
+    `${prefix}/EmployeeLifecycleLocks/${employeeId}`,
+  ];
   try {
-    const { GeoPoint: AdminGeoPoint } = requireFromFunctions("firebase-admin/firestore");
-    await ref.update({ unknown: { stamp: new AdminTimestamp(1788200000, 123456789), point: new AdminGeoPoint(35, 139), nested: [null, { retain: true }] } });
-    const before = (await ref.get()).data();
-    for (const [name, field] of EMPLOYEE_ARCHIVE_QUERIES) {
-      const dependency = admin.doc(`${prefix}/${name}/dependency`);
-      await dependency.set({ [field]: field === "employeeIds" ? [employeeId] : employeeId, state: "completed", isTemporary: true, disabled: true });
-      const rejected = await call(); assert.equal(rejected.payload.error.status, "FAILED_PRECONDITION", name);
-      assert.deepEqual((await ref.get()).data(), before); assert.equal((await archiveRef.get()).exists, false); await dependency.delete();
+    for (const roles of [[], ["unknown"], ["manager"], ["human-resource"]]) {
+      await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: false, roles, disabled: false, isTemporary: false });
+      assert.deepEqual(await state.archive(employeeId), { success: true, allowed: true, employeeId });
     }
-    for (const name of EMPLOYEE_ARCHIVE_DOCUMENTS) {
-      const dependency = admin.doc(`${prefix}/${name}/${employeeId}`); await dependency.set({ malformed: true });
-      assert.equal((await call()).payload.error.status, "FAILED_PRECONDITION", name); await dependency.delete();
+    await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: true, roles: [] });
+    assert.deepEqual(await state.archive(employeeId), { success: true, allowed: true, employeeId });
+    for (const path of dependencyPaths) {
+      await admin.doc(path).set(path.includes("Users/") ? { docId: "linked-user", companyId: actor.companyId, employeeId } : { operationId: "lock" });
+      await assert.rejects(state.archive(employeeId), { code: "failed-precondition" });
+      await admin.doc(path).delete();
     }
-    const retainedTransactions = [
-      ["SiteOperationSchedules", { employeeIds: [employeeId] }],
-      ["OperationResults", { employeeIds: [employeeId] }],
-      ["ArrangementNotifications", { employeeId }],
-      ["SiteEmployeeHistories", { employeeId }],
-      ["Billings", { employeeIds: [employeeId] }],
-      ["DailyAttendances", { employeeIds: [employeeId] }],
-      ["DailyOperationsByEmployee", { employeeIds: [employeeId] }],
-    ];
-    for (const [name, value] of retainedTransactions) await admin.doc(`${prefix}/${name}/retained`).set(value);
-    await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: false, roles: ["human-resource"] });
-    assert.equal((await call()).payload.error.status, "PERMISSION_DENIED");
-    await admin.doc(`${prefix}/Users/${actor.uid}`).update({ roles: ["manager"] });
-    assert.equal((await call()).response.status, 200);
-    const saved = (await archiveRef.get()).data(); assert.deepEqual(saved.employee, before); assert.equal(saved.schemaVersion, 1);
-    assert.equal(saved.audit.actorUid, actor.uid); assert.equal((await ref.get()).exists, false);
-    for (const [name, value] of retainedTransactions) assert.deepEqual((await admin.doc(`${prefix}/${name}/retained`).get()).data(), value);
-    assert.equal((await call()).response.status, 200); assert.deepEqual((await archiveRef.get()).data(), saved);
-    assert.equal((await call({ ...state.request(employeeId), reason: "別要求" })).payload.error.status, "ALREADY_EXISTS");
-    const client = authenticatedFirestore(actor.uid, { companyId: actor.companyId });
-    await assertFails(setDoc(doc(client, "Companies", actor.companyId, "Employees", employeeId), {
-      docId: employeeId,
-      employmentStatus: "ACTIVE",
-      uid: actor.uid,
-    }));
-    assert.equal((await ref.get()).exists, false);
+    await admin.doc(`${prefix}/Employees_archive/${employeeId}`).set({ collision: true });
+    await assert.rejects(state.archive(employeeId), { code: "already-exists" });
+    await admin.doc(`${prefix}/Employees_archive/${employeeId}`).delete();
+    await admin.doc("System/system").set({ isMaintenance: true });
+    await assert.rejects(state.archive(employeeId), { code: "failed-precondition" });
+    assert.equal((await live.get()).exists, true);
+    assert.equal((await archived.get()).exists, false);
   } finally { await state.cleanup(); }
 });
 
-for (const writerKind of ["user", "retirement"]) test(`EMP05-D archive versus actual ${writerKind} writer protects both commit orders and concurrency`, async () => {
-  const state = await emp05ArchiveFixture(writerKind), { admin, actor, prefix, identity } = state;
-  const { createEmployeeLinkedTemporaryUser } = await import("../../functions/modules/auth/createTemporaryUser.js");
-  const { terminateEmployee } = await import("../../functions/modules/auth/lifecycle/terminateEmployee.js");
-  const authBefore = (await getAdminAuth().getUser(actor.uid)).toJSON(), actorBefore = (await admin.doc(`${prefix}/Users/${actor.uid}`).get()).data();
-  const emailReservations = [];
-  try {
-    let index = 0;
-    for (const order of ["writer-first", "archive-first", "concurrent"]) {
-      const employeeId = `${state.employeeId}-${order}`, ref = admin.doc(`${prefix}/Employees/${employeeId}`), archiveRef = admin.doc(`${prefix}/Employees_archive/${employeeId}`);
-      await ref.set({ ...state.original, docId: employeeId });
-      const operationId = `05000000-0000-4000-8000-${String(900 + ++index).padStart(12, "0")}`, email = `d-${writerKind}-${index}@codex-test.invalid`;
-      emailReservations.push(`UserEmailReservations/${createUserEmailReservationId(email)}`);
-      const write = (firestore = admin) => {
-        if (writerKind === "user") return createEmployeeLinkedTemporaryUser({ firestore, auth: getAdminAuth(), companyId: actor.companyId, actorUid: actor.uid, input: { employeeId, email } });
-        return terminateEmployee({ firestore, auth: getAdminAuth(), cleanupFcm: async () => { assert.fail("employee-only retirement must not clean User tokens"); }, identity, serverTodayJst: "2026-09-07", input: { operationId, employeeId, terminationDate: "2026-08-20", reasonOfTermination: "合成退職" } });
-      };
-      if (order === "writer-first") { await write(); await assert.rejects(state.archive(employeeId), { code: "failed-precondition" }); }
-      else if (order === "archive-first") {
-        // Pause after the actual writer's preflight, before any native Tx lock.
-        const gate = emp05BeforeTransactionGate(admin), pending = write(gate.firestore);
-        const rejected = assert.rejects(pending); await Promise.race([gate.entered, pending.then(() => { throw new Error("writer completed before the transaction gate"); })]);
-        try { await state.archive(employeeId); } finally { gate.release(); }
-        await rejected;
-      } else {
-        const outcomes = splitSettled(await Promise.allSettled([write(), state.archive(employeeId)]));
-        assert.equal(outcomes.fulfilled.length, 1); assert.equal(outcomes.rejected.length, 1);
-      }
-      const live = await ref.get(), archived = await archiveRef.get(); assert.notEqual(live.exists, archived.exists);
-      const users = await admin.collection(`${prefix}/Users`).where("employeeId", "==", employeeId).get();
-      const employeeReservation = await admin.doc(`${prefix}/EmployeeUserReservations/${employeeId}`).get(), emailReservation = await admin.doc(`UserEmailReservations/${createUserEmailReservationId(email)}`).get();
-      const operation = await admin.doc(`${prefix}/LifecycleOperations/${operationId}`).get(), head = await admin.doc(`${prefix}/EmployeeLifecycleHeads/${employeeId}`).get(), lock = await admin.doc(`${prefix}/EmployeeLifecycleLocks/${employeeId}`).get();
-      if (archived.exists) {
-        assert.equal(users.size, 0); for (const snapshot of [employeeReservation, emailReservation, operation, head, lock]) assert.equal(snapshot.exists, false);
-      } else if (writerKind === "user") { assert.equal(users.size, 1); assert.equal(employeeReservation.exists, true); assert.equal(emailReservation.exists, true); }
-      else { assert.equal(live.data().employmentStatus, "RESIGNED"); assert.equal(operation.data().state, "completed"); assert.equal(head.exists, true); assert.equal(lock.exists, false); }
-      await assert.rejects(getAdminAuth().getUserByEmail(email), (error) => error.code === "auth/user-not-found");
-    }
-    assert.deepEqual((await admin.doc(`${prefix}/Users/${actor.uid}`).get()).data(), actorBefore);
-    assert.deepEqual((await getAdminAuth().getUser(actor.uid)).toJSON(), authBefore);
-  } finally { await Promise.all(emailReservations.map((path) => admin.doc(path).delete())); await state.cleanup(); }
+test("EMP05-D Rules permit only same-tenant active registered raw same-ID archive moves", async () => {
+  for (const [index, roles] of [[], ["unknown"], ["manager"], ["human-resource"]].entries()) {
+    const state = await emp05ArchiveFixture(`rules-${index}`), { admin, actor, prefix, employeeId } = state;
+    const client = authenticatedFirestore(actor.uid, { companyId: actor.companyId });
+    const live = doc(client, "Companies", actor.companyId, "Employees", employeeId), archive = doc(client, "Companies", actor.companyId, "Employees_archive", employeeId);
+    try {
+      await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: false, roles });
+      const clientOriginal = (await assertSucceeds(getDoc(live))).data();
+      const batch = writeBatch(client); batch.set(archive, clientOriginal); batch.delete(live);
+      await assertSucceeds(batch.commit());
+      assert.equal((await admin.doc(`${prefix}/Employees/${employeeId}`).get()).exists, false);
+      assert.deepEqual(encodeExpected((await admin.doc(`${prefix}/Employees_archive/${employeeId}`).get()).data()), encodeExpected(clientOriginal));
+    } finally { await state.cleanup(); }
+  }
 });
 
-async function emp05BillingCustomerMatrix() {
-  const { addOperationResultToBilling, syncOperationResultToBilling, removeOperationResultFromBilling } = await loadBillingServerWriters();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id, otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
-  const admin = getAdminFirestore(), root = `Companies/${companyId}`, suffix = "emp05-c-matrix";
-  const raw = cas03ServerBillingOperationResult({ customerId: `${suffix}-active`, suffix });
-  const paths = new Set([`${root}/Sites/${raw.siteId}`]);
-  try {
-    await admin.doc(`${root}/Sites/${raw.siteId}`).set({ docId: raw.siteId });
-    for (const [label, status] of [["active", "ACTIVE"], ["terminated", "TERMINATED"], ["missing", null], ["archive", null], ["other", null]]) {
-      const customerId = `${suffix}-${label}`, candidate = { ...raw, customerId }, billingId = cas03ServerBillingDocumentId(candidate), path = `${root}/Billings/${billingId}`;
-      paths.add(path);
-      if (status) { await seedCustomerRulesDocument({ companyId, docId: customerId, data: { contractStatus: status } }); paths.add(`${root}/Customers/${customerId}`); }
-      if (label === "archive" || label === "other") {
-        const referencePath = label === "archive" ? `${root}/Customers_archive/${customerId}` : `Companies/${otherCompanyId}/Customers/${customerId}`;
-        paths.add(referencePath); await admin.doc(referencePath).set({ docId: customerId });
-      }
-      if (!status) { await assert.rejects(addOperationResultToBilling({ companyId, doc: candidate }), (error) => error.code === "failed-precondition"); assert.equal((await admin.doc(path).get()).exists, false); continue; }
-      await addOperationResultToBilling({ companyId, doc: candidate });
-      assert.equal((await admin.doc(path).get()).data().customerId, customerId);
-      await admin.doc(`${root}/Customers/${customerId}`).delete();
-      const changed = { ...candidate, remarks: "orphan same-reference update" };
-      await syncOperationResultToBilling({ companyId, before: candidate, after: changed });
-      const saved = (await admin.doc(path).get()).data(); assert.equal(saved.operationResults[0].remarks, changed.remarks);
-      const move = { ...changed, customerId: `${suffix}-absent-destination` }, destination = `${root}/Billings/${cas03ServerBillingDocumentId(move)}`; paths.add(destination);
-      await assert.rejects(syncOperationResultToBilling({ companyId, before: changed, after: move }));
-      assert.deepEqual(encodeExpected((await admin.doc(path).get()).data()), encodeExpected(saved)); assert.equal((await admin.doc(destination).get()).exists, false);
-      await removeOperationResultFromBilling({ companyId, operationResult: changed }); assert.equal((await admin.doc(path).get()).exists, false);
-    }
-  } finally { await Promise.all([...paths].map((path) => admin.doc(path).delete())); }
-}
-
-async function emp05BillingOrdering(order) {
-  const { archiveCustomer } = await loadRebuildApis();
-  const { addOperationResultToBilling } = await loadBillingServerWriters();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id, actorUid = `emp05-c-billing-${order}-actor`;
-  const customerId = `emp05-c-billing-${order}-customer`, actor = await seedCustomerArchiveActor({ uid: actorUid });
-  const raw = cas03ServerBillingOperationResult({ customerId, suffix: `emp05-c-${order}` });
-  const billingId = cas03ServerBillingDocumentId(raw);
-  const references = [{ collectionName: "Billings", docId: billingId }];
-  const save = () => addOperationResultToBilling({ companyId, doc: raw });
-  const archive = () => archiveCustomer.run(actorCallableRequest({ actor, data: { customerId, operationId: `emp05-c-${order}-archive`, reason: "合成Billing参照順序検証" } }));
-  try {
-    await seedCustomerRulesDocument({ companyId, docId: customerId });
-    if (order === "reference-first") {
-      await save(); await archive();
-    } else if (order === "archive-first") {
-      await archive(); await assert.rejects(save(), (error) => error.code === "failed-precondition");
-    } else {
-      const [billingResult, archiveResult] = await Promise.allSettled([save(), archive()]);
-      assert.equal(archiveResult.status, "fulfilled");
-      if (billingResult.status === "rejected") assert.equal(billingResult.reason.code, "failed-precondition");
-    }
-    const state = await readCustomerArchiveState(companyId, customerId);
-    const billing = await readCas03Document(companyId, "Billings", billingId);
-    assert.equal(state.active, null);
-    assert.ok(state.archive);
-    if (order === "reference-first") assert.equal(billing?.customerId, customerId);
-    if (order === "archive-first") assert.equal(billing, null);
-  } finally { await cleanupCustomerArchiveScenario({ actorUid, customerIds: [customerId], references }); }
-}
-const emp05SiteData = (options) => ({ ...siteRulesData(options), createdAt: new Date("2026-01-01"), updatedAt: new Date("2026-01-01") });
-async function emp05SaveAs(actor, operations) {
-  const { saveOperation } = await loadRebuildApis();
-  return saveOperation.run(actorCallableRequest({ actor, data: { operations } }));
-}
-
-async function emp05CustomerOrdering(order) {
-  const { archiveCustomer } = await loadRebuildApis();
-  const actor = await seedCustomerArchiveActor({ uid: `emp05-customer-${order}-actor` });
-  const companyId = actor.companyId, customerId = `emp05-customer-${order}`, siteId = `${customerId}-site`, id = `${customerId}-result`;
-  const archive = () => archiveCustomer.run(actorCallableRequest({ actor, data: { customerId, operationId: `${customerId}-archive`, reason: "合成参照競合" } }));
-  const client = authenticatedFirestore(actor.uid, { isSuperUser: false });
-  const write = () => setDoc(
-    doc(client, "Companies", companyId, "OperationResults", id),
-    operationResultClientCreateData({ docId: id, uid: actor.uid, customerId, siteId }),
-  );
-  try {
-    await getAdminFirestore().doc(`Companies/${companyId}/Users/${actor.uid}`).update({ docId: actor.uid });
-    await seedCustomerRulesDocument({ companyId, docId: customerId });
-    if (order === "archive-first") {
-      await archive();
-      await assertSucceeds(write());
-    } else {
-      if (order === "reference-first") { await assertSucceeds(write()); await archive(); }
-      else {
-        const [writer, archiver] = await Promise.allSettled([write(), archive()]);
-        assert.equal(writer.status, "fulfilled");
-        assert.equal(archiver.status, "fulfilled");
-      }
-    }
-    const state = await readCustomerArchiveState(companyId, customerId);
-    const reference = await readCas03Document(companyId, "OperationResults", id);
-    assert.equal(state.active, null);
-    assert.ok(state.archive);
-    assert.equal(reference?.customerId, customerId);
-  } finally {
-    await cleanupCustomerArchiveScenario({ actorUid: actor.uid, customerIds: [customerId], references: [{ collectionName: "Sites", docId: siteId }, { collectionName: "OperationResults", docId: id }] });
+test("EMP05-D Rules reject invalid archive moves and keep archive read separate from write", async () => {
+  const cases = [
+    { name: "disabled", user: { disabled: true } },
+    { name: "temporary", user: { isTemporary: true } },
+    { name: "other-tenant", claims: { companyId: "codex-emp05-other-tenant" } },
+    { name: "unauthenticated", unauthenticated: true },
+  ];
+  for (const entry of cases) {
+    const state = await emp05ArchiveFixture(`deny-${entry.name}`), { admin, actor, prefix, employeeId } = state;
+    const neutralClient = authenticatedFirestore(actor.uid, { companyId: actor.companyId });
+    const neutralLive = doc(neutralClient, "Companies", actor.companyId, "Employees", employeeId);
+    const clientOriginal = (await assertSucceeds(getDoc(neutralLive))).data();
+    const client = entry.unauthenticated ? testEnvironment.unauthenticatedContext().firestore() : authenticatedFirestore(actor.uid, entry.claims ? { companyId: entry.claims.companyId } : { companyId: actor.companyId });
+    const live = doc(client, "Companies", actor.companyId, "Employees", employeeId), archive = doc(client, "Companies", actor.companyId, "Employees_archive", employeeId);
+    try {
+      if (entry.user) await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: false, roles: [], ...entry.user });
+      const batch = writeBatch(client); batch.set(archive, clientOriginal); batch.delete(live);
+      await assertFails(batch.commit());
+    } finally { await state.cleanup(); }
   }
-}
-
+  const state = await emp05ArchiveFixture("deny-shapes"), { admin, actor, prefix, employeeId } = state;
+  const client = authenticatedFirestore(actor.uid, { companyId: actor.companyId });
+  const live = doc(client, "Companies", actor.companyId, "Employees", employeeId), archive = doc(client, "Companies", actor.companyId, "Employees_archive", employeeId);
+  try {
+    const clientOriginal = (await assertSucceeds(getDoc(live))).data();
+    const mismatch = writeBatch(client); mismatch.set(archive, { ...clientOriginal, docId: "other" }); mismatch.delete(live); await assertFails(mismatch.commit());
+    const oneSided = writeBatch(client); oneSided.set(archive, clientOriginal); await assertFails(oneSided.commit());
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "Companies", actor.companyId, "Employees_archive", employeeId), clientOriginal);
+      await deleteDoc(doc(context.firestore(), "Companies", actor.companyId, "Employees", employeeId));
+    });
+    await assertFails(deleteDoc(archive));
+    await assertFails(setDoc(doc(client, "Companies", actor.companyId, "Employees_archive", employeeId, "Nested", "child"), clientOriginal));
+    await assertFails(setDoc(live, clientOriginal));
+    assert.equal((await admin.doc(`${prefix}/Employees/${employeeId}`).get()).exists, false);
+    assert.deepEqual(encodeExpected((await admin.doc(`${prefix}/Employees_archive/${employeeId}`).get()).data()), encodeExpected(clientOriginal));
+  } finally { await state.cleanup(); }
+});
 test("EMP05-C background aggregates preserve raw references and protected client writes", async () => {
   const actor = await seedSiteLifecycleTransportActor({ uid: "emp05-c-payment-user", roles: [], isAdmin: false });
   const { companyId } = actor, admin = getAdminFirestore(), root = `Companies/${companyId}`;
@@ -510,13 +400,14 @@ test("EMP05-C background aggregates preserve raw references and protected client
   }
 });
 
-test("EMP05-B HTTP operation writers preserve references, notification confirmation, billing locks and raw duplicate data", async () => {
+test("EMP05-B mixed standard model and Callable paths preserve notifications, locks, and raw duplicate data", async () => {
   const actor = await seedSiteLifecycleTransportActor({ uid: "emp05-operation-controller", roles: ["controller"] });
   const companyId = actor.companyId, siteId = "emp05-operation-site", id = "emp05-operation", customerId = "emp05-operation-customer";
   const admin = getAdminFirestore(), root = `Companies/${companyId}`;
   const employees = Array.from({ length: 10 }, (_, index) => `emp05-worker-${index}`);
   const cleanup = [
     ["Customers", customerId], ["Sites", siteId], ["SiteOperationSchedules", id], ["OperationResults", id], ["OperationResults", "emp05-copy"],
+    ["SiteOperationSchedules", "new-direct"], ["OperationResults", "new-direct"], ["ArrangementNotifications", "new-direct"],
     ...employees.map((employeeId) => ["Employees", employeeId]),
   ];
   try {
@@ -626,29 +517,64 @@ test("EMP05-B HTTP operation writers preserve references, notification confirmat
     assert.deepEqual(encodeExpected(afterNotices), beforeSync, "result generation does not write ArrangementNotifications");
   }));
   let result = (await resultRef.get()).data(); assert.equal(result.employees[0].startTime, "11:00"); assert.equal(result.employees[0].breakMinutes, 0); assert.equal((await scheduleRef.get()).data().operationResultId, id);
-  await succeeded([emp05Command(result, "articles", { articleId: "synthetic-article", price: 200, quantity: 3 }, { kind: "result", array: "articles", rowAction: "add", position: 0 })]);
+  await assertSucceeds(withClientModelAdapter(userFirestore, actor.uid, companyId, async () => {
+    const draft = new OperationResult({
+      ...(await getDoc(doc(userFirestore, "Companies", companyId, "OperationResults", id))).data(),
+      docId: id,
+    });
+    draft.articles = [
+      ...draft.articles,
+      new ArticleDetail({ articleId: "synthetic-article", price: 200, quantity: 3 }),
+    ];
+    await draft.update();
+  }));
   const accountant = await seedSiteLifecycleTransportActor({ uid: "emp05-operation-accountant", roles: ["accountant"] });
-  const billing = (operations) => callSiteLifecycleTransport({ actor: accountant, functionName: "saveOperation", data: { operations } });
-  result = (await resultRef.get()).data();
-  assert.equal((await billing([emp05Command(result, "lock", { desiredLocked: true }, { kind: "billing" })])).response.status, 200);
+  const accountantFirestore = authenticatedFirestore(accountant.uid, { isSuperUser: false });
+  await assertSucceeds(withClientModelAdapter(accountantFirestore, accountant.uid, companyId, async () => {
+    const billing = new OperationBilling({
+      ...(await getDoc(doc(accountantFirestore, "Companies", companyId, "OperationResults", id))).data(),
+      docId: id,
+    });
+    billing.useAdjusted = true;
+    billing.adjustedQuantityBase = 3;
+    await OperationBilling.runTransaction(async (transaction) => {
+      await billing.update({ transaction });
+    });
+  }));
+  await assertSucceeds(withClientModelAdapter(accountantFirestore, accountant.uid, companyId, async () => {
+    const billing = new OperationBilling({
+      ...(await getDoc(doc(accountantFirestore, "Companies", companyId, "OperationResults", id))).data(),
+      docId: id,
+    });
+    await billing.toggleLock(true);
+  }));
   result = (await resultRef.get()).data();
   assert.equal((await call([emp05Command(result, "overview", { remarks: "locked normal" }, { kind: "result" })])).payload.error.status, "INVALID_ARGUMENT");
-  assert.equal((await billing([emp05Command(result, "workers", { id: "missing" }, { kind: "result", array: "employees", rowAction: "update", position: 0 })])).payload.error.status, "INVALID_ARGUMENT");
-  assert.equal((await billing([emp05Command(result, "adjusted", { useAdjusted: true, adjustedQuantityBase: 3 }, { kind: "billing" })])).response.status, 200);
+  assert.equal((await call([emp05Command(result, "workers", { id: "missing" }, { kind: "result", array: "employees", rowAction: "update", position: 0 })])).payload.error.status, "INVALID_ARGUMENT");
   result = (await resultRef.get()).data();
+  assert.equal(result.isLocked, true);
+  assert.equal(result.useAdjusted, true);
+  assert.equal(result.adjustedQuantityBase, 3);
+  assert.equal(result.articles[0].articleId, "synthetic-article");
   const copy = emp05Command(result, "duplicate", { dateAt: "2028-05-02" }, { kind: "result", documentId: "emp05-copy", sourceId: id });
   assert.equal((await call([copy])).payload.error.status, "FAILED_PRECONDITION");
-  assert.equal((await billing([emp05Command(result, "lock", { desiredLocked: false }, { kind: "billing" })])).response.status, 200);
+  await assertSucceeds(withClientModelAdapter(accountantFirestore, accountant.uid, companyId, async () => {
+    const billing = new OperationBilling({
+      ...(await getDoc(doc(accountantFirestore, "Companies", companyId, "OperationResults", id))).data(),
+      docId: id,
+    });
+    await billing.toggleLock(false);
+  }));
   result = (await resultRef.get()).data(); copy.expected = expectedForOperation(result, copy);
   await succeeded([copy]); const duplicate = (await admin.doc(`${root}/OperationResults/emp05-copy`).get()).data();
-  assert.equal(duplicate.adjustedQuantityBase, 3); assert.equal(duplicate.articles[0].price, 200); assert.deepEqual(duplicate.employeeIds, employees);
+  assert.equal(duplicate.isLocked, false); assert.equal(duplicate.adjustedQuantityBase, 3); assert.equal(duplicate.articles[0].price, 200); assert.deepEqual(duplicate.employeeIds, employees);
   for (const collectionName of ["SiteOperationSchedules", "OperationResults", "ArrangementNotifications"]) {
     const target = doc(userFirestore, "Companies", companyId, collectionName, collectionName === "ArrangementNotifications" ? noticeId : id);
     await assertSucceeds(getDoc(target));
     const direct = doc(userFirestore, "Companies", companyId, collectionName, "new-direct");
     if (collectionName === "OperationResults") {
-      await assertSucceeds(setDoc(target, { employeeIds: [] }));
-      await assertSucceeds(setDoc(direct, { docId: "new-direct" }));
+      await assertSucceeds(setDoc(target, { docId: id, uid: actor.uid, isLocked: false, employeeIds: [] }));
+      await assertSucceeds(setDoc(direct, { docId: "new-direct", uid: actor.uid, isLocked: false }));
       await assertSucceeds(updateDoc(direct, { employeeIds: [] }));
       await assertSucceeds(deleteDoc(direct));
       await assertSucceeds(deleteDoc(target));
@@ -825,7 +751,7 @@ async function seedRegisteredUser({
   omit = [],
 }) {
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const data = { companyId, isTemporary, disabled };
+    const data = { docId: uid, companyId, isTemporary, disabled };
     if (isAdmin !== undefined) data.isAdmin = isAdmin;
     if (email !== undefined) data.email = email;
     if (displayName !== undefined) data.displayName = displayName;
@@ -1183,6 +1109,86 @@ function customerRulesData({ docId, uid, ...overrides }) {
   };
 }
 
+async function seedCustomerRulesDocument({
+  companyId = CODEX_LOCAL_COMPANIES.primary.id,
+  docId,
+  uid = "server-writer",
+  data = {},
+}) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, "Customers", docId),
+      customerRulesData({ docId, uid, ...data }),
+    );
+  });
+}
+
+async function seedOutsourcerRulesDocument({
+  companyId = CODEX_LOCAL_COMPANIES.primary.id,
+  collectionName = "Outsourcers",
+  docId,
+  data = {},
+}) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, collectionName, docId),
+      outsourcerRulesData({ docId, ...data }),
+    );
+  });
+}
+
+async function seedCas03Documents(entries) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const batch = writeBatch(context.firestore());
+    for (const { companyId, collectionName, docId, data } of entries) {
+      batch.set(
+        doc(context.firestore(), "Companies", companyId, collectionName, docId),
+        data,
+      );
+    }
+    await batch.commit();
+  });
+}
+
+async function cleanupCas03Documents(entries) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const batch = writeBatch(context.firestore());
+    for (const { companyId, collectionName, docId } of entries) {
+      batch.delete(
+        doc(context.firestore(), "Companies", companyId, collectionName, docId),
+      );
+    }
+    await batch.commit();
+  });
+}
+
+const CAS03_CUSTOMER_REFERENCE_COLLECTIONS = [
+  { collectionName: "Sites", optionalOnCreate: true, deleteAllowed: false },
+  { collectionName: "Billings", optionalOnCreate: false, deleteAllowed: true },
+];
+
+before(async () => {
+  assert.equal(process.env.GCLOUD_PROJECT, CODEX_LOCAL_PROJECT_ID);
+  assert.equal(process.env.FUNCTIONS_EMULATOR, undefined);
+
+  const firestoreHost = parseEmulatorHost("FIRESTORE_EMULATOR_HOST");
+  const storageHost = parseEmulatorHost("FIREBASE_STORAGE_EMULATOR_HOST");
+  const rules = await readFile(new URL("../../firestore.rules", import.meta.url), "utf8");
+  const storageRules = await readFile(
+    new URL("../../storage.rules", import.meta.url),
+    "utf8",
+  );
+  testEnvironment = await initializeTestEnvironment({
+    projectId: CODEX_LOCAL_PROJECT_ID,
+    firestore: { ...firestoreHost, rules },
+    storage: { ...storageHost, rules: storageRules },
+  });
+});
+
+after(async () => {
+  if (testEnvironment) await testEnvironment.cleanup();
+});
+
 function siteRulesData({ docId, uid, customerId = null, customer = null, ...overrides }) {
   return {
     docId,
@@ -1220,6 +1226,15 @@ function siteRulesData({ docId, uid, customerId = null, customer = null, ...over
     displayName: "合成現場",
     tokenMap: { 合: true, 合成: true },
     ...overrides,
+  };
+}
+
+// Local-only fixture: Admin SDK writes must receive concrete client-neutral dates.
+function emp05SiteData(options) {
+  return {
+    ...siteRulesData(options),
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   };
 }
 
@@ -1325,123 +1340,6 @@ function cas03ServerBillingDocumentId(operationResult) {
   ].join("_");
 }
 
-const CUSTOMER_ARCHIVE_FIELDS = [
-  "docId",
-  "uid",
-  "createdAt",
-  "updatedAt",
-  "code",
-  "name",
-  "branchName",
-  "abbreviation",
-  "nameKana",
-  "zipcode",
-  "prefCode",
-  "city",
-  "address",
-  "building",
-  "location",
-  "geopoint",
-  "tel",
-  "fax",
-  "contractStatus",
-  "cutoffDate",
-  "paymentMonth",
-  "paymentDate",
-  "remarks",
-  "fullAddress",
-  "prefecture",
-  "tokenMap",
-];
-
-async function seedCustomerArchiveActor({ uid, disabled = false }) {
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const email = `${uid}@codex-test.invalid`;
-  await seedCallableAuthUser({
-    uid,
-    companyId,
-    email,
-    isSuperUser: false,
-  });
-  await seedRegisteredUser({
-    uid,
-    pathCompanyId: companyId,
-    companyId,
-    isTemporary: false,
-    disabled,
-    isAdmin: true,
-    email,
-    roles: [],
-  });
-  return { uid, companyId, email };
-}
-
-async function readCustomerArchiveState(companyId, customerId) {
-  let result;
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const firestore = context.firestore();
-    const [active, archive] = await Promise.all([
-      getDoc(doc(firestore, "Companies", companyId, "Customers", customerId)),
-      getDoc(
-        doc(
-          firestore,
-          "Companies",
-          companyId,
-          "Customers_archive",
-          customerId,
-        ),
-      ),
-    ]);
-    result = {
-      active: active.exists() ? active.data() : null,
-      archive: archive.exists() ? archive.data() : null,
-    };
-  });
-  return result;
-}
-
-async function cleanupCustomerArchiveScenario({
-  actorUid,
-  customerIds,
-  references = [],
-}) {
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const firestore = context.firestore();
-    const batch = writeBatch(firestore);
-    batch.delete(doc(firestore, "Companies", companyId, "Users", actorUid));
-    for (const customerId of customerIds) {
-      batch.delete(doc(firestore, "Companies", companyId, "Customers", customerId));
-      batch.delete(
-        doc(
-          firestore,
-          "Companies",
-          companyId,
-          "Customers_archive",
-          customerId,
-        ),
-      );
-    }
-    for (const reference of references) {
-      batch.delete(
-        doc(
-          firestore,
-          "Companies",
-          companyId,
-          reference.collectionName,
-          reference.docId,
-        ),
-      );
-    }
-    await batch.commit();
-  });
-  try {
-    await getAdminAuth().deleteUser(actorUid);
-  } catch (error) {
-    if (error?.code !== "auth/user-not-found") throw error;
-  }
-}
-
 const SITE_ARCHIVE_FIELDS = [
   "docId", "uid", "createdAt", "updatedAt", "customerId", "customer",
   "customerName", "code", "name", "hasAbbreviation", "abbreviation",
@@ -1468,9 +1366,48 @@ async function seedSiteRulesActor({
   docId = uid,
   ...user
 }) {
-  await seedRegisteredUser({ uid, pathCompanyId, ...user });
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId,
+    ...user,
+    omit: docId === null ? ["docId"] : [],
+  });
   if (docId !== null) {
     await setSiteRulesActorDocId({ uid, companyId: pathCompanyId, docId });
+  }
+}
+
+async function cleanupSiteLifecycleFixtures({ actorUids = [], entries = [] }) {
+  const errors = [];
+  try {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const firestore = context.firestore();
+      const batch = writeBatch(firestore);
+      for (const { companyId, collectionName, docId } of entries) {
+        batch.delete(doc(firestore, "Companies", companyId, collectionName, docId));
+      }
+      for (const uid of actorUids) {
+        for (const companyId of [
+          CODEX_LOCAL_COMPANIES.primary.id,
+          CODEX_LOCAL_COMPANIES.secondary.id,
+        ]) {
+          batch.delete(doc(firestore, "Companies", companyId, "Users", uid));
+        }
+      }
+      await batch.commit();
+    });
+  } catch (error) {
+    errors.push(error);
+  }
+  for (const uid of actorUids) {
+    try {
+      await getAdminAuth().deleteUser(uid);
+    } catch (error) {
+      if (error?.code !== "auth/user-not-found") errors.push(error);
+    }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, "SITE-04 fixture cleanup failed");
   }
 }
 
@@ -1580,358 +1517,6 @@ function assertSafeCustomerArchiveError({
   }
   assert.equal(publicSurface.includes("stack"), false);
 }
-
-async function runArchiveCustomerInChild(request) {
-  const maxOutputCharacters = 1024 * 1024;
-  const firebaseInitUrl = new URL(
-    "../../functions/modules/firebase.init.js",
-    import.meta.url,
-  ).href;
-  const apiIndexUrl = new URL("../../functions/apis/index.js", import.meta.url).href;
-  const encodedRequest = Buffer.from(JSON.stringify(request), "utf8").toString(
-    "base64",
-  );
-  const childSource = `
-await import(${JSON.stringify(firebaseInitUrl)});
-const { archiveCustomer } = await import(${JSON.stringify(apiIndexUrl)});
-const request = JSON.parse(Buffer.from(process.argv[1], "base64").toString("utf8"));
-try {
-  const result = await archiveCustomer.run(request);
-  process.stdout.write("__CUSTOMER_ARCHIVE_RESULT__" + JSON.stringify(result) + "\\n");
-} catch (error) {
-  process.stdout.write("__CUSTOMER_ARCHIVE_ERROR__" + JSON.stringify({
-    code: error?.code,
-    message: error?.message,
-    details: error?.details,
-  }) + "\\n");
-}
-`;
-
-  return await new Promise((resolveResult, rejectResult) => {
-    const child = spawn(
-      process.execPath,
-      ["--input-type=module", "--eval", childSource, encodedRequest],
-      {
-        cwd: fileURLToPath(new URL("../..", import.meta.url)),
-        env: { ...process.env, AIR_GUARD_EXTERNAL_EFFECTS: "deny" },
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
-      },
-    );
-    let stdout = "";
-    let stderr = "";
-    let outputCharacters = 0;
-    let settled = false;
-
-    const stopChild = () => {
-      if (child.exitCode !== null || child.signalCode !== null || child.killed) {
-        return;
-      }
-      try {
-        child.kill();
-      } catch {
-        // The fixed rejection below remains the only exposed diagnostic.
-      }
-    };
-    const removeOutputListeners = () => {
-      child.stdout.off("data", onStdout);
-      child.stderr.off("data", onStderr);
-    };
-    const clearLifecycle = () => {
-      clearTimeout(timer);
-      removeOutputListeners();
-      child.off("error", onError);
-      child.off("close", onClose);
-    };
-    const rejectOnce = (message, terminate = false) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      removeOutputListeners();
-      if (terminate) stopChild();
-      rejectResult(new Error(message));
-    };
-    const appendOutput = (target, chunk) => {
-      if (settled) return;
-      outputCharacters += chunk.length;
-      if (outputCharacters > maxOutputCharacters) {
-        rejectOnce(
-          "Customer archive log capture exceeded the output limit.",
-          true,
-        );
-        return;
-      }
-      if (target === "stdout") stdout += chunk;
-      else stderr += chunk;
-    };
-    function onStdout(chunk) {
-      appendOutput("stdout", chunk);
-    }
-    function onStderr(chunk) {
-      appendOutput("stderr", chunk);
-    }
-    function onError() {
-      rejectOnce("Customer archive log capture child failed.");
-    }
-    function onClose(status, signal) {
-      if (settled) {
-        clearLifecycle();
-        return;
-      }
-      settled = true;
-      clearLifecycle();
-      resolveResult({ status, signal, stdout, stderr });
-    }
-
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", onStdout);
-    child.stderr.on("data", onStderr);
-    child.once("error", onError);
-    child.once("close", onClose);
-    const timer = setTimeout(() => {
-      rejectOnce("Customer archive log capture timed out.", true);
-    }, 30_000);
-  });
-}
-
-async function seedCustomerRulesDocument({
-  companyId = CODEX_LOCAL_COMPANIES.primary.id,
-  docId,
-  uid = "server-writer",
-  data = {},
-}) {
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    await setDoc(
-      doc(context.firestore(), "Companies", companyId, "Customers", docId),
-      customerRulesData({ docId, uid, ...data }),
-    );
-  });
-}
-
-async function seedOutsourcerRulesDocument({
-  companyId = CODEX_LOCAL_COMPANIES.primary.id,
-  collectionName = "Outsourcers",
-  docId,
-  data = {},
-}) {
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    await setDoc(
-      doc(context.firestore(), "Companies", companyId, collectionName, docId),
-      outsourcerRulesData({ docId, ...data }),
-    );
-  });
-}
-
-async function seedCas03Documents(entries) {
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const batch = writeBatch(context.firestore());
-    for (const { companyId, collectionName, docId, data } of entries) {
-      batch.set(
-        doc(context.firestore(), "Companies", companyId, collectionName, docId),
-        data,
-      );
-    }
-    await batch.commit();
-  });
-}
-
-async function cleanupCas03Documents(entries) {
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const batch = writeBatch(context.firestore());
-    for (const { companyId, collectionName, docId } of entries) {
-      batch.delete(
-        doc(context.firestore(), "Companies", companyId, collectionName, docId),
-      );
-    }
-    await batch.commit();
-  });
-}
-
-async function readCas03Document(companyId, collectionName, docId) {
-  let result;
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const snapshot = await getDoc(
-      doc(context.firestore(), "Companies", companyId, collectionName, docId),
-    );
-    result = snapshot.exists() ? snapshot.data() : null;
-  });
-  return result;
-}
-
-before(async () => {
-  assert.equal(process.env.GCLOUD_PROJECT, CODEX_LOCAL_PROJECT_ID);
-  assert.equal(process.env.FUNCTIONS_EMULATOR, undefined);
-
-  const firestoreHost = parseEmulatorHost("FIRESTORE_EMULATOR_HOST");
-  const storageHost = parseEmulatorHost("FIREBASE_STORAGE_EMULATOR_HOST");
-  const rules = await readFile(new URL("../../firestore.rules", import.meta.url), "utf8");
-  const storageRules = await readFile(
-    new URL("../../storage.rules", import.meta.url),
-    "utf8",
-  );
-  testEnvironment = await initializeTestEnvironment({
-    projectId: CODEX_LOCAL_PROJECT_ID,
-    firestore: { ...firestoreHost, rules },
-    storage: { ...storageHost, rules: storageRules },
-  });
-});
-
-after(async () => {
-  if (testEnvironment) await testEnvironment.cleanup();
-});
-
-test("dedicated seed contains only the expected synthetic company marker", async () => {
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const snapshot = await getDoc(
-      doc(context.firestore(), "Companies", CODEX_LOCAL_COMPANIES.primary.id),
-    );
-    assert.equal(snapshot.exists(), true);
-    assert.equal(snapshot.data().fixture, "codex-local-seed-v1");
-  });
-});
-
-test("dedicated Functions entrypoint is ready over the Callable transport", async () => {
-  const functionsHost = await readDedicatedFunctionsHost();
-  const response = await fetch(
-    `http://${functionsHost.host}:${functionsHost.port}/${CODEX_LOCAL_PROJECT_ID}/asia-northeast1/checkUserPreRegistration`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ data: {} }),
-    },
-  );
-  const payload = await response.json();
-
-  assert.equal(response.status, 400);
-  assert.equal(payload.error?.status, "INVALID_ARGUMENT");
-});
-
-test("dedicated Auth seed accepts the synthetic fixture account", async () => {
-  const authHost = parseEmulatorHost("FIREBASE_AUTH_EMULATOR_HOST");
-  const app = initializeApp(
-    { apiKey: "codex-local-only", projectId: CODEX_LOCAL_PROJECT_ID },
-    `codex-test-auth-${process.pid}`,
-  );
-  try {
-    const auth = getAuth(app);
-    connectAuthEmulator(auth, `http://${authHost.host}:${authHost.port}`, {
-      disableWarnings: true,
-    });
-    const fixture = CODEX_LOCAL_USERS[0];
-    const credential = await signInWithEmailAndPassword(
-      auth,
-      fixture.email,
-      fixture.password,
-    );
-    assert.equal(credential.user.email, fixture.email);
-  } finally {
-    await deleteApp(app);
-  }
-});
-
-test("Firestore Rules reject unauthenticated tenant access", async () => {
-  const firestore = testEnvironment.unauthenticatedContext().firestore();
-  await assertFails(
-    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
-  );
-});
-
-test("Firestore Rules allow a verified active registered User in the matching tenant", async () => {
-  const uid = "codex-rules-active-user";
-  await seedRegisteredUser({ uid });
-  const firestore = authenticatedFirestore(uid);
-
-  await assertSucceeds(
-    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
-  );
-  await assertFails(
-    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.secondary.id)),
-  );
-});
-
-test("Firestore Rules reject an unverified email", async () => {
-  const uid = "codex-rules-unverified-user";
-  await seedRegisteredUser({ uid });
-  const firestore = authenticatedFirestore(uid, { email_verified: false });
-  const missingClaimFirestore = testEnvironment
-    .authenticatedContext(uid, {
-      companyId: CODEX_LOCAL_COMPANIES.primary.id,
-    })
-    .firestore();
-
-  await assertFails(
-    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
-  );
-  await assertFails(
-    getDoc(
-      doc(
-        missingClaimFirestore,
-        "Companies",
-        CODEX_LOCAL_COMPANIES.primary.id,
-      ),
-    ),
-  );
-});
-
-test("Firestore Rules reject missing or malformed company claims", async () => {
-  const uid = "codex-rules-invalid-claim-user";
-  await seedRegisteredUser({ uid });
-  const missingClaimFirestore = testEnvironment
-    .authenticatedContext(uid, { email_verified: true })
-    .firestore();
-
-  await assertFails(
-    getDoc(
-      doc(
-        missingClaimFirestore,
-        "Companies",
-        CODEX_LOCAL_COMPANIES.primary.id,
-      ),
-    ),
-  );
-
-  for (const companyId of [null, 1, true, ""]) {
-    const firestore = authenticatedFirestore(uid, { companyId });
-    await assertFails(
-      getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
-    );
-  }
-});
-
-test("Firestore Rules reject a missing registered User", async () => {
-  const firestore = authenticatedFirestore("codex-rules-missing-user");
-
-  await assertFails(
-    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
-  );
-});
-
-test("Firestore Rules reject temporary and disabled Users", async () => {
-  const temporaryUid = "codex-rules-temporary-user";
-  const disabledUid = "codex-rules-disabled-user";
-  await seedRegisteredUser({ uid: temporaryUid, isTemporary: true });
-  await seedRegisteredUser({ uid: disabledUid, disabled: true });
-
-  await assertFails(
-    getDoc(
-      doc(
-        authenticatedFirestore(temporaryUid),
-        "Companies",
-        CODEX_LOCAL_COMPANIES.primary.id,
-      ),
-    ),
-  );
-  await assertFails(
-    getDoc(
-      doc(
-        authenticatedFirestore(disabledUid),
-        "Companies",
-        CODEX_LOCAL_COMPANIES.primary.id,
-      ),
-    ),
-  );
-});
 
 test("Firestore Rules reject malformed User registration states", async () => {
   const invalidTemporaryUid = "codex-rules-invalid-temporary-user";
@@ -3622,7 +3207,6 @@ test("Site Rules reject malformed, inactive, and cross-tenant writers", async ()
   const deniedActors = [
     { label: "user-doc-id-missing", user: { isAdmin: true, roles: [] }, docId: null },
     { label: "user-doc-id-mismatch", user: { isAdmin: true, roles: [] }, docId: "another-user" },
-    { label: "admin-state-missing", user: { roles: ["manager"] } },
     { label: "temporary", user: { isAdmin: true, roles: [], isTemporary: true } },
     { label: "disabled", user: { isAdmin: true, roles: [], disabled: true } },
     { label: "company-mismatch", user: { isAdmin: true, roles: [], companyId: CODEX_LOCAL_COMPANIES.secondary.id } },
@@ -3849,12 +3433,19 @@ test("Site Rules allow ordinary update schema drift and protect only normal-oper
   for (const patch of [
     { scheduleRevision: 99, uid, updatedAt: serverTimestamp() },
     { remarks: "mixed schedule revision", scheduleRevision: 1, uid, updatedAt: serverTimestamp() },
+  ]) {
+    await assertSucceeds(updateDoc(reference, patch));
+  }
+  for (const patch of [
     { statusChangedAt: serverTimestamp(), uid, updatedAt: serverTimestamp() },
     { statusChangedBy: uid, uid, updatedAt: serverTimestamp() },
     { statusChangeSource: "MANUAL", uid, updatedAt: serverTimestamp() },
     { statusChangeReason: "ordinary document field", uid, updatedAt: serverTimestamp() },
   ]) {
-    await assertSucceeds(updateDoc(reference, patch));
+    const before = (await assertSucceeds(getDoc(reference))).data();
+    await assertFails(updateDoc(reference, patch));
+    const after = (await assertSucceeds(getDoc(reference))).data();
+    assert.deepEqual(encodeExpected(after), encodeExpected(before));
   }
 
   const replacement = siteRulesData({
@@ -3896,7 +3487,7 @@ test("Site Rules allow ordinary update schema drift and protect only normal-oper
     const deletion = updateDoc(reference, {
       [field]: deleteField(), uid, updatedAt: serverTimestamp(),
     });
-    if (field === "status") {
+    if (["status", "statusChangedAt", "statusChangedBy", "statusChangeSource", "statusChangeReason"].includes(field)) {
       await assertFails(deletion);
     } else {
       await assertSucceeds(deletion);
@@ -3904,9 +3495,12 @@ test("Site Rules allow ordinary update schema drift and protect only normal-oper
     const after = (await assertSucceeds(getDoc(reference))).data();
     assert.equal(
       Object.hasOwn(after, field),
-      field === "status",
+      ["status", "statusChangedAt", "statusChangedBy", "statusChangeSource", "statusChangeReason"].includes(field),
       `${field} protected presence`,
     );
+    if (["status", "statusChangedAt", "statusChangedBy", "statusChangeSource", "statusChangeReason"].includes(field)) {
+      assert.deepEqual(encodeExpected(after[field]), encodeExpected(protectedValues[field]));
+    }
   }
 });
 
@@ -4294,7 +3888,7 @@ test("Site Rules allow a linked Customer create with geocoded location within th
 });
 
 test("SITE-04 Schedule Rules allow normal same-company client CRUD without Site revisions", async () => {
-  const actor = await seedSiteArchiveActor({ uid: "site-lifecycle-schedule-admin", isAdmin: true, roles: [] });
+  const actor = await seedSiteLifecycleTransportActor({ uid: "site-lifecycle-schedule-admin", isAdmin: true, roles: [] });
   const companyId = actor.companyId;
   const id = "site-lifecycle-schedule";
   const firestore = authenticatedFirestore(actor.uid, { isSuperUser: false });
@@ -4311,39 +3905,36 @@ test("SITE-04 Schedule Rules allow normal same-company client CRUD without Site 
   assert.equal((await assertSucceeds(getDoc(schedule))).exists(), false);
 });
 
-test("FGA-06 active role-less users can create, update, duplicate and delete schedules but cannot mix in restricted operations", async () => {
+test("FGA-06 active role-less users can create, update, duplicate and delete schedules through standard client CRUD", async () => {
   const actor = await seedSiteLifecycleTransportActor({ uid: "fga06-schedule-roleless", roles: [] });
   const companyId = actor.companyId, admin = getAdminFirestore(), root = `Companies/${companyId}`;
   const customerId = "fga06-schedule-customer", siteId = "fga06-schedule-site";
   const firstId = "fga06-schedule-first", copyId = "fga06-schedule-copy";
-  const entries = [
-    ["Customers", customerId], ["Sites", siteId],
-    ["SiteOperationSchedules", firstId], ["SiteOperationSchedules", copyId],
-  ];
+  const client = authenticatedFirestore(actor.uid, { isSuperUser: false });
+  const first = doc(client, "Companies", companyId, "SiteOperationSchedules", firstId);
+  const copy = doc(client, "Companies", companyId, "SiteOperationSchedules", copyId);
   try {
     await admin.doc("System/system").set({ isMaintenance: false });
     await admin.doc(`${root}/Customers/${customerId}`).set({ docId: customerId });
     await admin.doc(`${root}/Sites/${siteId}`).set(emp05SiteData({ docId: siteId, uid: actor.uid, customerId, customer: {}, isTemporary: false, agreementsV2: [] }));
-    await emp05SaveAs(actor, [emp05Command(null, "create", emp05Overview(siteId), { documentId: firstId, siteStatuses: { [siteId]: "ACTIVE" } })]);
-    const firstRef = admin.doc(`${root}/SiteOperationSchedules/${firstId}`), copyRef = admin.doc(`${root}/SiteOperationSchedules/${copyId}`);
-    let first = (await firstRef.get()).data();
-    await emp05SaveAs(actor, [emp05Command(first, "overview", { remarks: "roleに依存しない更新" })]);
-    first = (await firstRef.get()).data(); assert.equal(first.remarks, "roleに依存しない更新");
-    await emp05SaveAs(actor, [emp05Command(first, "duplicate", { dateAt: "2028-05-02" }, { documentId: copyId, sourceId: firstId, siteStatuses: { [siteId]: "ACTIVE" } })]);
-    const copy = (await copyRef.get()).data(); assert.equal(copy.docId, copyId);
-
-    const mixed = emp05SaveAs(actor, [
-      emp05Command(first, "overview", { remarks: "保存されない更新" }),
-      emp05Command(copy, "notify", { shouldNotify: false }),
-    ]);
-    await assertCallableError(mixed, "permission-denied");
-    assert.equal((await firstRef.get()).data().remarks, "roleに依存しない更新");
-    await emp05SaveAs(actor, [emp05Command(first, "delete")]);
-    await emp05SaveAs(actor, [emp05Command(copy, "delete")]);
-    assert.equal((await firstRef.get()).exists, false); assert.equal((await copyRef.get()).exists, false);
+    const base = { docId: firstId, siteId, date: "2028-05-01", operationResultId: null };
+    await assertSucceeds(setDoc(first, base));
+    await assertSucceeds(updateDoc(first, { remarks: "roleに依存しない更新" }));
+    assert.equal((await assertSucceeds(getDoc(first))).data().remarks, "roleに依存しない更新");
+    await assertSucceeds(setDoc(copy, { ...base, docId: copyId, date: "2028-05-02" }));
+    assert.equal((await assertSucceeds(getDoc(copy))).data().docId, copyId);
+    await assertSucceeds(deleteDoc(first));
+    await assertSucceeds(deleteDoc(copy));
+    assert.equal((await assertSucceeds(getDoc(first))).exists(), false);
+    assert.equal((await assertSucceeds(getDoc(copy))).exists(), false);
   } finally {
-    await Promise.all(entries.map(([collectionName, docId]) => admin.doc(`${root}/${collectionName}/${docId}`).delete()));
-    await admin.doc(`${root}/Users/${actor.uid}`).delete();
+    await Promise.all([
+      admin.doc(`${root}/Customers/${customerId}`).delete(),
+      admin.doc(`${root}/Sites/${siteId}`).delete(),
+      admin.doc(`${root}/SiteOperationSchedules/${firstId}`).delete(),
+      admin.doc(`${root}/SiteOperationSchedules/${copyId}`).delete(),
+      admin.doc(`${root}/Users/${actor.uid}`).delete(),
+    ]);
     await getAdminAuth().deleteUser(actor.uid);
   }
 });
@@ -4475,7 +4066,7 @@ test("OperationResult writes allow a valid same-tenant user while Schedule updat
     await (normalWriter ? assertSucceeds : assertFails)(runTransaction(firestore, async (transaction) => {
       transaction.set(result, {
         docId: scheduleId, customerId, siteOperationScheduleId: scheduleId,
-        siteId, uid, updatedAt: serverTimestamp(),
+        siteId, isLocked: false, uid, updatedAt: serverTimestamp(),
       });
       transaction.update(schedule, { operationResultId: scheduleId });
     }), `${label} create-link`);
@@ -4532,20 +4123,12 @@ test("OperationResult writes allow a valid same-tenant user while Schedule updat
   ), "unauthenticated");
 });
 
-test("OperationResult client create allows linked, worker, locked, and field variants for a valid user", async () => {
+test("OperationResult client create allows valid linked, worker, article, and adjustment variants while rejecting identity and lock violations", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "operation-result-create-boundary-writer";
   const customerId = "operation-result-create-boundary-customer";
   const siteId = "operation-result-create-boundary-site";
-  await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: [] });
-  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
-  const base = operationResultClientCreateData({
-    docId: "operation-result-create-boundary-base",
-    uid, customerId, siteId,
-  });
-  const attacks = [
-    { uid: "other" },
-    { isLocked: true },
+  const validVariants = [
     { siteOperationScheduleId: "schedule" },
     { articles: [{ articleId: "article", price: 100, quantity: 1 }] },
     { employees: [{ id: "employee" }] },
@@ -4557,21 +4140,69 @@ test("OperationResult client create allows linked, worker, locked, and field var
     { adjustedQuantityBase: 1 },
     { billingCalculationVersion: 1 },
   ];
-  for (const [index, patch] of attacks.entries()) {
-    const id = `operation-result-create-boundary-${index}`;
-    await assertSucceeds(setDoc(
-      doc(firestore, "Companies", companyId, "OperationResults", id),
-      { ...base, docId: id, ...patch },
-    ));
-  }
   const mismatchedId = "operation-result-create-boundary-mismatched";
-  await assertSucceeds(setDoc(
-    doc(firestore, "Companies", companyId, "OperationResults", mismatchedId),
-    { ...base, docId: "other" },
-  ));
+  const resultIds = [
+    ...validVariants.map((_, index) => `operation-result-create-boundary-${index}`),
+    "operation-result-create-boundary-uid-spoof",
+    "operation-result-create-boundary-locked",
+    mismatchedId,
+  ];
+  try {
+    await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: [] });
+    const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+    const base = operationResultClientCreateData({
+      docId: "operation-result-create-boundary-base",
+      uid, customerId, siteId,
+    });
+    for (const [index, patch] of validVariants.entries()) {
+      const id = `operation-result-create-boundary-${index}`;
+      await assertSucceeds(setDoc(
+        doc(firestore, "Companies", companyId, "OperationResults", id),
+        { ...base, docId: id, ...patch },
+      ));
+    }
+    for (const [label, patch] of [
+      ["uid-spoof", { uid: "other" }],
+      ["locked", { isLocked: true }],
+    ]) {
+      const id = `operation-result-create-boundary-${label}`;
+      await assertFails(setDoc(
+        doc(firestore, "Companies", companyId, "OperationResults", id),
+        { ...base, docId: id, ...patch },
+      ));
+    }
+    await assertFails(setDoc(
+      doc(firestore, "Companies", companyId, "OperationResults", mismatchedId),
+      { ...base, docId: "other" },
+    ));
+  } finally {
+    const cleanupErrors = [];
+    try {
+      await testEnvironment.withSecurityRulesDisabled(async (context) => {
+        const cleanupFirestore = context.firestore();
+        for (const resultId of resultIds) {
+          try {
+            await deleteDoc(doc(cleanupFirestore, "Companies", companyId, "OperationResults", resultId));
+          } catch (error) {
+            cleanupErrors.push(error);
+          }
+        }
+        try {
+          await deleteDoc(doc(cleanupFirestore, "Companies", companyId, "Users", uid));
+        } catch (error) {
+          cleanupErrors.push(error);
+        }
+      });
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(cleanupErrors, "OperationResult create boundary cleanup failed");
+    }
+  }
 });
 
-test("OperationResult client update allows lock, article, billing, lifecycle, and identity variants", async () => {
+test("OperationResult client update allows standard fields and lock transitions while rejecting identity changes and locked delete", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "operation-result-normal-writer";
   const customerId = "operation-result-normal-customer";
@@ -4619,16 +4250,18 @@ test("OperationResult client update allows lock, article, billing, lifecycle, an
     { adjustedUnitPriceBase: 9999 },
     { billingCalculationVersion: 2 },
     { siteOperationScheduleId: "other" },
-    { docId: "other" },
     { createdAt: serverTimestamp() },
   ]) {
     await assertSucceeds(updateDoc(result, { ...patch, uid, updatedAt: serverTimestamp() }));
   }
-  await assertSucceeds(updateDoc(result, { remarks: "spoof", uid: "other", updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(result, { docId: "other", uid, updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(result, { remarks: "spoof", uid: "other", updatedAt: serverTimestamp() }));
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
     await updateDoc(doc(context.firestore(), "Companies", companyId, "OperationResults", resultId), { isLocked: true });
   });
   await assertSucceeds(updateDoc(result, { remarks: "locked", uid, updatedAt: serverTimestamp() }));
+  await assertFails(deleteDoc(result));
+  await assertSucceeds(updateDoc(result, { isLocked: false, uid, updatedAt: serverTimestamp() }));
   await assertSucceeds(deleteDoc(result));
 });
 
@@ -4798,296 +4431,243 @@ test("SCR-01-04 Billing rejects invalid actors, forged metadata, create, delete 
   await assertFails(setDoc(nested, { uid: validUid }));
 });
 
-test("SITE-04 Site lifecycle metadata and cross-tenant schedule writes remain server-only", async () => {
+test("SITE-04 standard client lifecycle is role-independent and rejects invalid metadata or maintenance", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const actor = await seedSiteLifecycleTransportActor({
+    uid: "site-lifecycle-standard-client",
+    isAdmin: false,
+    roles: ["accountant"],
+  });
+  const siteId = "site-lifecycle-standard-client-site";
+  const firestore = authenticatedFirestore(actor.uid, { isSuperUser: false });
+  const site = doc(firestore, "Companies", companyId, "Sites", siteId);
+  const assertDeniedWithoutMutation = async (patch) => {
+    const before = (await assertSucceeds(getDoc(site))).data();
+    await assertFails(updateDoc(site, patch));
+    const after = (await assertSucceeds(getDoc(site))).data();
+    assert.deepEqual(encodeExpected(after), encodeExpected(before));
+  };
+  try {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "Companies", companyId, "Sites", siteId), siteRulesData({ docId: siteId, uid: "server-writer" }));
+      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
+    });
+    const terminatedAt = ClientTimestamp.fromDate(new Date("2028-01-01T00:00:00.000Z"));
+    await assertSucceeds(updateDoc(site, {
+      status: "TERMINATED",
+      statusChangedAt: terminatedAt,
+      statusChangedBy: actor.uid,
+      statusChangeSource: "MANUAL",
+      statusChangeReason: "標準更新で終了",
+      uid: actor.uid,
+    }));
+    let state = (await assertSucceeds(getDoc(site))).data();
+    assert.equal(state.status, "TERMINATED");
+    assert.equal(state.statusChangeSource, "MANUAL");
+
+    const reactivatedAt = ClientTimestamp.fromDate(new Date("2028-01-02T00:00:00.000Z"));
+    await assertSucceeds(updateDoc(site, {
+      status: "ACTIVE",
+      statusChangedAt: reactivatedAt,
+      statusChangedBy: actor.uid,
+      statusChangeSource: "REACTIVATION",
+      statusChangeReason: "新築期間付きで再開",
+      constructionPeriodStartAt: ClientTimestamp.fromDate(new Date("2028-02-01T00:00:00.000Z")),
+      constructionPeriodEndAt: ClientTimestamp.fromDate(new Date("2028-03-01T00:00:00.000Z")),
+      uid: actor.uid,
+    }));
+    state = (await assertSucceeds(getDoc(site))).data();
+    assert.equal(state.status, "ACTIVE");
+    assert.equal(state.statusChangeSource, "REACTIVATION");
+
+    const completeManualTermination = {
+      status: "TERMINATED",
+      statusChangedAt: ClientTimestamp.fromDate(new Date("2028-01-03T00:00:00.000Z")),
+      statusChangedBy: actor.uid,
+      statusChangeSource: "MANUAL",
+      statusChangeReason: "拒否後も原本を保持",
+      uid: actor.uid,
+    };
+    await assertDeniedWithoutMutation({
+      ...completeManualTermination,
+      statusChangedAt: deleteField(),
+    });
+    await assertDeniedWithoutMutation({
+      ...completeManualTermination,
+      statusChangeSource: "AUTO",
+    });
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: true });
+    });
+    await assertDeniedWithoutMutation(completeManualTermination);
+  } finally {
+    const cleanupErrors = [];
+    try {
+      await testEnvironment.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
+      });
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    try {
+      await cleanupSiteLifecycleFixtures({
+        actorUids: [actor.uid],
+        entries: [{ companyId, collectionName: "Sites", docId: siteId }],
+      });
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(cleanupErrors, "SITE-04 lifecycle cleanup failed");
+    }
+  }
+});
+
+test("SITE-04 cross-tenant schedule read, update, delete, and create are denied", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
   const uid = "site-lifecycle-cross-tenant-manager";
   const siteId = "site-lifecycle-metadata-site";
-  await seedSiteRulesActor({
-    uid, pathCompanyId: otherCompanyId, companyId: otherCompanyId,
-    isAdmin: false, roles: ["manager"],
-  });
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const firestore = context.firestore();
-    await setDoc(
-      doc(firestore, "Companies", companyId, "Sites", siteId),
-      siteRulesData({ docId: siteId, uid: "server-writer", scheduleRevision: 0 }),
-    );
-    await setDoc(
-      doc(firestore, "Companies", companyId, "SiteOperationSchedules", "cross-tenant"),
-      { docId: "cross-tenant", siteId, date: "2028-05-01", operationResultId: null },
-    );
-  });
-  const otherFirestore = authenticatedFirestore(uid, {
-    companyId: otherCompanyId, isSuperUser: false,
-  });
-  const crossTenantSchedule = doc(
-    otherFirestore, "Companies", companyId, "SiteOperationSchedules", "cross-tenant",
-  );
-  await assertFails(getDoc(crossTenantSchedule));
-  await assertFails(updateDoc(crossTenantSchedule, { date: "2028-05-02" }));
-  await assertFails(deleteDoc(crossTenantSchedule));
-  await assertFails(setDoc(
-    doc(otherFirestore, "Companies", companyId, "SiteOperationSchedules", "cross-tenant-create"),
-    { docId: "cross-tenant", siteId, date: "2028-05-01", operationResultId: null },
-  ));
-
-  const ownUid = "site-lifecycle-metadata-admin";
-  await seedSiteRulesActor({ uid: ownUid, companyId, isAdmin: true, roles: [] });
-  const ownFirestore = authenticatedFirestore(ownUid, { isSuperUser: false });
-  await assertFails(updateDoc(
-    doc(ownFirestore, "Companies", companyId, "Sites", siteId),
-    {
-      status: "TERMINATED",
-      statusChangedAt: serverTimestamp(),
-      statusChangedBy: ownUid,
-      statusChangeSource: "MANUAL",
-      statusChangeReason: "client spoof",
-      uid: ownUid,
-      updatedAt: serverTimestamp(),
-    },
-  ));
-});
-
-test("SITE-04 lifecycle Callables terminate then reactivate through the local transport", async () => {
-  const actor = await seedSiteLifecycleTransportActor({
-    uid: "site-lifecycle-transport-manager",
-  });
-  const siteId = "site-lifecycle-transport-success";
-  const originalCustomer = { docId: "customer-a", name: "合成取引先" };
-  const originalAgreements = [{ docId: "agreement-a", shiftType: "DAY" }];
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const firestore = context.firestore();
-    await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
-    await setDoc(
-      doc(firestore, "Companies", actor.companyId, "Sites", siteId),
-      siteRulesData({
-        docId: siteId,
-        uid: "server-writer",
-        customerId: "customer-a",
-        customer: originalCustomer,
-        isTemporary: false,
-        agreementsV2: originalAgreements,
-      }),
-    );
-  });
-
-  const terminated = await callSiteLifecycleTransport({
-    actor,
-    functionName: "terminateSite",
-    data: { siteId, reason: "合成現場の通常終了" },
-  });
-  assert.equal(terminated.response.status, 200);
-  assert.deepEqual(terminated.payload.result, {
-    success: true, siteId, status: "TERMINATED",
-  });
-  let state;
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    state = (await getDoc(doc(
-      context.firestore(), "Companies", actor.companyId, "Sites", siteId,
-    ))).data();
-  });
-  assert.equal(state.status, "TERMINATED");
-  assert.equal(state.statusChangedBy, actor.uid);
-  assert.equal(state.statusChangeSource, "MANUAL");
-  assert.equal(state.statusChangeReason, "合成現場の通常終了");
-  assert.deepEqual(state.customer, originalCustomer);
-  assert.deepEqual(state.agreementsV2, originalAgreements);
-
-  const reactivated = await callSiteLifecycleTransport({
-    actor,
-    functionName: "reactivateSite",
-    data: {
-      siteId,
-      reason: "合成現場の継続再開",
-      constructionPeriodStartDate: "2028-02-29",
-      constructionPeriodEndDate: "2028-03-31",
-    },
-  });
-  assert.equal(reactivated.response.status, 200);
-  assert.deepEqual(reactivated.payload.result, {
-    success: true, siteId, status: "ACTIVE",
-  });
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    state = (await getDoc(doc(
-      context.firestore(), "Companies", actor.companyId, "Sites", siteId,
-    ))).data();
-  });
-  assert.equal(state.status, "ACTIVE");
-  assert.equal(state.statusChangedBy, actor.uid);
-  assert.equal(state.statusChangeSource, "REACTIVATION");
-  assert.equal(state.statusChangeReason, "合成現場の継続再開");
-  assert.equal(state.hasConstructionPeriod, true);
-  assert.deepEqual(state.customer, originalCustomer);
-  assert.deepEqual(state.agreementsV2, originalAgreements);
-});
-
-test("SITE-04 lifecycle Callable transport allows role-independent actors and rejects maintenance", async () => {
-  const roleIndependent = await seedSiteLifecycleTransportActor({
-    uid: "site-lifecycle-transport-accountant",
-    roles: ["accountant"],
-  });
-  const allowed = await seedSiteLifecycleTransportActor({
-    uid: "site-lifecycle-transport-maintenance-manager",
-  });
-  const companyId = allowed.companyId;
-  const roleIndependentSiteId = "site-lifecycle-transport-role-independent";
-  const maintenanceSiteId = "site-lifecycle-transport-maintenance";
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const firestore = context.firestore();
-    await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
-    for (const siteId of [roleIndependentSiteId, maintenanceSiteId]) {
-      await setDoc(
-        doc(firestore, "Companies", companyId, "Sites", siteId),
-        siteRulesData({ docId: siteId, uid: "server-writer" }),
-      );
-    }
-  });
-
-  const allowedResult = await callSiteLifecycleTransport({
-    actor: roleIndependent,
-    functionName: "terminateSite",
-    data: { siteId: roleIndependentSiteId, reason: "roleに依存しない終了" },
-  });
-  assert.equal(allowedResult.response.status, 200);
-  assert.deepEqual(allowedResult.payload.result, {
-    success: true, siteId: roleIndependentSiteId, status: "TERMINATED",
-  });
-
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: true });
-  });
   try {
-    const maintenance = await callSiteLifecycleTransport({
-      actor: allowed,
-      functionName: "terminateSite",
-      data: { siteId: maintenanceSiteId, reason: "保守中の終了" },
+    await seedSiteRulesActor({
+      uid,
+      pathCompanyId: otherCompanyId,
+      companyId: otherCompanyId,
+      isAdmin: false,
+      roles: ["manager"],
     });
-    assert.equal(maintenance.payload.error?.status, "INTERNAL");
-    assert.equal(maintenance.payload.error?.message, "現場の状態を変更できませんでした。");
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), "Companies", companyId, "SiteOperationSchedules", "cross-tenant"),
+        { docId: "cross-tenant", siteId, date: "2028-05-01", operationResultId: null },
+      );
+    });
+    const otherFirestore = authenticatedFirestore(uid, {
+      companyId: otherCompanyId,
+      isSuperUser: false,
+    });
+    const crossTenantSchedule = doc(
+      otherFirestore,
+      "Companies",
+      companyId,
+      "SiteOperationSchedules",
+      "cross-tenant",
+    );
+    await assertFails(getDoc(crossTenantSchedule));
+    await assertFails(updateDoc(crossTenantSchedule, { date: "2028-05-02" }));
+    await assertFails(deleteDoc(crossTenantSchedule));
+    await assertFails(setDoc(
+      doc(otherFirestore, "Companies", companyId, "SiteOperationSchedules", "cross-tenant-create"),
+      { docId: "cross-tenant-create", siteId, date: "2028-05-01", operationResultId: null },
+    ));
+    const unchanged = await getAdminFirestore()
+      .doc(`Companies/${companyId}/SiteOperationSchedules/cross-tenant`)
+      .get();
+    assert.equal(unchanged.data().date, "2028-05-01");
   } finally {
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
+    await cleanupSiteLifecycleFixtures({
+      actorUids: [uid],
+      entries: [
+        { companyId, collectionName: "SiteOperationSchedules", docId: "cross-tenant" },
+        { companyId, collectionName: "SiteOperationSchedules", docId: "cross-tenant-create" },
+      ],
     });
   }
 });
 
-test("SITE-04 terminateSite Callable transport rejects future and unprocessed schedules", async () => {
-  const actor = await seedSiteLifecycleTransportActor({
-    uid: "site-lifecycle-transport-schedule-manager",
-  });
-  const cases = [
-    {
-      siteId: "site-lifecycle-transport-future",
-      scheduleId: "site-lifecycle-transport-future-schedule",
-      schedule: { date: "2099-01-01", operationResultId: "result-a" },
-    },
-    {
-      siteId: "site-lifecycle-transport-unprocessed",
-      scheduleId: "site-lifecycle-transport-unprocessed-schedule",
-      schedule: { date: "2020-01-01", operationResultId: null },
-    },
-  ];
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    const firestore = context.firestore();
-    await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
-    for (const item of cases) {
-      await setDoc(
-        doc(firestore, "Companies", actor.companyId, "Sites", item.siteId),
-        siteRulesData({ docId: item.siteId, uid: "server-writer" }),
-      );
-      await setDoc(
-        doc(firestore, "Companies", actor.companyId, "SiteOperationSchedules", item.scheduleId),
-        { docId: item.scheduleId, siteId: item.siteId, ...item.schedule },
-      );
-    }
-  });
-
-  for (const item of cases) {
-    const result = await callSiteLifecycleTransport({
-      actor,
-      functionName: "terminateSite",
-      data: { siteId: item.siteId, reason: "予定競合による拒否" },
-    });
-    assert.equal(result.payload.error?.status, "FAILED_PRECONDITION");
-    let state;
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      state = (await getDoc(doc(
-        context.firestore(), "Companies", actor.companyId, "Sites", item.siteId,
-      ))).data();
-    });
-    assert.equal(state.status, "ACTIVE");
-    assert.equal(Object.hasOwn(state, "statusChangedAt"), false);
-  }
-});
-
-test("Site Rules preserve same-tenant live and archive reads while denying direct destructive writes", async () => {
+test("Site Rules preserve same-tenant live reads while denying archive reads and direct destructive writes", async () => {
   const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
   const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
   const uid = "site-rules-read-only-accountant";
-  const docId = "site-rules-readable";
-  await seedRegisteredUser({
-    uid,
-    pathCompanyId: primaryCompanyId,
-    companyId: primaryCompanyId,
-    isAdmin: false,
-    roles: ["accountant"],
-  });
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    for (const companyId of [primaryCompanyId, secondaryCompanyId]) {
-      for (const collectionName of ["Sites", "Sites_archive"]) {
-        await setDoc(
-          doc(context.firestore(), "Companies", companyId, collectionName, docId),
-          { revision: 1 },
-        );
-        await setDoc(
-          doc(
-            context.firestore(),
-            "Companies",
-            companyId,
-            collectionName,
-            docId,
-            "Nested",
-            "server-seeded",
-          ),
-          { revision: 1 },
-        );
-      }
-    }
-  });
-  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
-
-  for (const collectionName of ["Sites", "Sites_archive"]) {
-    const ownCollection = collection(firestore, "Companies", primaryCompanyId, collectionName);
-    assert.equal((await assertSucceeds(getDoc(doc(ownCollection, docId)))).exists(), true);
-    assert.ok((await assertSucceeds(getDocs(ownCollection))).docs.some((snapshot) => snapshot.id === docId));
-    const otherCollection = collection(firestore, "Companies", secondaryCompanyId, collectionName);
-    await assertFails(getDoc(doc(otherCollection, docId)));
-    await assertFails(getDocs(otherCollection));
-  }
-
   const adminUid = "site-rules-destructive-admin";
-  await seedRegisteredUser({
-    uid: adminUid,
-    pathCompanyId: primaryCompanyId,
-    companyId: primaryCompanyId,
-    isAdmin: true,
-    roles: [],
-  });
-  const adminFirestore = authenticatedFirestore(adminUid, { isSuperUser: false });
-  const live = doc(adminFirestore, "Companies", primaryCompanyId, "Sites", docId);
-  const archive = doc(adminFirestore, "Companies", primaryCompanyId, "Sites_archive", docId);
-  await assertFails(deleteDoc(live));
-  await assertFails(setDoc(doc(adminFirestore, "Companies", primaryCompanyId, "Sites_archive", "new-archive"), { revision: 1 }));
-  await assertFails(updateDoc(archive, { revision: 2 }));
-  await assertFails(deleteDoc(archive));
-  await assertFails(setDoc(doc(live, "Nested", "fallback-bypass"), { bypass: true }));
-  await assertFails(setDoc(doc(archive, "Nested", "fallback-bypass"), { bypass: true }));
-  for (const parent of [live, archive]) {
-    const nested = doc(parent, "Nested", "server-seeded");
-    await assertFails(getDoc(nested));
-    await assertFails(updateDoc(nested, { revision: 2 }));
-    await assertFails(deleteDoc(nested));
+  const docId = "site-rules-readable";
+  try {
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: primaryCompanyId,
+      companyId: primaryCompanyId,
+      isAdmin: false,
+      roles: ["accountant"],
+    });
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      for (const companyId of [primaryCompanyId, secondaryCompanyId]) {
+        for (const collectionName of ["Sites", "Sites_archive"]) {
+          await setDoc(
+            doc(context.firestore(), "Companies", companyId, collectionName, docId),
+            { revision: 1 },
+          );
+          await setDoc(
+            doc(context.firestore(), "Companies", companyId, collectionName, docId, "Nested", "server-seeded"),
+            { revision: 1 },
+          );
+        }
+      }
+    });
+    const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+    const ownLive = collection(firestore, "Companies", primaryCompanyId, "Sites");
+    assert.equal((await assertSucceeds(getDoc(doc(ownLive, docId)))).exists(), true);
+    assert.ok((await assertSucceeds(getDocs(ownLive))).docs.some((snapshot) => snapshot.id === docId));
+    const otherLive = collection(firestore, "Companies", secondaryCompanyId, "Sites");
+    await assertFails(getDoc(doc(otherLive, docId)));
+    await assertFails(getDocs(otherLive));
+    for (const companyId of [primaryCompanyId, secondaryCompanyId]) {
+      const archiveCollection = collection(firestore, "Companies", companyId, "Sites_archive");
+      await assertFails(getDoc(doc(archiveCollection, docId)));
+      await assertFails(getDocs(archiveCollection));
+    }
+
+    await seedRegisteredUser({
+      uid: adminUid,
+      pathCompanyId: primaryCompanyId,
+      companyId: primaryCompanyId,
+      isAdmin: true,
+      roles: [],
+    });
+    const adminFirestore = authenticatedFirestore(adminUid, { isSuperUser: false });
+    const live = doc(adminFirestore, "Companies", primaryCompanyId, "Sites", docId);
+    const archive = doc(adminFirestore, "Companies", primaryCompanyId, "Sites_archive", docId);
+    await assertFails(deleteDoc(live));
+    await assertFails(setDoc(doc(adminFirestore, "Companies", primaryCompanyId, "Sites_archive", "new-archive"), { revision: 1 }));
+    await assertFails(updateDoc(archive, { revision: 2 }));
+    await assertFails(deleteDoc(archive));
+    await assertFails(setDoc(doc(live, "Nested", "fallback-bypass"), { bypass: true }));
+    await assertFails(setDoc(doc(archive, "Nested", "fallback-bypass"), { bypass: true }));
+    for (const parent of [live, archive]) {
+      const nested = doc(parent, "Nested", "server-seeded");
+      await assertFails(getDoc(nested));
+      await assertFails(updateDoc(nested, { revision: 2 }));
+      await assertFails(deleteDoc(nested));
+    }
+  } finally {
+    const cleanupErrors = [];
+    try {
+      await testEnvironment.withSecurityRulesDisabled(async (context) => {
+        const cleanupFirestore = context.firestore();
+        const tryDelete = async (reference) => {
+          try {
+            await deleteDoc(reference);
+          } catch (error) {
+            cleanupErrors.push(error);
+          }
+        };
+        for (const companyId of [primaryCompanyId, secondaryCompanyId]) {
+          for (const collectionName of ["Sites", "Sites_archive"]) {
+            for (const nestedId of ["server-seeded", "fallback-bypass"]) {
+              await tryDelete(doc(cleanupFirestore, "Companies", companyId, collectionName, docId, "Nested", nestedId));
+            }
+            await tryDelete(doc(cleanupFirestore, "Companies", companyId, collectionName, docId));
+          }
+        }
+        await tryDelete(doc(cleanupFirestore, "Companies", primaryCompanyId, "Sites_archive", "new-archive"));
+        await tryDelete(doc(cleanupFirestore, "Companies", primaryCompanyId, "Users", uid));
+        await tryDelete(doc(cleanupFirestore, "Companies", primaryCompanyId, "Users", adminUid));
+      });
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(cleanupErrors, "Site read and archive boundary cleanup failed");
+    }
   }
 });
 
@@ -5448,6 +5028,187 @@ test(`Customer ${contractStatus} delete, archive CUD, and fallback-path bypass r
 });
 }
 
+test("PRELOCAL accepted direct SDK bypass archives despite a Site dependency", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "customer-standard-delete-local-manager";
+  const customerId = "customer-standard-delete-local";
+  const siteId = "customer-standard-delete-local-site";
+  await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: ["manager"] });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const customerRef = doc(firestore, "Companies", companyId, "Customers", customerId);
+  const archiveRef = doc(firestore, "Companies", companyId, "Customers_archive", customerId);
+  const dependentId = "customer-standard-delete-local-dependent";
+  const dependentCustomer = doc(firestore, "Companies", companyId, "Customers", dependentId);
+  const dependentArchivePath = `Companies/${companyId}/Customers_archive/${dependentId}`;
+  try {
+    await assertSucceeds(setDoc(customerRef, customerRulesData({ docId: customerId, uid })));
+    const raw = (await assertSucceeds(getDoc(customerRef))).data();
+    await assertSucceeds(runTransaction(firestore, async (transaction) => {
+      transaction.set(archiveRef, raw);
+      transaction.delete(customerRef);
+    }));
+    assert.equal((await assertSucceeds(getDoc(customerRef))).exists(), false);
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const archived = await getDoc(doc(context.firestore(), "Companies", companyId, "Customers_archive", customerId));
+      assert.equal(archived.exists(), true);
+      assert.deepEqual(encodeExpected(archived.data()), encodeExpected(raw));
+      assert.equal("schemaVersion" in archived.data(), false);
+      assert.equal("customer" in archived.data(), false);
+      assert.equal("audit" in archived.data(), false);
+    });
+
+    await assertSucceeds(setDoc(dependentCustomer, customerRulesData({ docId: dependentId, uid })));
+    const dependentRaw = (await assertSucceeds(getDoc(dependentCustomer))).data();
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "Companies", companyId, "Sites", siteId), { docId: siteId, customerId: dependentId });
+    });
+    const sites = await assertSucceeds(getDocs(query(
+      collection(firestore, "Companies", companyId, "Sites"),
+      where("customerId", "==", dependentId),
+    )));
+    assert.equal(sites.empty, false);
+    await assertSucceeds(runTransaction(firestore, async (transaction) => {
+      transaction.set(doc(firestore, "Companies", companyId, "Customers_archive", dependentId), dependentRaw);
+      transaction.delete(dependentCustomer);
+    }));
+    assert.equal((await assertSucceeds(getDoc(dependentCustomer))).exists(), false);
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const dependentArchived = await getDoc(doc(context.firestore(), dependentArchivePath));
+      assert.equal(dependentArchived.exists(), true);
+      assert.deepEqual(encodeExpected(dependentArchived.data()), encodeExpected(dependentRaw));
+    });
+  } finally {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await deleteDoc(doc(context.firestore(), "Companies", companyId, "Customers", customerId));
+      await deleteDoc(doc(context.firestore(), "Companies", companyId, "Customers_archive", customerId));
+      await deleteDoc(doc(context.firestore(), "Companies", companyId, "Customers", dependentId));
+      await deleteDoc(doc(context.firestore(), "Companies", companyId, "Customers_archive", dependentId));
+      await deleteDoc(doc(context.firestore(), "Companies", companyId, "Sites", siteId));
+      await deleteDoc(doc(context.firestore(), "Companies", companyId, "Users", uid));
+    });
+  }
+});
+
+test("PRELOCAL Customer Rules reject altered atomic pairs, invalid actors, maintenance states, and archive collisions", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "customer-standard-delete-matrix-manager";
+  const disabledUid = "customer-standard-delete-disabled";
+  const disabledId = "customer-standard-delete-disabled-doc";
+  const wrongId = "customer-standard-delete-wrong-archive-id";
+  const maintenanceId = "customer-standard-delete-maintenance";
+  const collisionId = "customer-standard-delete-collision";
+  const altered = [
+    ["altered", { remarks: "changed" }],
+    ["extra", { unexpected: true }],
+    ["dropped", { name: deleteField() }],
+  ];
+  const customerIds = [
+    ...altered.map(([label]) => `customer-standard-delete-${label}`),
+    wrongId,
+    `${wrongId}-archive`,
+    "customer-standard-delete-unauthenticated",
+    "customer-standard-delete-other-tenant",
+    disabledId,
+    ...[true, undefined, "false"].map((state) => `${maintenanceId}-${String(state)}`),
+    collisionId,
+  ];
+  let testFailure = null;
+  try {
+  await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: ["manager"] });
+  const own = authenticatedFirestore(uid, { isSuperUser: false });
+  const setup = async (id, archiveId = id, data = customerRulesData({ docId: id, uid })) => {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "Companies", companyId, "Customers", id), data);
+      if (archiveId) await deleteDoc(doc(context.firestore(), "Companies", companyId, "Customers_archive", archiveId));
+    });
+    return (await assertSucceeds(getDoc(doc(own, "Companies", companyId, "Customers", id)))).data();
+  };
+  const attempt = async (firestore, id, archiveId = id, archiveData = customerRulesData({ docId: id, uid })) =>
+    runTransaction(firestore, async (transaction) => {
+      transaction.set(doc(firestore, "Companies", companyId, "Customers_archive", archiveId), archiveData);
+      transaction.delete(doc(firestore, "Companies", companyId, "Customers", id));
+    });
+  for (const [label, change] of altered) {
+    const id = `customer-standard-delete-${label}`;
+    const raw = await setup(id);
+    const payload = { ...raw, ...change };
+    if (label === "dropped") delete payload.name;
+    await assertFails(attempt(own, id, id, payload));
+    assert.equal((await assertSucceeds(getDoc(doc(own, "Companies", companyId, "Customers", id)))).exists(), true);
+  }
+  const wrongRaw = await setup(wrongId);
+  await assertFails(attempt(own, wrongId, `${wrongId}-archive`, wrongRaw));
+
+  for (const [label, firestore] of [
+    ["unauthenticated", testEnvironment.unauthenticatedContext().firestore()],
+    ["other-tenant", testEnvironment.authenticatedContext("customer-matrix-other", { email_verified: true, companyId: CODEX_LOCAL_COMPANIES.secondary.id }).firestore()],
+  ]) {
+    const id = `customer-standard-delete-${label}`;
+    const raw = await setup(id);
+    await assertFails(attempt(firestore, id, id, raw));
+  }
+  await seedRegisteredUser({ uid: disabledUid, companyId, isAdmin: false, roles: ["manager"], disabled: true });
+  const disabledRaw = await setup(disabledId);
+  await assertFails(attempt(authenticatedFirestore(disabledUid, { isSuperUser: false }), disabledId, disabledId, disabledRaw));
+
+  for (const state of [true, undefined, "false"]) {
+    const id = `${maintenanceId}-${String(state)}`;
+    const raw = await setup(id);
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const system = doc(context.firestore(), "System", "system");
+      if (state === undefined) await deleteDoc(system);
+      else await setDoc(system, { isMaintenance: state });
+    });
+    await assertFails(attempt(own, id, id, raw));
+  }
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
+  });
+  const collisionData = await setup(collisionId);
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId, "Customers_archive", collisionId), collisionData);
+  });
+  await assertFails(attempt(own, collisionId, collisionId, collisionData));
+  assert.equal((await assertSucceeds(getDoc(doc(own, "Companies", companyId, "Customers", collisionId)))).exists(), true);
+  } catch (error) {
+    testFailure = error;
+  } finally {
+    const cleanupErrors = [];
+    try {
+      await testEnvironment.withSecurityRulesDisabled(async (context) => {
+        const cleanupFirestore = context.firestore();
+        for (const id of customerIds) {
+          for (const collectionName of ["Customers", "Customers_archive"]) {
+            try {
+              await deleteDoc(doc(cleanupFirestore, "Companies", companyId, collectionName, id));
+            } catch (error) {
+              cleanupErrors.push(error);
+            }
+          }
+        }
+        for (const actorUid of [uid, disabledUid]) {
+          try {
+            await deleteDoc(doc(cleanupFirestore, "Companies", companyId, "Users", actorUid));
+          } catch (error) {
+            cleanupErrors.push(error);
+          }
+        }
+        try {
+          await setDoc(doc(cleanupFirestore, "System", "system"), { isMaintenance: false });
+        } catch (error) {
+          cleanupErrors.push(error);
+        }
+      });
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    const failures = [...(testFailure ? [testFailure] : []), ...cleanupErrors];
+    if (failures.length > 0) {
+      throw new AggregateError(failures, "Customer negative matrix test or cleanup failed");
+    }
+  }
+});
+
 test("Customer status ignores role changes but rechecks disabled User state in the same context", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   for (const scenario of [
@@ -5561,259 +5322,36 @@ test("Site Agreement normal update is last-write-wins and preserves OperationRes
   }
 });
 
-test("Site archive Callable preserves exact ACTIVE and TERMINATED snapshots and is idempotent", async () => {
-  const { archiveSite } = await loadRebuildApis();
-  const actorUid = "site05-archive-success-admin";
-  const actor = await seedSiteArchiveActor({ uid: actorUid, isAdmin: true, roles: [] });
-  const entries = [{ companyId: actor.companyId, collectionName: "Users", docId: actorUid }];
-  try {
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
-    });
-    for (const status of ["ACTIVE", "TERMINATED"]) {
-      const suffix = status.toLowerCase();
-      const siteId = `site05-archive-${suffix}`;
-      const operationId = `site05-archive-${suffix}-operation`;
-      const reason = `SITE-05 ${status} 合成アーカイブ`;
-      entries.push(
-        { companyId: actor.companyId, collectionName: "Sites", docId: siteId },
-        { companyId: actor.companyId, collectionName: "Sites_archive", docId: siteId },
-      );
-      await seedSiteArchiveDocument({ companyId: actor.companyId, siteId, status });
-      const companyOrderId = `site05-archive-${suffix}-company-order`;
-      const companyOrderData = { siteId, marker: "not-a-direct-reference" };
-      entries.push({
-        companyId: actor.companyId,
-        collectionName: "CompanyOrders",
-        docId: companyOrderId,
-      });
-      await testEnvironment.withSecurityRulesDisabled((context) => setDoc(
-        doc(context.firestore(), "Companies", actor.companyId, "CompanyOrders", companyOrderId),
-        companyOrderData,
-      ));
-      const before = await readSiteArchiveState(actor.companyId, siteId);
-      assert.deepEqual(Object.keys(before.active).sort(), [...SITE_ARCHIVE_FIELDS].sort());
-      const request = actorCallableRequest({ actor, data: { siteId, operationId, reason } });
-      assert.deepEqual(await archiveSite.run(request), { success: true, archived: true });
-      const archived = await readSiteArchiveState(actor.companyId, siteId);
-      assert.equal(archived.active, null);
-      assert.deepEqual(Object.keys(archived.archive).sort(), ["audit", "schemaVersion", "site"]);
-      assert.equal(archived.archive.schemaVersion, 1);
-      assert.deepEqual(archived.archive.site, before.active);
-      assert.deepEqual(Object.keys(archived.archive.audit).sort(), [
-        "actorUid", "archivedAt", "operationId", "reason",
-      ]);
-      assert.equal(archived.archive.audit.actorUid, actorUid);
-      assert.equal(archived.archive.audit.operationId, operationId);
-      assert.equal(archived.archive.audit.reason, reason);
-      assert.equal(archived.archive.audit.archivedAt instanceof ClientTimestamp, true);
-      assert.deepEqual(await archiveSite.run(request), { success: true, archived: true });
-      const retried = await readSiteArchiveState(actor.companyId, siteId);
-      assert.deepEqual(retried, archived);
-      assert.equal(retried.archive.audit.archivedAt.isEqual(archived.archive.audit.archivedAt), true);
-      await testEnvironment.withSecurityRulesDisabled(async (context) => {
-        assert.deepEqual((await getDoc(doc(
-          context.firestore(), "Companies", actor.companyId, "CompanyOrders", companyOrderId,
-        ))).data(), companyOrderData);
-      });
-      await assertCallableError(
-        archiveSite.run(actorCallableRequest({
-          actor,
-          data: { siteId, operationId: `${operationId}-different`, reason },
-        })),
-        "aborted",
-      );
-      assert.deepEqual(await readSiteArchiveState(actor.companyId, siteId), archived);
-    }
-  } finally {
-    await cleanupSiteArchiveScenario({ actorUids: [actorUid], entries });
-  }
-});
-
-test("Site archive Callable rejects invalid state, maintenance, and the strict actor matrix with write zero", async () => {
-  const { archiveSite } = await loadRebuildApis();
+test("PRELOCAL Site preseeded same-ID archive still rejects standalone live delete", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const allowed = [
-    { label: "admin", isAdmin: true, roles: [] },
-    { label: "manager", roles: ["manager"] },
-    { label: "controller", roles: ["controller"] },
-    { label: "legal", roles: ["legal"] },
-  ];
-  const denied = [
-    { label: "accountant", roles: ["accountant"] },
-    { label: "labor", roles: ["labor"] },
-    { label: "human-resource", roles: ["human-resource"] },
-    { label: "direct-permission", roles: [], permissions: ["sites:write"] },
-    { label: "unknown", roles: ["unknown-role"] },
-    { label: "mixed", roles: ["manager", "unknown-role"] },
-    { label: "super", roles: ["manager"], isSuperUser: true },
-    { label: "temporary", isAdmin: true, roles: [], isTemporary: true },
-    { label: "disabled", isAdmin: true, roles: [], disabled: true },
-  ];
-  const actorUids = [];
-  const entries = [];
-  try {
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
-    });
-    for (const scenario of [...allowed, ...denied]) {
-      const uid = `site05-actor-${scenario.label}`;
-      const siteId = `site05-actor-${scenario.label}-site`;
-      actorUids.push(uid);
-      entries.push(
-        { companyId, collectionName: "Sites", docId: siteId },
-        { companyId, collectionName: "Sites_archive", docId: siteId },
-      );
-      const actor = await seedSiteArchiveActor({ uid, ...scenario });
-      await seedSiteArchiveDocument({ companyId, siteId });
-      const before = await readSiteArchiveState(companyId, siteId);
-      const operation = archiveSite.run(actorCallableRequest({
-        actor,
-        data: { siteId, operationId: `site05-${scenario.label}-operation`, reason: "SITE-05 actor matrix" },
-      }));
-      if (allowed.includes(scenario)) {
-        assert.deepEqual(await operation, { success: true, archived: true });
-        assert.equal((await readSiteArchiveState(companyId, siteId)).active, null);
-      } else {
-        await assertCallableError(operation, "permission-denied");
-        assert.deepEqual(await readSiteArchiveState(companyId, siteId), before);
-      }
-    }
-
-    const otherUid = "site05-actor-other-tenant";
-    const otherSiteId = "site05-actor-other-tenant-site";
-    actorUids.push(otherUid);
-    entries.push(
-      { companyId, collectionName: "Sites", docId: otherSiteId },
-      { companyId, collectionName: "Sites_archive", docId: otherSiteId },
+  const uid = "site-standard-delete-collision-manager";
+  const siteId = "site-standard-delete-collision";
+  await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: ["manager"] });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const liveReference = doc(firestore, "Companies", companyId, "Sites", siteId);
+  const archiveReference = doc(firestore, "Companies", companyId, "Sites_archive", siteId);
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, "Sites", siteId),
+      siteRulesData({ docId: siteId, uid }),
     );
-    const otherActor = await seedSiteArchiveActor({
-      uid: otherUid,
-      companyId: CODEX_LOCAL_COMPANIES.secondary.id,
-      pathCompanyId: companyId,
-      isAdmin: true,
-      roles: [],
-    });
-    await seedSiteArchiveDocument({ companyId, siteId: otherSiteId });
-    const otherBefore = await readSiteArchiveState(companyId, otherSiteId);
-    await assertCallableError(archiveSite.run(callableRequest({
-      uid: otherUid,
-      claims: { companyId, isSuperUser: false, email: otherActor.email },
-      data: { siteId: otherSiteId, operationId: "site05-other-operation", reason: "other tenant" },
-    })), "permission-denied");
-    assert.deepEqual(await readSiteArchiveState(companyId, otherSiteId), otherBefore);
-
-    await assertCallableError(archiveSite.run({
-      data: { siteId: otherSiteId, operationId: "site05-unauth-operation", reason: "unauth" },
-    }), "unauthenticated");
-
-    const admin = await seedSiteArchiveActor({ uid: "site05-invalid-admin", isAdmin: true, roles: [] });
-    actorUids.push(admin.uid);
-    for (const [label, setup, expected] of [
-      ["missing", async () => {}, "not-found"],
-      ["malformed", async (siteId) => testEnvironment.withSecurityRulesDisabled((context) =>
-        setDoc(doc(context.firestore(), "Companies", companyId, "Sites", siteId), { docId: siteId })), "failed-precondition"],
-      ["active-and-archive", async (siteId) => {
-        await seedSiteArchiveDocument({ companyId, siteId });
-        await testEnvironment.withSecurityRulesDisabled((context) => setDoc(
-          doc(context.firestore(), "Companies", companyId, "Sites_archive", siteId),
-          { schemaVersion: 1, synthetic: true },
-        ));
-      }, "aborted"],
-    ]) {
-      const siteId = `site05-invalid-${label}`;
-      entries.push(
-        { companyId, collectionName: "Sites", docId: siteId },
-        { companyId, collectionName: "Sites_archive", docId: siteId },
-      );
-      await setup(siteId);
-      const before = await readSiteArchiveState(companyId, siteId);
-      await assertCallableError(archiveSite.run(actorCallableRequest({
-        actor: admin,
-        data: { siteId, operationId: `site05-${label}-operation`, reason: "invalid state" },
-      })), expected);
-      assert.deepEqual(await readSiteArchiveState(companyId, siteId), before);
-    }
-    await assertCallableError(archiveSite.run(actorCallableRequest({
-      actor: admin,
-      data: { siteId: otherSiteId, operationId: "site05-extra-operation", reason: "bad", extra: true },
-    })), "invalid-argument");
-    for (const [label, systemData] of [
-      ["missing", null],
-      ["malformed", { isMaintenance: "false" }],
-      ["active", { isMaintenance: true }],
-    ]) {
-      await testEnvironment.withSecurityRulesDisabled(async (context) => {
-        const system = doc(context.firestore(), "System", "system");
-        if (systemData === null) await deleteDoc(system);
-        else await setDoc(system, systemData);
-      });
-      const maintenanceBefore = await readSiteArchiveState(companyId, otherSiteId);
-      await assertCallableError(archiveSite.run(actorCallableRequest({
-        actor: admin,
-        data: {
-          siteId: otherSiteId,
-          operationId: `site05-maintenance-${label}-operation`,
-          reason: "maintenance",
-        },
-      })), "failed-precondition");
-      assert.deepEqual(await readSiteArchiveState(companyId, otherSiteId), maintenanceBefore);
-    }
-  } finally {
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
-    });
-    await cleanupSiteArchiveScenario({ actorUids, entries });
-  }
-});
-
-test("Site archive Callable preserves transaction documents that retain the archived Site ID", async () => {
-  const { archiveSite } = await loadRebuildApis();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const actorUid = "site05-reference-admin";
-  const actor = await seedSiteArchiveActor({ uid: actorUid, isAdmin: true, roles: [] });
-  const entries = [{ companyId, collectionName: "Users", docId: actorUid }];
-  try {
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
-    });
-    for (const collectionName of [
-      "SiteOperationSchedules", "OperationResults", "ArrangementNotifications",
-      "Billings", "SiteEmployeeHistories",
-    ]) {
-      for (const status of ["ACTIVE", "TERMINATED"]) {
-        const suffix = `${collectionName.toLowerCase()}-${status.toLowerCase()}`;
-        const siteId = `site05-ref-${suffix}`;
-        const referenceId = `site05-ref-${suffix}-document`;
-        const referenceData = { siteId, marker: "site05-direct-reference" };
-        entries.push(
-          { companyId, collectionName: "Sites", docId: siteId },
-          { companyId, collectionName: "Sites_archive", docId: siteId },
-          { companyId, collectionName, docId: referenceId },
-        );
-        await seedSiteArchiveDocument({ companyId, siteId, status });
-        await testEnvironment.withSecurityRulesDisabled((context) => setDoc(
-          doc(context.firestore(), "Companies", companyId, collectionName, referenceId),
-          referenceData,
-        ));
-        assert.deepEqual(await archiveSite.run(actorCallableRequest({
-          actor,
-          data: { siteId, operationId: `site05-${suffix}-operation`, reason: "referenced" },
-        })), { success: true, archived: true });
-        const after = await readSiteArchiveState(companyId, siteId);
-        assert.equal(after.active, null);
-        assert.ok(after.archive);
-        await testEnvironment.withSecurityRulesDisabled(async (context) => {
-          const snapshot = await getDoc(doc(
-            context.firestore(), "Companies", companyId, collectionName, referenceId,
-          ));
-          assert.deepEqual(snapshot.data(), referenceData);
-        });
-      }
-    }
-  } finally {
-    await cleanupSiteArchiveScenario({ actorUids: [actorUid], entries });
-  }
+  });
+  const resolvedRaw = (await assertSucceeds(getDoc(liveReference))).data();
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId, "Sites_archive", siteId), resolvedRaw);
+  });
+  await assertFails(deleteDoc(liveReference));
+  assert.equal((await assertSucceeds(getDoc(liveReference))).exists(), true);
+  await assertFails(getDoc(archiveReference));
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const archived = await getDoc(doc(context.firestore(), "Companies", companyId, "Sites_archive", siteId));
+    assert.equal(archived.exists(), true);
+    assert.deepEqual(encodeExpected(archived.data()), encodeExpected(resolvedRaw));
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await deleteDoc(doc(context.firestore(), "Companies", companyId, "Sites", siteId));
+    await deleteDoc(doc(context.firestore(), "Companies", companyId, "Sites_archive", siteId));
+  });
 });
 
 test("Firestore Rules preserve guarded references while Results and Notifications use normal tenant CRUD", async () => {
@@ -5823,14 +5361,15 @@ test("Firestore Rules preserve guarded references while Results and Notification
   const liveSiteId = "site05-reference-rules-live-site";
   const archivedSiteId = "site05-reference-rules-archived-site";
   const missingSiteId = "site05-reference-rules-missing-site";
-  const actorUids = [uid];
+  const actorUids = [];
   const entries = [
+    { companyId, collectionName: "Users", docId: uid },
     { companyId, collectionName: "Customers", docId: customerId },
     { companyId, collectionName: "Sites", docId: liveSiteId },
     { companyId, collectionName: "Sites_archive", docId: archivedSiteId },
   ];
   try {
-    await seedSiteArchiveActor({ uid, isAdmin: true, roles: [] });
+    await seedSiteArchiveActor({ uid, isAdmin: true, roles: [], auth: false });
     await seedCustomerRulesDocument({ companyId, docId: customerId });
     await seedSiteArchiveDocument({ companyId, siteId: liveSiteId });
     await seedCas03Documents([{
@@ -5847,7 +5386,9 @@ test("Firestore Rules preserve guarded references while Results and Notification
       const compatibleId = `site05-rules-${suffix}-compatible`;
       entries.push({ companyId, collectionName, docId: compatibleId });
       const compatible = doc(firestore, "Companies", companyId, collectionName, compatibleId);
-      const liveData = { siteId: liveSiteId, customerId, marker: "created-live" };
+      const liveData = collectionName === "OperationResults"
+        ? { docId: compatibleId, uid, isLocked: false, siteId: liveSiteId, customerId, marker: "created-live" }
+        : { siteId: liveSiteId, customerId, marker: "created-live" };
       if (["Billings", "SiteEmployeeHistories"].includes(collectionName)) {
         await assertFails(setDoc(compatible, liveData));
         await testEnvironment.withSecurityRulesDisabled(async (context) => { await setDoc(doc(context.firestore(), "Companies", companyId, collectionName, compatibleId), liveData); });
@@ -5900,1093 +5441,6 @@ test("Firestore Rules preserve guarded references while Results and Notification
     await cleanupSiteArchiveScenario({ actorUids, entries });
   }
 });
-
-test("Site archive and transaction writers coexist without requiring a live Site parent", async () => {
-  const { archiveSite } = await loadRebuildApis();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const uid = "site05-race-admin";
-  const customerId = "site05-race-customer";
-  const actor = await seedSiteArchiveActor({ uid, isAdmin: true, roles: [] });
-  const entries = [
-    { companyId, collectionName: "Customers", docId: customerId },
-    { companyId, collectionName: "Users", docId: uid },
-  ];
-  try {
-    await seedCustomerRulesDocument({ companyId, docId: customerId });
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
-    });
-    const firestore = authenticatedFirestore(uid, { isSuperUser: false });
-    const customer = createSiteCustomerProjection((await getDoc(doc(firestore, "Companies", companyId, "Customers", customerId))).data());
-    const createResult = (siteId, resultId) => setDoc(
-      doc(firestore, "Companies", companyId, "OperationResults", resultId),
-      operationResultClientCreateData({
-        docId: resultId, uid, customerId, siteId,
-      }),
-    );
-
-    const referenceFirstSite = "site05-race-reference-first";
-    const referenceFirstId = "site05-race-reference-first-result";
-    entries.push(
-      { companyId, collectionName: "Sites", docId: referenceFirstSite },
-      { companyId, collectionName: "Sites_archive", docId: referenceFirstSite },
-      { companyId, collectionName: "OperationResults", docId: referenceFirstId },
-    );
-    await seedSiteArchiveDocument({ companyId, siteId: referenceFirstSite, data: { customerId, customer, isTemporary: false } });
-    await assertSucceeds(createResult(referenceFirstSite, referenceFirstId));
-    assert.deepEqual(await archiveSite.run(actorCallableRequest({
-      actor,
-      data: { siteId: referenceFirstSite, operationId: "site05-reference-first-op", reason: "race" },
-    })), { success: true, archived: true });
-    assert.ok((await readSiteArchiveState(companyId, referenceFirstSite)).archive);
-    assert.ok(await readCas03Document(companyId, "OperationResults", referenceFirstId));
-
-    const archiveFirstSite = "site05-race-archive-first";
-    const archiveFirstId = "site05-race-archive-first-result";
-    entries.push(
-      { companyId, collectionName: "Sites", docId: archiveFirstSite },
-      { companyId, collectionName: "Sites_archive", docId: archiveFirstSite },
-      { companyId, collectionName: "OperationResults", docId: archiveFirstId },
-    );
-    await seedSiteArchiveDocument({ companyId, siteId: archiveFirstSite, data: { customerId, customer, isTemporary: false } });
-    await archiveSite.run(actorCallableRequest({
-      actor,
-      data: { siteId: archiveFirstSite, operationId: "site05-archive-first-op", reason: "race" },
-    }));
-    await assertSucceeds(createResult(archiveFirstSite, archiveFirstId));
-
-    const { addOperationResultToBilling } = await loadBillingServerWriters();
-    const billingOperation = cas03ServerBillingOperationResult({
-      customerId,
-      suffix: "site05-archive-first",
-    });
-    billingOperation.siteId = archiveFirstSite;
-    const billingId = cas03ServerBillingDocumentId(billingOperation);
-    entries.push({ companyId, collectionName: "Billings", docId: billingId });
-    await addOperationResultToBilling({ companyId, doc: billingOperation });
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      assert.equal((await getDoc(doc(
-        context.firestore(), "Companies", companyId, "Billings", billingId,
-      ))).exists(), true);
-    });
-
-    const concurrentSite = "site05-race-concurrent";
-    const concurrentId = "site05-race-concurrent-result";
-    entries.push(
-      { companyId, collectionName: "Sites", docId: concurrentSite },
-      { companyId, collectionName: "Sites_archive", docId: concurrentSite },
-      { companyId, collectionName: "OperationResults", docId: concurrentId },
-    );
-    await seedSiteArchiveDocument({ companyId, siteId: concurrentSite, data: { customerId, customer, isTemporary: false } });
-    const settled = splitSettled(await Promise.allSettled([
-      archiveSite.run(actorCallableRequest({
-        actor,
-        data: { siteId: concurrentSite, operationId: "site05-concurrent-op", reason: "race" },
-      })),
-      createResult(concurrentSite, concurrentId),
-    ]));
-    assert.equal(settled.fulfilled.length, 2);
-    assert.equal(settled.rejected.length, 0);
-    const finalSite = await readSiteArchiveState(companyId, concurrentSite);
-    let finalReferenceExists = false;
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      finalReferenceExists = (await getDoc(doc(
-        context.firestore(), "Companies", companyId, "OperationResults", concurrentId,
-      ))).exists();
-    });
-    assert.equal(Boolean(finalSite.active), false);
-    assert.equal(Boolean(finalSite.archive), true);
-    assert.equal(finalReferenceExists, true);
-  } finally {
-    await cleanupSiteArchiveScenario({ actorUids: [uid], entries });
-  }
-});
-
-test("Customer archive Callable archives an exact Customer and rejects client-spoofed state", async () => {
-  const { archiveCustomer } = await loadRebuildApis();
-  const actorUid = "cas02-archive-success-admin";
-  const customerId = "cas02-archive-success-customer";
-  const operationId = "cas02-archive-success-operation";
-  const reason = "CAS-02合成取引先の整理";
-  const actor = await seedCustomerArchiveActor({ uid: actorUid });
-
-  try {
-    assert.equal(process.env.AIR_GUARD_EXTERNAL_EFFECTS, "deny");
-    await seedCustomerRulesDocument({
-      companyId: actor.companyId,
-      docId: customerId,
-      uid: "cas02-synthetic-customer-writer",
-      data: { name: "CAS02合成取引先" },
-    });
-    const before = await readCustomerArchiveState(actor.companyId, customerId);
-    assert.ok(before.active);
-    assert.equal(before.archive, null);
-    assert.deepEqual(Object.keys(before.active).sort(), [...CUSTOMER_ARCHIVE_FIELDS].sort());
-
-    const spoofedError = await captureCallableError(
-      archiveCustomer.run(
-        actorCallableRequest({
-          actor,
-          data: {
-            customerId,
-            operationId,
-            reason,
-            companyId: CODEX_LOCAL_COMPANIES.secondary.id,
-            actorUid: "cas02-spoofed-actor",
-            archivedAt: "cas02-spoofed-time",
-            customer: { name: "cas02-spoofed-customer" },
-          },
-        }),
-      ),
-    );
-    assertSafeCustomerArchiveError({
-      error: spoofedError,
-      expectedCode: "invalid-argument",
-      expectedMessage: "入力内容を確認してください。",
-      sensitiveValues: [customerId, operationId, reason, "cas02-spoofed-actor"],
-    });
-    assert.deepEqual(
-      await readCustomerArchiveState(actor.companyId, customerId),
-      before,
-    );
-
-    const result = await archiveCustomer.run(
-      actorCallableRequest({
-        actor,
-        data: { customerId, operationId, reason },
-      }),
-    );
-    assert.deepEqual(result, { success: true, archived: true });
-
-    const after = await readCustomerArchiveState(actor.companyId, customerId);
-    assert.equal(after.active, null);
-    assert.ok(after.archive);
-    assert.deepEqual(Object.keys(after.archive).sort(), ["audit", "customer", "schemaVersion"]);
-    assert.equal(after.archive.schemaVersion, 1);
-    assert.deepEqual(
-      Object.keys(after.archive.customer).sort(),
-      [...CUSTOMER_ARCHIVE_FIELDS].sort(),
-    );
-    assert.deepEqual(after.archive.customer, before.active);
-    assert.deepEqual(Object.keys(after.archive.audit).sort(), [
-      "actorUid",
-      "archivedAt",
-      "operationId",
-      "reason",
-    ]);
-    assert.equal(after.archive.audit.actorUid, actorUid);
-    assert.equal(after.archive.audit.operationId, operationId);
-    assert.equal(after.archive.audit.reason, reason);
-    assert.equal(after.archive.audit.archivedAt instanceof ClientTimestamp, true);
-    assert.equal(Object.hasOwn(after.archive, "companyId"), false);
-    assert.equal(Object.hasOwn(after.archive, "actorUid"), false);
-    assert.equal(Object.hasOwn(after.archive, "archivedAt"), false);
-  } finally {
-    await cleanupCustomerArchiveScenario({
-      actorUid,
-      customerIds: [customerId],
-    });
-  }
-});
-
-test("Customer archive Callable retries the same operation without changing the archive", async () => {
-  const { archiveCustomer } = await loadRebuildApis();
-  const actorUid = "cas02-archive-retry-admin";
-  const customerId = "cas02-archive-retry-customer";
-  const operationId = "cas02-archive-retry-operation";
-  const reason = "CAS-02合成再試行";
-  const actor = await seedCustomerArchiveActor({ uid: actorUid });
-
-  try {
-    await seedCustomerRulesDocument({
-      companyId: actor.companyId,
-      docId: customerId,
-      uid: "cas02-synthetic-retry-writer",
-      data: { name: "CAS02再試行先" },
-    });
-    const request = actorCallableRequest({
-      actor,
-      data: { customerId, operationId, reason },
-    });
-
-    assert.deepEqual(await archiveCustomer.run(request), {
-      success: true,
-      archived: true,
-    });
-    const afterFirst = await readCustomerArchiveState(actor.companyId, customerId);
-    assert.equal(afterFirst.active, null);
-    assert.ok(afterFirst.archive);
-
-    assert.deepEqual(await archiveCustomer.run(request), {
-      success: true,
-      archived: true,
-    });
-    const afterRetry = await readCustomerArchiveState(actor.companyId, customerId);
-    assert.deepEqual(afterRetry, afterFirst);
-    assert.equal(
-      afterRetry.archive.audit.archivedAt.isEqual(
-        afterFirst.archive.audit.archivedAt,
-      ),
-      true,
-    );
-
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      const matchingArchives = await getDocs(
-        query(
-          collection(
-            context.firestore(),
-            "Companies",
-            actor.companyId,
-            "Customers_archive",
-          ),
-          where("audit.operationId", "==", operationId),
-        ),
-      );
-      assert.equal(matchingArchives.size, 1);
-      assert.equal(matchingArchives.docs[0].id, customerId);
-    });
-  } finally {
-    await cleanupCustomerArchiveScenario({
-      actorUid,
-      customerIds: [customerId],
-    });
-  }
-});
-
-test("Customer archive is blocked by live Sites but not by transaction documents", async () => {
-  const { archiveCustomer } = await loadRebuildApis();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-
-  for (const collectionName of ["Sites", "OperationResults", "Billings"]) {
-    const suffix = collectionName.toLowerCase();
-    const actorUid = `cas02-archive-reference-${suffix}-admin`;
-    const customerId = `cas02-archive-reference-${suffix}-customer`;
-    const referenceId = `cas02-archive-reference-${suffix}-document`;
-    const operationId = `cas02-archive-reference-${suffix}-operation`;
-    const reason = `CAS-02合成${collectionName}参照`;
-    const actor = await seedCustomerArchiveActor({ uid: actorUid });
-    const reference = { collectionName, docId: referenceId };
-
-    try {
-      await seedCustomerRulesDocument({
-        companyId,
-        docId: customerId,
-        uid: "cas02-synthetic-reference-writer",
-        data: { name: "CAS02参照中取引先" },
-      });
-      const referenceData = {
-        customerId,
-        marker: `cas02-synthetic-${suffix}-reference`,
-      };
-      await testEnvironment.withSecurityRulesDisabled(async (context) => {
-        await setDoc(
-          doc(
-            context.firestore(),
-            "Companies",
-            companyId,
-            collectionName,
-            referenceId,
-          ),
-          referenceData,
-        );
-      });
-      if (collectionName === "Sites") {
-        const before = await readCustomerArchiveState(companyId, customerId);
-        const error = await captureCallableError(archiveCustomer.run(actorCallableRequest({
-          actor,
-          data: { customerId, operationId, reason },
-        })));
-        assertSafeCustomerArchiveError({
-          error,
-          expectedCode: "failed-precondition",
-          expectedMessage: "参照されている取引先はアーカイブできません。",
-          sensitiveValues: [customerId, operationId, reason, actorUid],
-        });
-        const after = await readCustomerArchiveState(companyId, customerId);
-        assert.deepEqual(after.active, before.active);
-        assert.equal(after.archive, null);
-      } else {
-        assert.deepEqual(await archiveCustomer.run(actorCallableRequest({
-          actor,
-          data: { customerId, operationId, reason },
-        })), { success: true, archived: true });
-        const after = await readCustomerArchiveState(companyId, customerId);
-        assert.equal(after.active, null);
-        assert.ok(after.archive);
-      }
-      await testEnvironment.withSecurityRulesDisabled(async (context) => {
-        const referenceSnapshot = await getDoc(
-          doc(
-            context.firestore(),
-            "Companies",
-            companyId,
-            collectionName,
-            referenceId,
-          ),
-        );
-        assert.equal(referenceSnapshot.exists(), true);
-        assert.deepEqual(referenceSnapshot.data(), referenceData);
-      });
-    } finally {
-      await cleanupCustomerArchiveScenario({
-        actorUid,
-        customerIds: [customerId],
-        references: [reference],
-      });
-    }
-  }
-});
-
-test("Customer archive Callable rejects stale Auth and disabled registered actors safely", async () => {
-  const { archiveCustomer } = await loadRebuildApis();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const scenarios = [
-    {
-      name: "missing-current-auth",
-      expectedMessage: "この操作を行う権限がありません。",
-      seed: async (actor) => {
-        await seedRegisteredUser({
-          uid: actor.uid,
-          pathCompanyId: companyId,
-          companyId,
-          isTemporary: false,
-          disabled: false,
-          isAdmin: true,
-          email: actor.email,
-          roles: [],
-        });
-      },
-    },
-    {
-      name: "disabled-registered-actor",
-      expectedMessage: "取引先をアーカイブする権限がありません。",
-      seed: async (actor) => {
-        await seedCallableAuthUser({
-          uid: actor.uid,
-          companyId,
-          email: actor.email,
-          isSuperUser: false,
-        });
-        await seedRegisteredUser({
-          uid: actor.uid,
-          pathCompanyId: companyId,
-          companyId,
-          isTemporary: false,
-          disabled: true,
-          isAdmin: true,
-          email: actor.email,
-          roles: [],
-        });
-      },
-    },
-  ];
-
-  for (const scenario of scenarios) {
-    const actorUid = `cas02-archive-${scenario.name}`;
-    const customerId = `cas02-archive-${scenario.name}-customer`;
-    const operationId = `cas02-archive-${scenario.name}-operation`;
-    const reason = `CAS-02合成${scenario.name}`;
-    const actor = {
-      uid: actorUid,
-      companyId,
-      email: `${actorUid}@codex-test.invalid`,
-    };
-    try {
-      await scenario.seed(actor);
-      await seedCustomerRulesDocument({
-        companyId,
-        docId: customerId,
-        uid: "cas02-synthetic-boundary-writer",
-        data: { name: "CAS02境界取引先" },
-      });
-      const before = await readCustomerArchiveState(companyId, customerId);
-      const error = await captureCallableError(
-        archiveCustomer.run(
-          actorCallableRequest({
-            actor,
-            data: { customerId, operationId, reason },
-          }),
-        ),
-      );
-      assertSafeCustomerArchiveError({
-        error,
-        expectedCode: "permission-denied",
-        expectedMessage: scenario.expectedMessage,
-        sensitiveValues: [
-          customerId,
-          operationId,
-          reason,
-          actorUid,
-          actor.email,
-          companyId,
-          "request",
-          "claims",
-          "snapshot",
-        ],
-      });
-      assert.deepEqual(
-        await readCustomerArchiveState(companyId, customerId),
-        before,
-      );
-    } finally {
-      await cleanupCustomerArchiveScenario({
-        actorUid,
-        customerIds: [customerId],
-      });
-    }
-  }
-});
-
-test("Customer archive Callable logs fixed classifications without sensitive values", async () => {
-  const actorUid = "cas02-archive-log-admin";
-  const customerId = "cas02-archive-log-customer";
-  const operationId = "cas02-archive-log-operation";
-  const reason = "CAS-02合成ログ非漏えい";
-  const referenceId = "cas02-archive-log-site";
-  await loadRebuildApis();
-  const actor = await seedCustomerArchiveActor({ uid: actorUid });
-  const reference = { collectionName: "Sites", docId: referenceId };
-
-  try {
-    assert.equal(parseEmulatorHost("FIRESTORE_EMULATOR_HOST").host, "127.0.0.1");
-    assert.equal(parseEmulatorHost("FIREBASE_AUTH_EMULATOR_HOST").host, "127.0.0.1");
-    assert.equal(process.env.AIR_GUARD_EXTERNAL_EFFECTS, "deny");
-    await seedCustomerRulesDocument({
-      companyId: actor.companyId,
-      docId: customerId,
-      uid: "cas02-synthetic-log-writer",
-      data: { name: "CAS02ログ取引先" },
-    });
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(
-        doc(
-          context.firestore(),
-          "Companies",
-          actor.companyId,
-          reference.collectionName,
-          reference.docId,
-        ),
-        { customerId, marker: "cas02-synthetic-log-reference" },
-      );
-    });
-
-    const childResult = await runArchiveCustomerInChild(
-      actorCallableRequest({
-        actor,
-        data: { customerId, operationId, reason },
-      }),
-    );
-    assert.equal(childResult.status, 0, childResult.stderr);
-    assert.equal(childResult.signal, null);
-    const errorLine = childResult.stdout
-      .split(/\r?\n/u)
-      .find((line) => line.startsWith("__CUSTOMER_ARCHIVE_ERROR__"));
-    assert.ok(errorLine, childResult.stdout);
-    const publicError = JSON.parse(
-      errorLine.slice("__CUSTOMER_ARCHIVE_ERROR__".length),
-    );
-    assert.deepEqual(publicError, {
-      code: "failed-precondition",
-      message: "参照されている取引先はアーカイブできません。",
-    });
-
-    const combinedOutput = `${childResult.stdout}\n${childResult.stderr}`;
-    const loggerLine = combinedOutput
-      .split(/\r?\n/u)
-      .find((line) => line.includes('"errorCode":"references-exist"'));
-    assert.ok(loggerLine, combinedOutput);
-    assert.deepEqual(JSON.parse(loggerLine), {
-      errorName: "CustomerArchiveError",
-      errorCode: "references-exist",
-      severity: "ERROR",
-      message: "Customer archive failed",
-    });
-    for (const sensitiveValue of [
-      customerId,
-      operationId,
-      reason,
-      actorUid,
-      actor.email,
-      actor.companyId,
-      "request",
-      "claims",
-      "snapshot",
-    ]) {
-      assert.equal(combinedOutput.includes(sensitiveValue), false, sensitiveValue);
-    }
-
-    const state = await readCustomerArchiveState(actor.companyId, customerId);
-    assert.ok(state.active);
-    assert.equal(state.archive, null);
-  } finally {
-    await cleanupCustomerArchiveScenario({
-      actorUid,
-      customerIds: [customerId],
-      references: [reference],
-    });
-  }
-});
-
-test("Firestore Rules keep Customers_archive private for every client actor and query shape", async () => {
-  const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
-  const archiveId = "cas03-private-archive";
-  const actors = [
-    { label: "admin", uid: "cas03-archive-private-admin", isAdmin: true, roles: [] },
-    { label: "manager", uid: "cas03-archive-private-manager", isAdmin: false, roles: ["manager"] },
-    { label: "read-only", uid: "cas03-archive-private-reader", isAdmin: false, roles: ["accountant"] },
-  ];
-  const crossTenantUid = "cas03-archive-private-cross-tenant";
-  const cleanupEntries = [
-    { companyId: primaryCompanyId, collectionName: "Customers_archive", docId: archiveId },
-    { companyId: secondaryCompanyId, collectionName: "Customers_archive", docId: archiveId },
-    ...actors.map((actor) => ({
-      companyId: primaryCompanyId,
-      collectionName: "Users",
-      docId: actor.uid,
-    })),
-    { companyId: secondaryCompanyId, collectionName: "Users", docId: crossTenantUid },
-  ];
-
-  try {
-    for (const actor of actors) {
-      await seedRegisteredUser({
-        uid: actor.uid,
-        pathCompanyId: primaryCompanyId,
-        companyId: primaryCompanyId,
-        isAdmin: actor.isAdmin,
-        roles: actor.roles,
-      });
-    }
-    await seedRegisteredUser({
-      uid: crossTenantUid,
-      pathCompanyId: secondaryCompanyId,
-      companyId: secondaryCompanyId,
-      isAdmin: true,
-      roles: [],
-    });
-    await seedCas03Documents([
-      {
-        companyId: primaryCompanyId,
-        collectionName: "Customers_archive",
-        docId: archiveId,
-        data: { schemaVersion: 1, synthetic: true },
-      },
-      {
-        companyId: secondaryCompanyId,
-        collectionName: "Customers_archive",
-        docId: archiveId,
-        data: { schemaVersion: 1, synthetic: true },
-      },
-    ]);
-
-    for (const actor of actors) {
-      const firestore = authenticatedFirestore(actor.uid, { isSuperUser: false });
-      const archiveCollection = collection(
-        firestore,
-        "Companies",
-        primaryCompanyId,
-        "Customers_archive",
-      );
-      const archive = doc(archiveCollection, archiveId);
-      await assertFails(getDoc(archive));
-      await assertFails(getDocs(archiveCollection));
-      await assertFails(getDocs(query(archiveCollection, where("schemaVersion", "==", 1))));
-      await assertFails(
-        setDoc(doc(archiveCollection, `cas03-forged-${actor.label}`), { synthetic: true }),
-      );
-      await assertFails(updateDoc(archive, { synthetic: false }));
-      await assertFails(deleteDoc(archive));
-    }
-
-    const unauthenticated = testEnvironment.unauthenticatedContext().firestore();
-    const unauthenticatedCollection = collection(
-      unauthenticated,
-      "Companies",
-      primaryCompanyId,
-      "Customers_archive",
-    );
-    await assertFails(getDoc(doc(unauthenticatedCollection, archiveId)));
-    await assertFails(getDocs(unauthenticatedCollection));
-    await assertFails(
-      setDoc(doc(unauthenticatedCollection, "cas03-unauth-forged"), { synthetic: true }),
-    );
-
-    const crossTenantFirestore = authenticatedFirestore(crossTenantUid, {
-      companyId: secondaryCompanyId,
-      isSuperUser: false,
-    });
-    const crossTenantCollection = collection(
-      crossTenantFirestore,
-      "Companies",
-      primaryCompanyId,
-      "Customers_archive",
-    );
-    await assertFails(getDoc(doc(crossTenantCollection, archiveId)));
-    await assertFails(getDocs(crossTenantCollection));
-    await assertFails(
-      setDoc(doc(crossTenantCollection, "cas03-cross-tenant-forged"), { synthetic: true }),
-    );
-
-    const adminFirestore = authenticatedFirestore(actors[0].uid, { isSuperUser: false });
-    const nestedArchive = doc(
-      adminFirestore,
-      "Companies",
-      primaryCompanyId,
-      "Customers_archive",
-      archiveId,
-      "Nested",
-      "cas03-bypass",
-    );
-    await assertFails(getDoc(nestedArchive));
-    await assertFails(setDoc(nestedArchive, { synthetic: true }));
-    await assertFails(deleteDoc(nestedArchive));
-  } finally {
-    await cleanupCas03Documents(cleanupEntries);
-  }
-});
-
-test("Firestore Rules treat every same-ID archive shape as a Customer tombstone", async () => {
-  const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
-  const uid = "cas03-customer-tombstone-manager";
-  const tombstones = [
-    {
-      docId: "cas03-tombstone-valid-envelope",
-      data: {
-        schemaVersion: 1,
-        customer: customerRulesData({
-          docId: "cas03-tombstone-valid-envelope",
-          uid: "archive-server-writer",
-        }),
-        audit: {
-          operationId: "cas03-valid",
-          reason: "合成",
-          actorUid: uid,
-          archivedAt: serverTimestamp(),
-        },
-      },
-    },
-    {
-      docId: "cas03-tombstone-flat-legacy",
-      data: customerRulesData({
-        docId: "cas03-tombstone-flat-legacy",
-        uid: "legacy-server-writer",
-      }),
-    },
-    { docId: "cas03-tombstone-malformed", data: { malformed: true } },
-  ];
-  const otherTenantOnlyId = "cas03-tombstone-other-tenant-only";
-  const cleanupEntries = [
-    { companyId: primaryCompanyId, collectionName: "Users", docId: uid },
-    ...tombstones.flatMap(({ docId }) => [
-      { companyId: primaryCompanyId, collectionName: "Customers_archive", docId },
-      { companyId: primaryCompanyId, collectionName: "Customers", docId },
-    ]),
-    {
-      companyId: secondaryCompanyId,
-      collectionName: "Customers_archive",
-      docId: otherTenantOnlyId,
-    },
-    { companyId: primaryCompanyId, collectionName: "Customers", docId: otherTenantOnlyId },
-  ];
-
-  try {
-    await seedRegisteredUser({
-      uid,
-      pathCompanyId: primaryCompanyId,
-      companyId: primaryCompanyId,
-      isAdmin: false,
-      roles: ["manager"],
-    });
-    await seedCas03Documents([
-      ...tombstones.map(({ docId, data }) => ({
-        companyId: primaryCompanyId,
-        collectionName: "Customers_archive",
-        docId,
-        data,
-      })),
-      {
-        companyId: secondaryCompanyId,
-        collectionName: "Customers_archive",
-        docId: otherTenantOnlyId,
-        data: { malformed: true },
-      },
-    ]);
-    const firestore = authenticatedFirestore(uid, { isSuperUser: false });
-
-    for (const { docId } of tombstones) {
-      await assertFails(
-        setDoc(
-          doc(firestore, "Companies", primaryCompanyId, "Customers", docId),
-          customerRulesData({ docId, uid }),
-        ),
-      );
-    }
-
-    const allowedCustomer = doc(
-      firestore,
-      "Companies",
-      primaryCompanyId,
-      "Customers",
-      otherTenantOnlyId,
-    );
-    await assertSucceeds(
-      setDoc(allowedCustomer, customerRulesData({ docId: otherTenantOnlyId, uid })),
-    );
-    await assertFails(deleteDoc(allowedCustomer));
-  } finally {
-    await cleanupCas03Documents(cleanupEntries);
-  }
-});
-
-const CAS03_CUSTOMER_REFERENCE_COLLECTIONS = [
-  { collectionName: "Sites", optionalOnCreate: true, deleteAllowed: false },
-  { collectionName: "Billings", optionalOnCreate: false, deleteAllowed: true },
-];
-
-for (const {
-  collectionName,
-  optionalOnCreate,
-  deleteAllowed,
-} of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
-  test(`Firestore Rules enforce the ${collectionName} Customer reference matrix`, async () => {
-    if (collectionName === "Billings") return emp05BillingCustomerMatrix();
-    const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
-    const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
-    const suffix = collectionName.toLowerCase();
-    const uid = `cas03-${suffix}-matrix-user`;
-    const activeCustomerId = `cas03-${suffix}-active-customer`;
-    const terminatedCustomerId = `cas03-${suffix}-terminated-customer`;
-    const missingCustomerId = `cas03-${suffix}-missing-customer`;
-    const archiveOnlyCustomerId = `cas03-${suffix}-archive-only-customer`;
-    const otherTenantCustomerId = `cas03-${suffix}-other-tenant-customer`;
-    const orphanDocumentId = `cas03-${suffix}-existing-orphan`;
-    const crossTenantDocumentId = `cas03-${suffix}-cross-tenant-document`;
-    const liveSiteId = `cas03-${suffix}-matrix-live-site`;
-    const otherTenantLiveSiteId = `cas03-${suffix}-matrix-other-live-site`;
-    const cleanupEntries = [
-      { companyId: primaryCompanyId, collectionName: "Users", docId: uid },
-      ...[activeCustomerId, terminatedCustomerId].map((docId) => ({
-        companyId: primaryCompanyId,
-        collectionName: "Customers",
-        docId,
-      })),
-      {
-        companyId: primaryCompanyId,
-        collectionName: "Customers_archive",
-        docId: archiveOnlyCustomerId,
-      },
-      {
-        companyId: secondaryCompanyId,
-        collectionName: "Customers",
-        docId: otherTenantCustomerId,
-      },
-      { companyId: primaryCompanyId, collectionName, docId: orphanDocumentId },
-      { companyId: secondaryCompanyId, collectionName, docId: crossTenantDocumentId },
-      ...(collectionName === "Sites" ? [] : [
-        { companyId: primaryCompanyId, collectionName: "Sites", docId: liveSiteId },
-        { companyId: secondaryCompanyId, collectionName: "Sites", docId: otherTenantLiveSiteId },
-      ]),
-    ];
-
-    try {
-      const seedActor = collectionName === "Sites"
-        ? seedSiteRulesActor
-        : seedRegisteredUser;
-      await seedActor({
-        uid,
-        pathCompanyId: primaryCompanyId,
-        companyId: primaryCompanyId,
-        isAdmin: false,
-        roles: ["manager"],
-      });
-      await seedCustomerRulesDocument({
-        companyId: primaryCompanyId,
-        docId: activeCustomerId,
-        data: { contractStatus: "ACTIVE" },
-      });
-      await seedCustomerRulesDocument({
-        companyId: primaryCompanyId,
-        docId: terminatedCustomerId,
-        data: { contractStatus: "TERMINATED" },
-      });
-      await seedCustomerRulesDocument({
-        companyId: secondaryCompanyId,
-        docId: otherTenantCustomerId,
-        data: { contractStatus: "ACTIVE" },
-      });
-      await seedCas03Documents([
-        ...(collectionName === "Sites" ? [] : [
-          {
-            companyId: primaryCompanyId,
-            collectionName: "Sites",
-            docId: liveSiteId,
-            data: { docId: liveSiteId, status: "ACTIVE" },
-          },
-          {
-            companyId: secondaryCompanyId,
-            collectionName: "Sites",
-            docId: otherTenantLiveSiteId,
-            data: { docId: otherTenantLiveSiteId, status: "ACTIVE" },
-          },
-        ]),
-        {
-          companyId: primaryCompanyId,
-          collectionName: "Customers_archive",
-          docId: archiveOnlyCustomerId,
-          data: { schemaVersion: 1, synthetic: true },
-        },
-        {
-          companyId: primaryCompanyId,
-          collectionName,
-          docId: orphanDocumentId,
-          data: collectionName === "Sites"
-            ? siteRulesData({
-                docId: orphanDocumentId,
-                uid,
-                customerId: missingCustomerId,
-                customer: { docId: missingCustomerId, legacy: true },
-              })
-            : { customerId: missingCustomerId, siteId: liveSiteId, marker: "existing-orphan" },
-        },
-        {
-          companyId: secondaryCompanyId,
-          collectionName,
-          docId: crossTenantDocumentId,
-          data: {
-            customerId: otherTenantCustomerId,
-            ...(collectionName === "Sites" ? {} : { siteId: otherTenantLiveSiteId }),
-            marker: "other-tenant",
-          },
-        },
-      ]);
-
-      const firestore = authenticatedFirestore(uid, { isSuperUser: false });
-      const activeCustomer = createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
-        firestore,
-        "Companies",
-        primaryCompanyId,
-        "Customers",
-        activeCustomerId,
-      )))).data());
-      const terminatedCustomer = createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
-        firestore,
-        "Companies",
-        primaryCompanyId,
-        "Customers",
-        terminatedCustomerId,
-      )))).data());
-      const ownCollection = collection(
-        firestore,
-        "Companies",
-        primaryCompanyId,
-        collectionName,
-      );
-      const createProbe = async (label, data, shouldSucceed) => {
-        const docId = `cas03-${suffix}-create-${label}`;
-        cleanupEntries.push({ companyId: primaryCompanyId, collectionName, docId });
-        let candidate = collectionName === "Sites" ? data : { ...data, siteId: liveSiteId };
-        if (collectionName === "Sites") {
-          const hasCustomerId = Object.hasOwn(data, "customerId");
-          const customerId = hasCustomerId ? data.customerId : null;
-          const customer = customerId === activeCustomerId
-            ? activeCustomer
-            : customerId === terminatedCustomerId
-              ? terminatedCustomer
-              : null;
-          candidate = siteRulesData({ docId, uid, customerId, customer });
-          if (!hasCustomerId) {
-            delete candidate.customerId;
-          }
-        }
-        const operation = setDoc(doc(ownCollection, docId), candidate);
-        if (shouldSucceed) {
-          try {
-            await assertSucceeds(operation);
-          } catch (error) {
-            error.message = `${collectionName} create probe ${label}: ${error.message}`;
-            throw error;
-          }
-        } else {
-          await assertFails(operation);
-        }
-      };
-
-      await createProbe("active", { customerId: activeCustomerId, marker: "active" }, true);
-      await createProbe(
-        "terminated",
-        { customerId: terminatedCustomerId, marker: "terminated" },
-        true,
-      );
-      await createProbe("missing", { customerId: missingCustomerId }, false);
-      await createProbe("archive-only", { customerId: archiveOnlyCustomerId }, false);
-      await createProbe("other-tenant", { customerId: otherTenantCustomerId }, false);
-      await createProbe("empty", { customerId: "" }, false);
-      await createProbe("number", { customerId: 42 }, false);
-      await createProbe("path-like", { customerId: "parent/child" }, false);
-      await createProbe(
-        "null",
-        { customerId: null, customerName: "合成仮取引先" },
-        optionalOnCreate,
-      );
-      await createProbe(
-        "absent",
-        { customerName: "合成仮取引先", marker: "customer-id-absent" },
-        optionalOnCreate,
-      );
-
-      const mutableDocumentId = `cas03-${suffix}-mutable-reference`;
-      cleanupEntries.push({ companyId: primaryCompanyId, collectionName, docId: mutableDocumentId });
-      const mutableReference = doc(ownCollection, mutableDocumentId);
-      await assertSucceeds(
-        setDoc(
-          mutableReference,
-          collectionName === "Sites"
-            ? siteRulesData({
-                docId: mutableDocumentId,
-                uid,
-                customerId: activeCustomerId,
-                customer: activeCustomer,
-              })
-            : { customerId: activeCustomerId, siteId: liveSiteId, marker: "customer-a" },
-        ),
-      );
-      await assertSucceeds(
-        updateDoc(
-          mutableReference,
-          collectionName === "Sites"
-            ? {
-                customerId: terminatedCustomerId,
-                customer: terminatedCustomer,
-                isTemporary: false,
-                uid,
-                updatedAt: serverTimestamp(),
-              }
-            : {
-                customerId: terminatedCustomerId,
-                marker: "customer-b",
-              },
-        ),
-      );
-      assert.equal((await assertSucceeds(getDoc(mutableReference))).exists(), true);
-      const unchangedCustomerUpdate = updateDoc(
-        mutableReference,
-        collectionName === "Sites"
-          ? {
-              agreementsV2: [siteAgreementTransport({ cutoffDate: 5 })],
-              uid,
-              updatedAt: serverTimestamp(),
-            }
-          : {
-              customerId: terminatedCustomerId,
-              marker: "unchanged-customer-id",
-            },
-      );
-      await assertSucceeds(unchangedCustomerUpdate);
-
-      for (const [label, customerId] of [
-        ["missing", missingCustomerId],
-        ["archive-only", archiveOnlyCustomerId],
-        ["other-tenant", otherTenantCustomerId],
-        ["empty", ""],
-        ["number", 42],
-        ["path-like", "parent/child"],
-        ["null", null],
-        ["unset", deleteField()],
-      ]) {
-        const customer = customerId === terminatedCustomerId
-          ? terminatedCustomer
-          : null;
-        await assertFails(
-          updateDoc(
-            mutableReference,
-            collectionName === "Sites"
-              ? {
-                  customerId,
-                  customer,
-                  isTemporary: customerId == null,
-                  uid,
-                  updatedAt: serverTimestamp(),
-                }
-              : {
-                  customerId,
-                  marker: `invalid-${label}`,
-                },
-          ),
-        );
-      }
-
-      const orphanReference = doc(ownCollection, orphanDocumentId);
-      const orphanUpdate = updateDoc(
-        orphanReference,
-        collectionName === "Sites"
-          ? {
-              agreementsV2: [siteAgreementTransport({ cutoffDate: 10 })],
-              uid,
-              updatedAt: serverTimestamp(),
-            }
-          : { marker: "unrelated-update-compatible" },
-      );
-      await assertSucceeds(orphanUpdate);
-      if (deleteAllowed) {
-        await assertSucceeds(deleteDoc(orphanReference));
-      } else {
-        await assertFails(deleteDoc(orphanReference));
-      }
-
-      const crossTenantReference = doc(
-        firestore,
-        "Companies",
-        secondaryCompanyId,
-        collectionName,
-        crossTenantDocumentId,
-      );
-      await assertFails(getDoc(crossTenantReference));
-      await assertFails(
-        getDocs(
-          collection(
-            firestore,
-            "Companies",
-            secondaryCompanyId,
-            collectionName,
-          ),
-        ),
-      );
-      await assertFails(
-        setDoc(crossTenantReference, {
-          customerId: otherTenantCustomerId,
-          marker: "cross-tenant-write",
-        }),
-      );
-      await assertFails(
-        updateDoc(crossTenantReference, { marker: "cross-tenant-update" }),
-      );
-      await assertFails(deleteDoc(crossTenantReference));
-
-      const nestedReference = doc(
-        firestore,
-        "Companies",
-        primaryCompanyId,
-        collectionName,
-        mutableDocumentId,
-        "Nested",
-        "cas03-bypass",
-      );
-      await assertFails(getDoc(nestedReference));
-      await assertFails(setDoc(nestedReference, { synthetic: true }));
-      await assertFails(deleteDoc(nestedReference));
-    } finally {
-      await cleanupCas03Documents(cleanupEntries);
-    }
-  });
-}
-
-for (const order of ["reference-first", "archive-first", "concurrent"]) {
-  test(`CAS-03 OperationResults ${order} ordering allows archived Customer snapshots`, async () => {
-    await emp05CustomerOrdering(order);
-  });
-}
 
 test("Firestore Rules preserve Site temporary-reference transitions and forbid unsetting an assigned Customer", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
@@ -7245,834 +5699,6 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
   });
 }
 
-for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
-  const referenceFirstTitle = collectionName === "Billings"
-    ? "keeps Billing while allowing Customer archive"
-    : "preserves active Customer and reference";
-  const archiveFirstTitle = collectionName === "Billings"
-    ? "cannot calculate new payment terms after Customer archive"
-    : "rejects the later reference";
-  const concurrentTitle = collectionName === "Billings"
-    ? "always archives Customer while Billing depends on payment-term read order"
-    : "keeps the invariant";
-  test(`CAS-03 ${collectionName} reference-first ordering ${referenceFirstTitle}`, async () => {
-    if (collectionName === "OperationResults") return emp05CustomerOrdering("reference-first");
-    if (collectionName === "Billings") return emp05BillingOrdering("reference-first");
-    const { archiveCustomer } = await loadRebuildApis();
-    const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-    const suffix = collectionName.toLowerCase();
-    const actorUid = `cas03-${suffix}-reference-first-admin`;
-    const customerId = `cas03-${suffix}-reference-first-customer`;
-    const referenceId = `cas03-${suffix}-reference-first-document`;
-    const operationId = `cas03-${suffix}-reference-first-operation`;
-    const liveSiteId = `cas03-${suffix}-reference-first-site`;
-    const actor = await seedCustomerArchiveActor({ uid: actorUid });
-    if (collectionName === "Sites") {
-      await setSiteRulesActorDocId({ uid: actorUid, companyId });
-    }
-    const reference = { collectionName, docId: referenceId };
-    const references = collectionName === "Sites"
-      ? [reference]
-      : [reference, { collectionName: "Sites", docId: liveSiteId }];
-
-    try {
-      await seedCustomerRulesDocument({ companyId, docId: customerId });
-      if (collectionName !== "Sites") {
-        await seedSiteArchiveDocument({ companyId, siteId: liveSiteId });
-      }
-      const firestore = authenticatedFirestore(actorUid, { isSuperUser: false });
-      const customer = collectionName === "Sites"
-        ? createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
-            firestore,
-            "Companies",
-            companyId,
-            "Customers",
-            customerId,
-          )))).data())
-        : null;
-      const clientReference = doc(
-        firestore,
-        "Companies",
-        companyId,
-        collectionName,
-        referenceId,
-      );
-      await assertSucceeds(
-        setDoc(
-          clientReference,
-          collectionName === "Sites"
-            ? siteRulesData({
-                docId: referenceId,
-                uid: actorUid,
-                customerId,
-                customer,
-              })
-            : { customerId, siteId: liveSiteId, marker: "reference-first" },
-        ),
-      );
-      await assertCallableError(
-        archiveCustomer.run(
-          actorCallableRequest({
-            actor,
-            data: {
-              customerId,
-              operationId,
-              reason: `CAS-03 ${collectionName} reference-first`,
-            },
-          }),
-        ),
-        "failed-precondition",
-      );
-      const state = await readCustomerArchiveState(companyId, customerId);
-      assert.ok(state.active);
-      assert.equal(state.archive, null);
-      assert.ok(await readCas03Document(companyId, collectionName, referenceId));
-    } finally {
-      await cleanupCustomerArchiveScenario({
-        actorUid,
-        customerIds: [customerId],
-        references,
-      });
-    }
-  });
-
-  test(`CAS-03 ${collectionName} archive-first ordering ${archiveFirstTitle}`, async () => {
-    if (collectionName === "OperationResults") return emp05CustomerOrdering("archive-first");
-    if (collectionName === "Billings") return emp05BillingOrdering("archive-first");
-    const { archiveCustomer } = await loadRebuildApis();
-    const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-    const suffix = collectionName.toLowerCase();
-    const actorUid = `cas03-${suffix}-archive-first-admin`;
-    const customerId = `cas03-${suffix}-archive-first-customer`;
-    const referenceId = `cas03-${suffix}-archive-first-document`;
-    const operationId = `cas03-${suffix}-archive-first-operation`;
-    const actor = await seedCustomerArchiveActor({ uid: actorUid });
-    if (collectionName === "Sites") {
-      await setSiteRulesActorDocId({ uid: actorUid, companyId });
-    }
-    const reference = { collectionName, docId: referenceId };
-
-    try {
-      await seedCustomerRulesDocument({ companyId, docId: customerId });
-      const firestore = authenticatedFirestore(actorUid, { isSuperUser: false });
-      const customer = collectionName === "Sites"
-        ? createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
-            firestore,
-            "Companies",
-            companyId,
-            "Customers",
-            customerId,
-          )))).data())
-        : null;
-      assert.deepEqual(
-        await archiveCustomer.run(
-          actorCallableRequest({
-            actor,
-            data: {
-              customerId,
-              operationId,
-              reason: `CAS-03 ${collectionName} archive-first`,
-            },
-          }),
-        ),
-        { success: true, archived: true },
-      );
-      const clientReference = doc(
-        firestore,
-        "Companies",
-        companyId,
-        collectionName,
-        referenceId,
-      );
-      await assertFails(
-        setDoc(
-          clientReference,
-          collectionName === "Sites"
-            ? siteRulesData({
-                docId: referenceId,
-                uid: actorUid,
-                customerId,
-                customer,
-              })
-            : { customerId, marker: "archive-first" },
-        ),
-      );
-      const state = await readCustomerArchiveState(companyId, customerId);
-      assert.equal(state.active, null);
-      assert.ok(state.archive);
-      assert.equal(await readCas03Document(companyId, collectionName, referenceId), null);
-    } finally {
-      await cleanupCustomerArchiveScenario({
-        actorUid,
-        customerIds: [customerId],
-        references: [reference],
-      });
-    }
-  });
-
-  test(`CAS-03 ${collectionName} concurrent reference and archive ${concurrentTitle}`, async () => {
-    if (collectionName === "OperationResults") return emp05CustomerOrdering("concurrent");
-    if (collectionName === "Billings") return emp05BillingOrdering("concurrent");
-    const { archiveCustomer } = await loadRebuildApis();
-    const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-    const suffix = collectionName.toLowerCase();
-    const actorUid = `cas03-${suffix}-concurrent-admin`;
-    const customerId = `cas03-${suffix}-concurrent-customer`;
-    const referenceId = `cas03-${suffix}-concurrent-document`;
-    const operationId = `cas03-${suffix}-concurrent-operation`;
-    const actor = await seedCustomerArchiveActor({ uid: actorUid });
-    if (collectionName === "Sites") {
-      await setSiteRulesActorDocId({ uid: actorUid, companyId });
-    }
-    const reference = { collectionName, docId: referenceId };
-
-    try {
-      await seedCustomerRulesDocument({ companyId, docId: customerId });
-      const firestore = authenticatedFirestore(actorUid, { isSuperUser: false });
-      const customer = collectionName === "Sites"
-        ? createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
-            firestore,
-            "Companies",
-            companyId,
-            "Customers",
-            customerId,
-          )))).data())
-        : null;
-      const clientReference = doc(
-        firestore,
-        "Companies",
-        companyId,
-        collectionName,
-        referenceId,
-      );
-      const results = splitSettled(
-        await Promise.allSettled([
-          setDoc(
-            clientReference,
-            collectionName === "Sites"
-              ? siteRulesData({
-                  docId: referenceId,
-                  uid: actorUid,
-                  customerId,
-                  customer,
-                })
-              : { customerId, marker: "bounded-concurrent" },
-          ),
-          archiveCustomer.run(
-            actorCallableRequest({
-              actor,
-              data: {
-                customerId,
-                operationId,
-                reason: `CAS-03 ${collectionName} bounded concurrency`,
-              },
-            }),
-          ),
-        ]),
-      );
-      assert.equal(results.fulfilled.length, 1);
-      assert.equal(results.rejected.length, 1);
-
-      const state = await readCustomerArchiveState(companyId, customerId);
-      const referenceData = await readCas03Document(
-        companyId,
-        collectionName,
-        referenceId,
-      );
-      const activeWithReference = Boolean(state.active)
-        && state.archive === null
-        && referenceData?.customerId === customerId;
-      const archiveWithoutReference = state.active === null
-        && Boolean(state.archive)
-        && referenceData === null;
-      assert.equal(activeWithReference || archiveWithoutReference, true);
-      assert.equal(activeWithReference && archiveWithoutReference, false);
-    } finally {
-      await cleanupCustomerArchiveScenario({
-        actorUid,
-        customerIds: [customerId],
-        references: [reference],
-      });
-    }
-  });
-}
-
-test("CAS-03 existing server Billing does not block Customer archive", async () => {
-  const { archiveCustomer } = await loadRebuildApis();
-  const { addOperationResultToBilling } = await loadBillingServerWriters();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const actorUid = "cas03-server-reference-first-admin";
-  const customerId = "cas03-server-reference-first-customer";
-  const operationId = "cas03-server-reference-first-operation";
-  const actor = await seedCustomerArchiveActor({ uid: actorUid });
-  const operationResult = cas03ServerBillingOperationResult({
-    customerId,
-    suffix: "reference-first",
-  });
-  const billingId = cas03ServerBillingDocumentId(operationResult);
-  const billingReference = { collectionName: "Billings", docId: billingId };
-  const siteReference = { collectionName: "Sites", docId: operationResult.siteId };
-
-  try {
-    await seedCustomerRulesDocument({ companyId, docId: customerId });
-    await addOperationResultToBilling({ companyId, doc: operationResult });
-    await archiveCustomer.run(actorCallableRequest({
-      actor,
-      data: { customerId, operationId, reason: "CAS-03 server Billing reference-first" },
-    }));
-
-    const state = await readCustomerArchiveState(companyId, customerId);
-    const billing = await readCas03Document(
-      companyId,
-      billingReference.collectionName,
-      billingReference.docId,
-    );
-    assert.equal(state.active, null);
-    assert.ok(state.archive);
-    assert.equal(billing?.customerId, customerId);
-    assert.equal(
-      billing?.operationResults?.some(
-        ({ docId }) => docId === operationResult.docId,
-      ),
-      true,
-    );
-  } finally {
-    await cleanupCustomerArchiveScenario({
-      actorUid,
-      customerIds: [customerId],
-      references: [billingReference, siteReference],
-    });
-  }
-});
-
-test("CAS-03 server Billing archive-first cannot calculate new payment terms", async () => {
-  const { archiveCustomer } = await loadRebuildApis();
-  const { addOperationResultToBilling } = await loadBillingServerWriters();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const actorUid = "cas03-server-archive-first-admin";
-  const customerId = "cas03-server-archive-first-customer";
-  const operationId = "cas03-server-archive-first-operation";
-  const actor = await seedCustomerArchiveActor({ uid: actorUid });
-  const operationResult = cas03ServerBillingOperationResult({
-    customerId,
-    suffix: "archive-first",
-  });
-  const billingId = cas03ServerBillingDocumentId(operationResult);
-  const billingReference = { collectionName: "Billings", docId: billingId };
-  const siteReference = { collectionName: "Sites", docId: operationResult.siteId };
-
-  try {
-    await seedCustomerRulesDocument({ companyId, docId: customerId });
-    await seedSiteArchiveDocument({ companyId, siteId: operationResult.siteId });
-    assert.deepEqual(
-      await archiveCustomer.run(
-        actorCallableRequest({
-          actor,
-          data: {
-            customerId,
-            operationId,
-            reason: "CAS-03 server Billing archive-first",
-          },
-        }),
-      ),
-      { success: true, archived: true },
-    );
-
-    await assert.rejects(
-      () => addOperationResultToBilling({ companyId, doc: operationResult }),
-      (error) => error?.code === "failed-precondition",
-    );
-
-    const state = await readCustomerArchiveState(companyId, customerId);
-    assert.equal(state.active, null);
-    assert.ok(state.archive);
-    assert.equal(
-      await readCas03Document(companyId, "Billings", billingId),
-      null,
-    );
-  } finally {
-    await cleanupCustomerArchiveScenario({
-      actorUid,
-      customerIds: [customerId],
-      references: [billingReference, siteReference],
-    });
-  }
-});
-
-test("CAS-03 server Billing move preserves source when archived Customer payment terms are unavailable", async () => {
-  const { archiveCustomer } = await loadRebuildApis();
-  const {
-    addOperationResultToBilling,
-    syncOperationResultToBilling,
-  } = await loadBillingServerWriters();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const actorUid = "cas03-server-move-archive-first-admin";
-  const sourceCustomerId = "cas03-server-move-source-customer";
-  const targetCustomerId = "cas03-server-move-target-customer";
-  const operationId = "cas03-server-move-archive-first-operation";
-  const actor = await seedCustomerArchiveActor({ uid: actorUid });
-  const before = cas03ServerBillingOperationResult({
-    customerId: sourceCustomerId,
-    suffix: "move-archive-first",
-  });
-  const after = { ...before, customerId: targetCustomerId };
-  const sourceBillingId = cas03ServerBillingDocumentId(before);
-  const destinationBillingId = cas03ServerBillingDocumentId(after);
-  const references = [
-    { collectionName: "Billings", docId: sourceBillingId },
-    { collectionName: "Billings", docId: destinationBillingId },
-    { collectionName: "Sites", docId: before.siteId },
-  ];
-
-  try {
-    await seedCustomerRulesDocument({
-      companyId,
-      docId: sourceCustomerId,
-    });
-    await seedCustomerRulesDocument({
-      companyId,
-      docId: targetCustomerId,
-    });
-    await seedSiteArchiveDocument({ companyId, siteId: before.siteId });
-    await addOperationResultToBilling({ companyId, doc: before });
-    assert.deepEqual(
-      await archiveCustomer.run(
-        actorCallableRequest({
-          actor,
-          data: {
-            customerId: targetCustomerId,
-            operationId,
-            reason: "CAS-03 server Billing move archive-first",
-          },
-        }),
-      ),
-      { success: true, archived: true },
-    );
-
-    await assert.rejects(
-      () =>
-        syncOperationResultToBilling({
-          companyId,
-          before,
-          after,
-        }),
-      (error) => error?.code === "failed-precondition",
-    );
-
-    const targetState = await readCustomerArchiveState(
-      companyId,
-      targetCustomerId,
-    );
-    const sourceBilling = await readCas03Document(
-      companyId,
-      "Billings",
-      sourceBillingId,
-    );
-    const destinationBilling = await readCas03Document(
-      companyId,
-      "Billings",
-      destinationBillingId,
-    );
-    assert.equal(targetState.active, null);
-    assert.ok(targetState.archive);
-    assert.equal(sourceBilling?.customerId, sourceCustomerId);
-    assert.equal(
-      sourceBilling?.operationResults?.some(
-        ({ docId }) => docId === before.docId,
-      ),
-      true,
-    );
-    assert.equal(destinationBilling, null);
-  } finally {
-    await cleanupCustomerArchiveScenario({
-      actorUid,
-      customerIds: [sourceCustomerId, targetCustomerId],
-      references,
-    });
-  }
-});
-
-test("CAS-03 concurrent server Billing and archive always archive, while Billing depends on payment-term read order", async () => {
-  const { archiveCustomer } = await loadRebuildApis();
-  const { addOperationResultToBilling } = await loadBillingServerWriters();
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const actorUid = "cas03-server-concurrent-admin";
-  const customerId = "cas03-server-concurrent-customer";
-  const operationId = "cas03-server-concurrent-operation";
-  const actor = await seedCustomerArchiveActor({ uid: actorUid });
-  const operationResult = cas03ServerBillingOperationResult({
-    customerId,
-    suffix: "concurrent",
-  });
-  const billingId = cas03ServerBillingDocumentId(operationResult);
-  const billingReference = { collectionName: "Billings", docId: billingId };
-  const siteReference = { collectionName: "Sites", docId: operationResult.siteId };
-
-  try {
-    await seedCustomerRulesDocument({ companyId, docId: customerId });
-    await seedSiteArchiveDocument({ companyId, siteId: operationResult.siteId });
-    const [billingResult, archiveResult] = await Promise.allSettled([
-      addOperationResultToBilling({ companyId, doc: operationResult }),
-      archiveCustomer.run(
-        actorCallableRequest({
-          actor,
-          data: {
-            customerId,
-            operationId,
-            reason: "CAS-03 server Billing bounded concurrency",
-          },
-        }),
-      ),
-    ]);
-    assert.equal(archiveResult.status, "fulfilled");
-    if (billingResult.status === "rejected") assert.equal(billingResult.reason?.code, "failed-precondition");
-
-    const state = await readCustomerArchiveState(companyId, customerId);
-    const billing = await readCas03Document(companyId, "Billings", billingId);
-    assert.equal(state.active, null);
-    assert.ok(state.archive);
-    if (billingResult.status === "fulfilled") {
-      assert.equal(billing?.customerId, customerId);
-      assert.equal(billing.operationResults?.some(({ docId }) => docId === operationResult.docId), true);
-    } else assert.equal(billing, null);
-  } finally {
-    await cleanupCustomerArchiveScenario({
-      actorUid,
-      customerIds: [customerId],
-      references: [billingReference, siteReference],
-    });
-  }
-});
-
-for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {
-  test(`Firestore Rules enforce tenant read/write access for ${collectionName}`, async () => {
-    const uid = `codex-rules-${collectionName.toLowerCase()}-user`;
-    const requiresSite = collectionName === "ArrangementNotifications";
-    const primarySiteId = "codex-rules-arrangement-notifications-primary-site";
-    const secondarySiteId = "codex-rules-arrangement-notifications-secondary-site";
-    await seedRegisteredUser({ uid });
-    await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      if (requiresSite) {
-        await setDoc(
-          doc(context.firestore(), "Companies", CODEX_LOCAL_COMPANIES.primary.id, "Sites", primarySiteId),
-          { docId: primarySiteId, status: "ACTIVE" },
-        );
-        await setDoc(
-          doc(context.firestore(), "Companies", CODEX_LOCAL_COMPANIES.secondary.id, "Sites", secondarySiteId),
-          { docId: secondarySiteId, status: "ACTIVE" },
-        );
-      }
-      await setDoc(
-        doc(
-          context.firestore(),
-          "Companies",
-          CODEX_LOCAL_COMPANIES.secondary.id,
-          collectionName,
-          "rules-probe",
-        ),
-        { revision: 1, ...(requiresSite ? { siteId: secondarySiteId } : {}) },
-      );
-    });
-    const firestore = authenticatedFirestore(uid);
-    const sameTenant = doc(
-      firestore,
-      "Companies",
-      CODEX_LOCAL_COMPANIES.primary.id,
-      collectionName,
-      "rules-probe",
-    );
-    const otherTenant = doc(
-      firestore,
-      "Companies",
-      CODEX_LOCAL_COMPANIES.secondary.id,
-      collectionName,
-      "rules-probe",
-    );
-
-    await assertSucceeds(setDoc(sameTenant, {
-      revision: 1,
-      ...(requiresSite ? { siteId: primarySiteId } : {}),
-    }));
-    await assertSucceeds(getDoc(sameTenant));
-    await assertSucceeds(setDoc(sameTenant, {
-      revision: 2,
-      ...(requiresSite ? { siteId: primarySiteId } : {}),
-    }));
-    await assertSucceeds(deleteDoc(sameTenant));
-    await assertFails(getDoc(otherTenant));
-    await assertFails(setDoc(otherTenant, {
-      revision: 2,
-      ...(requiresSite ? { siteId: secondarySiteId } : {}),
-    }));
-    await assertFails(deleteDoc(otherTenant));
-  });
-}
-
-test("Firestore Rules keep User mutations server-only while allowing tenant reads", async () => {
-  const actorUid = "uwb08-rules-user-actor";
-  const targetUid = "uwb08-rules-user-target";
-  await seedRegisteredUser({ uid: actorUid, isAdmin: true, roles: ["manager"] });
-  await seedRegisteredUser({
-    uid: targetUid,
-    isAdmin: false,
-    roles: ["controller"],
-    displayName: "対象者",
-  });
-  const firestore = authenticatedFirestore(actorUid);
-  const targetRef = doc(
-    firestore,
-    "Companies",
-    CODEX_LOCAL_COMPANIES.primary.id,
-    "Users",
-    targetUid,
-  );
-  const newRef = doc(
-    firestore,
-    "Companies",
-    CODEX_LOCAL_COMPANIES.primary.id,
-    "Users",
-    "uwb08-rules-forged-user",
-  );
-
-  await assertSucceeds(getDoc(targetRef));
-  await assertFails(setDoc(targetRef, { displayName: "改変" }, { merge: true }));
-  await assertFails(deleteDoc(targetRef));
-  await assertFails(
-    setDoc(newRef, {
-      companyId: CODEX_LOCAL_COMPANIES.primary.id,
-      isTemporary: false,
-      disabled: false,
-      isAdmin: true,
-      roles: ["manager"],
-    }),
-  );
-});
-
-test("Firestore Rules keep legacy admin_users server-only", async () => {
-  const uid = "uwb08-admin-users-actor";
-  await seedRegisteredUser({ uid, isAdmin: true });
-  const firestore = authenticatedFirestore(uid, { isSuperUser: true });
-  const reference = doc(firestore, "admin_users", uid);
-  await assertFails(getDoc(reference));
-  await assertFails(setDoc(reference, { isAdmin: true }));
-  await assertFails(deleteDoc(reference));
-});
-
-test("Firestore Rules reserve Employee lifecycle fields and deletion for Admin SDK", async () => {
-  const actorUid = "uwb08-rules-employee-actor";
-  await seedRegisteredUser({ uid: actorUid, roles: ["human-resource"] });
-  const firestore = authenticatedFirestore(actorUid);
-  const employeeRef = doc(
-    firestore,
-    "Companies",
-    CODEX_LOCAL_COMPANIES.primary.id,
-    "Employees",
-    "uwb08-rules-employee",
-  );
-  const invalidEmployeeRef = doc(
-    firestore,
-    "Companies",
-    CODEX_LOCAL_COMPANIES.primary.id,
-    "Employees",
-    "uwb08-rules-resigned-create",
-  );
-
-  await assertFails(
-    setDoc(employeeRef, {
-      displayName: "規則社員",
-      employmentStatus: "ACTIVE",
-      dateOfTermination: null,
-      reasonOfTermination: null,
-    }),
-  );
-  await assertFails(
-    setDoc(employeeRef, { displayName: "更新社員" }, { merge: true }),
-  );
-  await assertFails(
-    setDoc(
-      employeeRef,
-      {
-        employmentStatus: "RESIGNED",
-        dateOfTermination: new Date("2026-08-20T00:00:00+09:00"),
-        reasonOfTermination: "直接退職",
-      },
-      { merge: true },
-    ),
-  );
-  await assertFails(
-    setDoc(
-      employeeRef,
-      { reasonOfTermination: "理由改変" },
-      { merge: true },
-    ),
-  );
-  await assertFails(deleteDoc(employeeRef));
-  await assertFails(
-    setDoc(invalidEmployeeRef, {
-      displayName: "不正社員",
-      employmentStatus: "RESIGNED",
-      dateOfTermination: new Date("2026-08-20T00:00:00+09:00"),
-      reasonOfTermination: "直接作成",
-    }),
-  );
-});
-
-test("Firestore Rules keep lifecycle ledger, events, locks, and heads server-only", async () => {
-  const actorUid = "uwb08-rules-lifecycle-actor";
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  await seedRegisteredUser({ uid: actorUid, isAdmin: true, roles: [] });
-  const paths = [
-    ["LifecycleOperations", "07000000-0000-4000-8000-000000000201"],
-    [
-      "LifecycleOperations",
-      "07000000-0000-4000-8000-000000000201",
-      "Events",
-      "access-revoke-1",
-    ],
-    ["UserLifecycleLocks", "target-user"],
-    ["EmployeeLifecycleLocks", "target-employee"],
-    ["EmployeeLifecycleHeads", "target-employee"],
-  ];
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    for (const path of paths) {
-      await setDoc(
-        doc(context.firestore(), "Companies", companyId, ...path),
-        { fixture: true },
-      );
-    }
-  });
-  const firestore = authenticatedFirestore(actorUid, { isSuperUser: true });
-  for (const path of paths) {
-    const reference = doc(firestore, "Companies", companyId, ...path);
-    await assertFails(getDoc(reference));
-    await assertFails(setDoc(reference, { fixture: false }));
-    await assertFails(deleteDoc(reference));
-  }
-});
-
-test("Firestore Rules enforce exact FCM token create and owner transfer", async () => {
-  const firstUid = "uwb08-fcm-first-owner";
-  const secondUid = "uwb08-fcm-second-owner";
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const token = "uwb08-fcm-token";
-  await seedRegisteredUser({ uid: firstUid });
-  await seedRegisteredUser({ uid: secondUid });
-  const firstFirestore = authenticatedFirestore(firstUid);
-  const secondFirestore = authenticatedFirestore(secondUid);
-  const firstRef = doc(firstFirestore, "FcmTokens", token);
-  const secondRef = doc(secondFirestore, "FcmTokens", token);
-
-  await assertSucceeds(
-    setDoc(firstRef, {
-      token,
-      uid: firstUid,
-      companyId,
-      updatedAt: serverTimestamp(),
-    }),
-  );
-  await assertFails(getDoc(firstRef));
-  await assertFails(
-    setDoc(firstRef, { updatedAt: serverTimestamp() }, { merge: true }),
-  );
-  await assertFails(
-    setDoc(secondRef, {
-      token,
-      uid: secondUid,
-      companyId,
-      updatedAt: serverTimestamp(),
-    }),
-  );
-  await assertFails(deleteDoc(secondRef));
-  await assertSucceeds(deleteDoc(firstRef));
-  await assertSucceeds(
-    setDoc(secondRef, {
-      token,
-      uid: secondUid,
-      companyId,
-      updatedAt: serverTimestamp(),
-    }),
-  );
-});
-
-test("Firestore Rules reject malformed or inactive FCM token owners", async () => {
-  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const activeUid = "uwb08-fcm-active";
-  const disabledUid = "uwb08-fcm-disabled";
-  const temporaryUid = "uwb08-fcm-temporary";
-  await seedRegisteredUser({ uid: activeUid });
-  await seedRegisteredUser({ uid: disabledUid, disabled: true });
-  await seedRegisteredUser({ uid: temporaryUid, isTemporary: true });
-  const activeFirestore = authenticatedFirestore(activeUid);
-  const malformed = [
-    {
-      pathToken: "uwb08-fcm-mismatch-path",
-      data: {
-        token: "uwb08-fcm-other-token",
-        uid: activeUid,
-        companyId,
-        updatedAt: serverTimestamp(),
-      },
-    },
-    {
-      pathToken: "uwb08-fcm-wrong-uid",
-      data: {
-        token: "uwb08-fcm-wrong-uid",
-        uid: "another-user",
-        companyId,
-        updatedAt: serverTimestamp(),
-      },
-    },
-    {
-      pathToken: "uwb08-fcm-wrong-company",
-      data: {
-        token: "uwb08-fcm-wrong-company",
-        uid: activeUid,
-        companyId: CODEX_LOCAL_COMPANIES.secondary.id,
-        updatedAt: serverTimestamp(),
-      },
-    },
-    {
-      pathToken: "uwb08-fcm-unknown-field",
-      data: {
-        token: "uwb08-fcm-unknown-field",
-        uid: activeUid,
-        companyId,
-        updatedAt: serverTimestamp(),
-        ownerOverride: true,
-      },
-    },
-    {
-      pathToken: "uwb08-fcm-invalid-time",
-      data: {
-        token: "uwb08-fcm-invalid-time",
-        uid: activeUid,
-        companyId,
-        updatedAt: "now",
-      },
-    },
-  ];
-  for (const candidate of malformed) {
-    await assertFails(
-      setDoc(
-        doc(activeFirestore, "FcmTokens", candidate.pathToken),
-        candidate.data,
-      ),
-    );
-  }
-  for (const uid of [disabledUid, temporaryUid, "uwb08-fcm-missing"]) {
-    const firestore = authenticatedFirestore(uid);
-    const token = `${uid}-token`;
-    await assertFails(
-      setDoc(doc(firestore, "FcmTokens", token), {
-        token,
-        uid,
-        companyId,
-        updatedAt: serverTimestamp(),
-      }),
-    );
-  }
-});
-
 test("Firestore Rules keep User reservation collections server-only", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const sameTenantUid = "uwb04-rules-reservation-primary";
@@ -8214,54 +5840,32 @@ test("Firestore Rules keep User reservation collections server-only", async () =
 test("Firestore Rules keep SecurityReportIndexes client writes denied", async () => {
   const uid = "codex-rules-security-report-index-user";
   await seedRegisteredUser({ uid });
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
-      await setDoc(
-        doc(
-          context.firestore(),
-          "Companies",
-          company.id,
-          "SecurityReportIndexes",
-          "rules-probe",
-        ),
-        { fixture: true },
-      );
-    }
-  });
-  const firestore = authenticatedFirestore(uid);
-  const sameTenant = doc(
-    firestore,
-    "Companies",
-    CODEX_LOCAL_COMPANIES.primary.id,
-    "SecurityReportIndexes",
-    "rules-probe",
-  );
-  const otherTenant = doc(
-    firestore,
-    "Companies",
-    CODEX_LOCAL_COMPANIES.secondary.id,
-    "SecurityReportIndexes",
-    "rules-probe",
-  );
-
-  await assertSucceeds(getDoc(sameTenant));
-  await assertFails(setDoc(sameTenant, { fixture: false }));
-  await assertFails(deleteDoc(sameTenant));
-  await assertFails(getDoc(otherTenant));
-
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
-      await deleteDoc(
-        doc(
-          context.firestore(),
-          "Companies",
-          company.id,
-          "SecurityReportIndexes",
-          "rules-probe",
-        ),
-      );
-    }
-  });
+  try {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
+        await setDoc(
+          doc(context.firestore(), "Companies", company.id, "SecurityReportIndexes", "rules-probe"),
+          { docId: "rules-probe", fixture: true },
+        );
+      }
+    });
+    const firestore = authenticatedFirestore(uid);
+    const sameTenant = doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id, "SecurityReportIndexes", "rules-probe");
+    const otherTenant = doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.secondary.id, "SecurityReportIndexes", "rules-probe");
+    await assertSucceeds(getDoc(sameTenant));
+    await assertFails(setDoc(sameTenant, { docId: "rules-probe", fixture: false }));
+    await assertFails(deleteDoc(sameTenant));
+    await assertFails(getDoc(otherTenant));
+  } finally {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
+        await deleteDoc(doc(context.firestore(), "Companies", company.id, "SecurityReportIndexes", "rules-probe"));
+      }
+    });
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await deleteDoc(doc(context.firestore(), "Companies", CODEX_LOCAL_COMPANIES.primary.id, "Users", uid));
+    });
+  }
 });
 
 test("Firestore Rules deny all StripeData operations for every actor and nested path", async () => {

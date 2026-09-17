@@ -2,26 +2,28 @@
 
 ## メタデータ
 
-- 状態: CAS-01〜05完了。専用Callable、参照barrier、Rules、Customer詳細UIをDev反映・受入れ済み
+- 状態: CAS-01〜05は履歴。SCR-06で専用Callable・独自envelopeから標準Customer.deleteへ移行済み。SCR-06のLocal／Dev受入れは未実施
 - checkpoint: `CUSTOMER-03-ARCHIVE-SAFETY-DESIGN`
 - 最終確認日: 2026-09-09
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[ADR 0048](../decisions/0048-site-customer-change-and-historical-snapshots.md)、[roadmap](../roadmaps/customer-archive-safety.md)
-- 実装事実の根拠: `firestore.rules`、`utils/customer/**`、`composables/application/customer/**`、`pages/customers/[id].vue`、`functions/apis/archiveCustomer.js`、`functions/modules/customer/**`、`functions/modules/billings/**`、installed Customer/Site/OperationResult/Billing schema、installed client/server adapter
+- 実装事実の根拠: `firestore.rules`、`components/Customer/Manager/index.vue`、`pages/customers/[id].vue`、installed Customer schema、installed client adapter
 
 ## 現行事実
 
-- Customerのclient create/updateは専用application処理でschema・業務validationを行い、Rulesは同一tenantの有効な本登録Userとactor UIDを検査する。active deleteと`Customers_archive` client read/CUDは拒否する。専用`archiveCustomer` Callableと権限制御されたCustomer詳細のarchive UIはCAS-02/04で実装し、CAS-05でDev反映・受入れ済みである。archive一覧、restore UI、restore Callableはない。
-- `Customers_archive`のclient read/CUDはCAS-03 Rulesで全client actorへ拒否し、CAS-05でDev反映・受入れ済みである。
+- Customerのclient create/update/deleteは標準Schema／FireModel処理へ接続した。`logicalDelete=true`により同IDのraw documentを`Customers_archive`へ保存し、active documentを同じtransactionで削除する。SCR-06のruntime／Emulator／Dev受入れは未実施である。archive一覧、restore UI、restore Callableはない。
+- `Customers_archive`のclient read/update/deleteは拒否し、createはlive Customerのraw dataと同じatomic pairだけをRulesで許可する。既存CAS-03〜05の専用Callable／envelope記録はHistoricalである。
 - installed Customer schemaは`logicalDelete=true`で、直接`hasMany`は`Sites.customerId`だけを列挙する。
-- generic client/server deleteは監査metadataを持たず、既存archiveを`set`で上書きする。clientの参照queryはtransaction外で、serverはschemaの`collectionPath`と異なるpropertyを読む。
-- generic restoreはactive同IDを確認せず全体`set`する。serverはarchive snapshotをtransaction readへ含めない。
+- 旧generic client/server deleteは監査metadataを持たず、既存archiveを`set`で上書きする。clientの参照queryはtransaction外で、serverはschemaの`collectionPath`と異なるpropertyを読む。これはHistorical調査である。
+- 旧generic restoreはactive同IDを確認せず全体`set`する。serverはarchive snapshotをtransaction readへ含めない。現行Customerではrestore UIを提供しない。
 - actual repositoryではSites、OperationResults、BillingsがcustomerIdを保持する。CAS-03 RulesはcustomerIdの新規設定・変更時にactive collection内のCustomer存在を要求するが、3 collectionの同一tenant内permission全体は既存の広い境界を維持する。Billingのserver create/moveも同一transaction内で新規参照先Customerを確認し、CAS-05でDev反映・受入れ済みである。
 - Site schemaは保存前にCustomerをfetchし、OperationResult schemaはSiteからcustomerIdを同期するが、client schema処理は直接Firestore writeを拒否するsecurity boundaryではない。
 - Admin SDKはRulesを迂回するため、Billingのserver create/moveはCAS-03で新規参照先Customerの読取りとBilling更新を同じtransactionへ統合し、CAS-05でDev反映済みである。
 
-## 承認済み契約と実装状態
+SCR-06現行境界: Customerの正規アーカイブは単数Domain ManagerからSchemaの`hasMany`を使う標準`Customer.delete()`へ委譲する。`Sites.customerId`の従属確認をRulesやCallableへ重複実装しない。直接Firestore SDKによる迂回はunsupportedであり、通常tenant writeを許可するRulesの残存リスクは[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)の境界として扱う。Rulesは同一tenant・maintenance停止・raw archive createとlive deleteのatomic pairだけを認可し、archive単独CUDは拒否する。
 
-### Callable input・actor（CAS-02実装、CAS-05 Dev反映・受入れ済み）
+## Historical CAS-01〜05 契約と実装記録
+
+### Historical: Callable input・actor（CAS-02〜05）
 
 `archiveCustomer` requestは次のexact shapeとする。
 

@@ -6,27 +6,25 @@ import { mapCallableAuthIdentityError } from "../modules/auth/mappers/mapCallabl
 import { EmployeeOperationError } from "../shared/employeeContract.js";
 import {
   archiveEmployee as archiveEmployeeUseCase,
-  configuredArchiveTenants,
 } from "../modules/employees/archiveEmployee.js";
 
-export function createArchiveEmployeeCallable(resolveAllowedTenants) {
+export function createArchiveEmployeeCallable() {
   return onCall(async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "認証が必要です。");
     try {
-      return await archiveEmployeeUseCase({ firestore: getFirestore(), input: request.data, resolveAllowedTenants,
+      return await archiveEmployeeUseCase({ firestore: getFirestore(), input: request.data,
         resolveIdentity: () => resolveCallableAuthIdentity({ auth: getAuth(), tokenUid: request.auth.uid, tokenEmail: request.auth.token?.email, tokenEmailVerified: request.auth.token?.email_verified, tokenCompanyId: request.auth.token?.companyId, tokenIsSuperUser: request.auth.token?.isSuperUser }),
       });
     } catch (error) {
       if (error instanceof EmployeeOperationError) throw new HttpsError(error.code, error.message);
       const identityError = mapCallableAuthIdentityError(error);
       if (identityError) throw new HttpsError(identityError.code, identityError.message);
-      throw new HttpsError("internal", "アーカイブ結果を確認できません。同じ操作から結果を確認してください。");
+      throw new HttpsError("internal", "アーカイブ事前確認に失敗しました。現在の従業員情報を確認してください。");
     }
   });
 }
 
-// The normal entrypoint remains fail-closed until the runtime tenant allowlist
-// is configured. The Codex-only entrypoint injects its separate demo resolver.
-export const archiveEmployee = createArchiveEmployeeCallable(
-  configuredArchiveTenants,
-);
+// The normal and Codex test entrypoints share the same authenticated
+// same-tenant Employee actor boundary. Environment-specific tenant allowlists
+// are not part of the archive authorization contract.
+export const archiveEmployee = createArchiveEmployeeCallable();

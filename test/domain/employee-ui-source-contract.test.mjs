@@ -15,7 +15,6 @@ const files = [
   "components/Employee/CustomInput/SecurityGuard.vue",
   "components/Employee/UserManager.vue",
   "components/Employee/Certifications/Manager/index.vue",
-  "components/Employee/ArchiveDialog.vue",
 ];
 
 test("reachable normal Employee CRUD uses the domain Managers and model persistence", async () => {
@@ -45,9 +44,14 @@ test("reachable normal Employee CRUD uses the domain Managers and model persiste
     assert.match(source, /draft\.update\(\)/u);
     assert.match(source, /disable-delete/u);
     assert.match(source, /:custom-input="resolveCustomInput"/u);
-    assert.doesNotMatch(source, /draft\.delete\(\)/u);
+    if (source === multiple) assert.doesNotMatch(source, /draft\.delete\(\)/u);
+    else assert.match(source, /draft\.delete\(\)/u);
   }
-  assert.equal((detail.match(/<EmployeeManager\b/gu) || []).length, 3);
+  assert.match(single, /async function handleDelete\(draft\)[\s\S]*?return await draft\.delete\(\)/u);
+  assert.equal((detail.match(/<EmployeeManager\b/gu) || []).length, 4);
+  assert.match(detail, /@delete="archived"/u);
+  assert.match(detail, /function archived\(\)[\s\S]*?excludeArchived[\s\S]*?navigateTo\("\/employees"\)/u);
+  assert.match(detail, /if \(await archive\.preflight\(\)\) toDelete\(\)/u);
   assert.doesNotMatch(detail, /<EmployeeEditor\b/u);
   await assert.rejects(
     readFile(new URL("../../components/Employee/Editor.vue", import.meta.url), "utf8"),

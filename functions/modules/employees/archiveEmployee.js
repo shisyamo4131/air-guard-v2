@@ -1,46 +1,65 @@
-import { FieldValue } from "firebase-admin/firestore";
-import { archiveIdentifier, archiveActorAllowed, archiveFail, parseEmployeeArchiveInput, validateEmployeeArchiveRaw, validateEmployeeArchiveEnvelope } from "../../shared/employeeArchiveContract.js";
+import { archiveIdentifier, archiveActorAllowed, archiveFail, parseEmployeeArchiveInput, validateEmployeeArchiveRaw } from "../../shared/employeeArchiveContract.js";
+import {
+  assertEmployeeLifecycleHeadRecord,
+  assertLifecycleOperationRecord,
+  LIFECYCLE_OPERATION_TYPES,
+} from "../auth/lifecycle/lifecycleOperationSchema.js";
 
 export const EMPLOYEE_ARCHIVE_QUERIES = Object.freeze([
-  ["Users", "employeeId", "=="], ["LifecycleOperations", "employeeId", "=="],
+  ["Users", "employeeId", "=="],
 ]);
 export const EMPLOYEE_ARCHIVE_DOCUMENTS = Object.freeze(["EmployeeUserReservations", "EmployeeLifecycleLocks", "EmployeeLifecycleHeads"]);
-export function parseArchiveTenants(setting) {
-  if (setting === undefined) return [];
-  let parsed; try { parsed = JSON.parse(setting); } catch { archiveFail("permission-denied", "この会社ではアーカイブを利用できません。"); }
-  if (!Array.isArray(parsed) || parsed.some((id) => !archiveIdentifier(id)) || new Set(parsed).size !== parsed.length) archiveFail("permission-denied", "この会社ではアーカイブを利用できません。");
-  return parsed;
-}
-export const configuredArchiveTenants = () => parseArchiveTenants(process.env.AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS);
-export async function archiveEmployee({ firestore, resolveIdentity, input, resolveAllowedTenants = configuredArchiveTenants, timestamp = () => FieldValue.serverTimestamp() }) {
+export async function archiveEmployee({ firestore, resolveIdentity, input }) {
   const parsed = parseEmployeeArchiveInput(input), initial = await resolveIdentity();
   if (!archiveIdentifier(initial.uid) || !archiveIdentifier(initial.companyId)) archiveFail("permission-denied");
   const prefix = `Companies/${initial.companyId}`, activeRef = firestore.doc(`${prefix}/Employees/${parsed.employeeId}`), archiveRef = firestore.doc(`${prefix}/Employees_archive/${parsed.employeeId}`);
   await firestore.runTransaction(async (transaction) => {
-    const identity = await resolveIdentity(), tenants = resolveAllowedTenants();
-    if (identity.uid !== initial.uid || identity.companyId !== initial.companyId || !Array.isArray(tenants) || tenants.some((id) => !archiveIdentifier(id)) || !tenants.includes(identity.companyId)) archiveFail("permission-denied", "この会社ではアーカイブを利用できません。");
-    const [actor, system, active, archived, ...dependencies] = await Promise.all([
+    const identity = await resolveIdentity();
+    if (identity.uid !== initial.uid || identity.companyId !== initial.companyId) archiveFail("permission-denied");
+    const [actor, system, active, archived, lifecycleOperations, ...dependencies] = await Promise.all([
       transaction.get(firestore.doc(`${prefix}/Users/${identity.uid}`)), transaction.get(firestore.doc("System/system")),
       transaction.get(activeRef), transaction.get(archiveRef),
+      transaction.get(firestore.collection(`${prefix}/LifecycleOperations`).where("employeeId", "==", parsed.employeeId)),
       ...EMPLOYEE_ARCHIVE_QUERIES.map(([name, field, operator]) => transaction.get(firestore.collection(`${prefix}/${name}`).where(field, operator, parsed.employeeId).limit(1))),
       ...EMPLOYEE_ARCHIVE_DOCUMENTS.map((name) => transaction.get(firestore.doc(`${prefix}/${name}/${parsed.employeeId}`))),
     ]);
     const queryCount = EMPLOYEE_ARCHIVE_QUERIES.length;
-    for (const snapshot of [actor, system, active, archived, ...dependencies.slice(queryCount)]) if (typeof snapshot?.exists !== "boolean" || (snapshot.exists && typeof snapshot.data !== "function")) archiveFail();
+    const dependencyQueries = dependencies.slice(0, queryCount);
+    const dependencyDocuments = dependencies.slice(queryCount);
+    for (const snapshot of [actor, system, active, archived, ...dependencyDocuments]) if (typeof snapshot?.exists !== "boolean" || (snapshot.exists && typeof snapshot.data !== "function")) archiveFail();
+    if (!Number.isInteger(lifecycleOperations?.size) || lifecycleOperations.size < 0) archiveFail();
     if (!actor.exists || !archiveActorAllowed(identity, actor.data())) archiveFail("permission-denied", "アーカイブ権限がありません。");
     if (!system.exists || system.data()?.isMaintenance !== false) archiveFail("failed-precondition", "メンテナンス状態を確認してください。");
-    for (const snapshot of dependencies.slice(0, queryCount)) if (!Number.isInteger(snapshot?.size) || snapshot.size < 0 || snapshot.size > 1) archiveFail();
-    if (dependencies.slice(0, queryCount).some((snapshot) => snapshot.size > 0) || dependencies.slice(queryCount).some((snapshot) => snapshot.exists)) archiveFail("failed-precondition", "利用中の従業員はアーカイブできません。");
-    if (active.exists && archived.exists) archiveFail("already-exists", "原本とアーカイブが両方存在します。");
-    if (archived.exists) {
-      const envelope = validateEmployeeArchiveEnvelope(archived.data(), parsed.employeeId);
-      if (envelope.audit.actorUid !== identity.uid || envelope.audit.operationId !== parsed.operationId || envelope.audit.reason !== parsed.reason) archiveFail("already-exists", "同じIDの別のアーカイブが存在します。");
-      return;
-    }
     if (!active.exists) archiveFail("not-found", "従業員情報が見つかりません。");
     const employee = validateEmployeeArchiveRaw(active.data(), parsed.employeeId);
-    transaction.create(archiveRef, { schemaVersion: 1, employee, audit: { actorUid: identity.uid, operationId: parsed.operationId, reason: parsed.reason, archivedAt: timestamp() } });
-    transaction.delete(activeRef);
+    if (employee.employmentStatus !== "ACTIVE") archiveFail("failed-precondition", "在職中の従業員だけをアーカイブできます。");
+    for (const snapshot of dependencyQueries) if (!Number.isInteger(snapshot?.size) || snapshot.size < 0 || snapshot.size > 1) archiveFail();
+    if (dependencyQueries.some((snapshot) => snapshot.size > 0) || dependencyDocuments.slice(0, 2).some((snapshot) => snapshot.exists)) archiveFail("failed-precondition", "利用中の従業員はアーカイブできません。");
+    const headSnapshot = dependencyDocuments[2];
+    let latestOperation = null;
+    try {
+      if (lifecycleOperations.size > 0) {
+        for (const snapshot of lifecycleOperations.docs) {
+          const operation = assertLifecycleOperationRecord(snapshot.data());
+          if (operation.employeeId !== parsed.employeeId) archiveFail();
+          if (operation.state !== "completed" || !["completed", "not-applicable"].includes(operation.cleanupState)) archiveFail("failed-precondition", "従業員の退職・訂正処理が完了していません。");
+        }
+      }
+      if (headSnapshot.exists) {
+        const head = assertEmployeeLifecycleHeadRecord(headSnapshot.data());
+        latestOperation = lifecycleOperations.docs
+          .map((snapshot) => snapshot.data())
+          .find((operation) => operation.operationId === head.latestOperationId);
+        if (!latestOperation || latestOperation.operationType !== head.latestOperationType || latestOperation.employeeId !== parsed.employeeId) archiveFail("failed-precondition", "従業員のライフサイクル履歴が整合していません。");
+      } else if (lifecycleOperations.size > 0) {
+        archiveFail("failed-precondition", "従業員のライフサイクル履歴が整合していません。");
+      }
+    } catch (error) {
+      if (error?.name === "EmployeeOperationError") throw error;
+      archiveFail("failed-precondition", "従業員のライフサイクル履歴が整合していません。");
+    }
+    if (latestOperation?.operationType === LIFECYCLE_OPERATION_TYPES.EMPLOYEE_RETIREMENT) archiveFail("failed-precondition", "退職済みの従業員はアーカイブできません。");
+    if (archived.exists) archiveFail("already-exists", "同じIDのアーカイブが既に存在します。");
   });
-  return { success: true, archived: true };
+  return { success: true, allowed: true, employeeId: parsed.employeeId };
 }
