@@ -392,6 +392,7 @@ service cloud.firestore {
       allow delete: if isAuthenticated()
                     && userCompanyId() == companyId
                     && isSystemMaintenanceOff()
+                    && !exists(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId))
                     && existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId))
                     && getAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId)).data == resource.data
                     && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(docId));

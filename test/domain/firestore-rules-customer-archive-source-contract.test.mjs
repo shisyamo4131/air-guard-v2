@@ -14,6 +14,7 @@ test("Customer Rules require archive collision safety and atomic raw exact same-
   assert.match(live, /allow delete:[\s\S]*?isSystemMaintenanceOff\(\)/u);
   assert.match(archive, /allow create:[\s\S]*?isSystemMaintenanceOff\(\)/u);
   assert.match(live, /allow create:[\s\S]*?!exists\(\/databases\/\$\(database\)\/documents\/Companies\/\$\(companyId\)\/Customers_archive\/\$\(docId\)\)/u);
+  assert.match(live, /allow delete:[\s\S]*?!exists\(\/databases\/\$\(database\)\/documents\/Companies\/\$\(companyId\)\/Customers_archive\/\$\(docId\)\)[\s\S]*?existsAfter\(\/databases\/\$\(database\)\/documents\/Companies\/\$\(companyId\)\/Customers_archive\/\$\(docId\)\)/u);
   assert.match(live, /allow delete:[\s\S]*?existsAfter\([\s\S]*?Customers_archive[\s\S]*?getAfter\([\s\S]*?\.data == resource\.data[\s\S]*?!existsAfter\([\s\S]*?Customers\/\$\(docId\)/u);
   assert.match(archive, /allow read, update, delete: if false;/u);
   assert.match(archive, /allow create:[\s\S]*?exists\([\s\S]*?Customers\/\$\(docId\)[\s\S]*?\.data == request\.resource\.data[\s\S]*?!existsAfter\([\s\S]*?Customers\/\$\(docId\)/u);
