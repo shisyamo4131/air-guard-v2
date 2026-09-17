@@ -16,8 +16,14 @@ test("Customer detail uses explicit manager delete, while list manager disables 
   const plural = await source("components/Customers/Manager/index.vue");
   const detail = await source("pages/customers/[id].vue");
   assert.match(manager, /async function handleDelete\(draft\)[\s\S]*?return await draft\.delete\(\)/u);
+  assert.match(manager, /archiveMode: \{ type: Boolean, default: false \}/u);
+  assert.match(manager, /if \(editMode === "DELETE" && !props\.archiveMode\)/u);
+  assert.match(manager, /:disable-delete="!props\.archiveMode"/u);
+  assert.match(manager, /:hide-delete-btn="!props\.archiveMode"/u);
   assert.match(manager, /:handle-delete="handleDelete"/u);
   assert.match(plural, /disable-delete/u); assert.doesNotMatch(plural, /handleDelete|:handle-delete=/u);
+  assert.equal((detail.match(/<CustomerManager/gu) ?? []).length, 3);
+  assert.equal((detail.match(/archive-mode/gu) ?? []).length, 1);
   assert.match(detail, /@click="\(\) => toDelete\(\)"/u); assert.match(detail, /@delete="handleDeleted"/u);
 });
 

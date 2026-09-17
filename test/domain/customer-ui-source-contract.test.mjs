@@ -90,7 +90,7 @@ async function loadUseItemManagerSource() {
   }
 }
 
-async function customerManagerHarness() {
+async function customerManagerHarness(archiveMode = false) {
   const component = await source("components/Customer/Manager/index.vue");
   const script = component.match(/<script setup>([\s\S]*?)<\/script>/u)?.[1];
   assert.ok(script);
@@ -129,13 +129,14 @@ async function customerManagerHarness() {
     "defineProps",
     "defineEmits",
     "useBaseManager",
-    `${stripImports(script)}; return { beforeEdit, defaultCustomer: props.modelValue, modelValueValidator: props.__modelValueValidator, handleCreate, handleUpdate };`,
+    `${stripImports(script)}; return { beforeEdit, archiveMode: props.archiveMode, defaultCustomer: props.modelValue, modelValueValidator: props.__modelValueValidator, handleCreate, handleUpdate };`,
   );
   const methods = factory(
     Customer,
     () => {},
     (options) => ({
       modelValue: options.modelValue.default(),
+      archiveMode,
       __modelValueValidator: options.modelValue.validator,
     }),
     () => (...args) => events.push(args),
@@ -301,14 +302,18 @@ test("real useItemManager starts each repeated Customer CREATE from the clean st
   assert.equal(harness.defaultCustomer.name, null);
 });
 
-test("CustomerManager delegates UPDATE to the listener document and exposes standard DELETE", async () => {
+test("CustomerManager keeps DELETE behind explicit archive mode", async () => {
   const harness = await customerManagerHarness();
   const draft = new harness.Customer({ docId: "listener-customer", name: "draft" });
 
-  assert.equal(harness.beforeEdit("UPDATE"), true);
+  assert.equal(await harness.beforeEdit("UPDATE"), true);
   await harness.handleUpdate(draft);
   assert.equal(draft.updateCalls, 1);
-  assert.equal(harness.beforeEdit("DELETE"), true);
+  await assert.rejects(harness.beforeEdit("DELETE"), /詳細画面から実行/u);
+
+  const archiveHarness = await customerManagerHarness(true);
+  assert.equal(archiveHarness.archiveMode, true);
+  assert.equal(await archiveHarness.beforeEdit("DELETE"), true);
 });
 
 test("Customer autocomplete uses singular CREATE without nesting plural manager", async () => {

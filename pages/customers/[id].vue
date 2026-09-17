@@ -79,9 +79,8 @@ onUnmounted(unsubscribe);
               :model-value="customerInstance"
               :included-keys="CUSTOMER_BASIC_FIELDS"
               label="取引先基本情報の編集"
-              @delete="handleDeleted"
             >
-              <template #activator="{ toUpdate, toDelete }">
+              <template #activator="{ toUpdate }">
                 <CustomerActivatorBase
                   :item="customerInstance"
                   title="基本情報"
@@ -89,13 +88,21 @@ onUnmounted(unsubscribe);
                   @click:edit="toUpdate"
                 >
                   <template #actions>
-                    <v-btn
-                      color="error"
-                      prepend-icon="mdi-archive-arrow-down-outline"
-                      text="アーカイブ"
-                      variant="outlined"
-                      @click="() => toDelete()"
-                    />
+                    <CustomerManager
+                      :model-value="customerInstance"
+                      archive-mode
+                      @delete="handleDeleted"
+                    >
+                      <template #activator="{ toDelete }">
+                        <v-btn
+                          color="error"
+                          prepend-icon="mdi-archive-arrow-down-outline"
+                          text="アーカイブ"
+                          variant="outlined"
+                          @click="() => toDelete()"
+                        />
+                      </template>
+                    </CustomerManager>
                   </template>
                 </CustomerActivatorBase>
               </template>
