@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 2026-09-17 SCR-10-Aをprelocal実装。Employee archiveはread-only preflight後に標準Manager／Schema archiveへ進み、有効な認証済み本登録User・同一tenant・role不問の境界へ統一した。tenant allowlistとadmin/manager限定を撤去し、direct SDKによるpreflight／hasMany迂回とpreflight後のraceは受容する。User/Auth・reservation・lifecycle保護は維持する。Local Emulator、browser、build、Dev受入れ、製品完了・得点加算は未実施。
+
 - 2026-09-16 Employee archiveをCallable事前検証後のブラウザ標準保存とし、検証から保存までの稀な競合を受容する方針を記録した。誤退職訂正完了の履歴だけでは拒否せず、User連携・退職状態等は検査する。server-adapter改修と将来の無効化→archive→物理削除は後続事項で、製品変更は未実施。
 
 - 2026-09-16 Employee退職・誤退職訂正を標準CRUD化の例外として明確化し、User連携の有無を内部で検証する既存Callable経路を維持する方針へ仕様・ADR・SCR-09を整合した。既存の保護・操作履歴・再開処理を維持し、有効な証拠と照合して不足だけを対応する。文書変更のみで、製品動作・Rules・dataは変更していない。

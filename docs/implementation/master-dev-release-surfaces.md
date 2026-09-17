@@ -17,7 +17,7 @@
 
 - 初回反映後の結果は[Dev受入れ記録](master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果)と同文書内のSite記録を参照する。
 - 後続変更・残作業は[FGAロードマップ](../roadmaps/foundational-governance-alignment.md)と[製品再開案内](current-coordinator-handoff.md)、新たな反映手順は[Dev runbook](../runbooks/dev-deployment.md)へ進む。
-- 以下の候補・未確認事項・二段階release・停止・rollbackは初回準備時点の契約を保存したもの。現在のtarget、差分、実行順、復旧source、承認を確定する根拠として流用しない。Employee tenant開放、Site自動終了、実data・IAM等の追加操作は個別承認のままとする。
+- 以下の候補・未確認事項・二段階release・停止・rollbackは初回準備時点の契約を保存したもの。現在のtarget、差分、実行順、復旧source、承認を確定する根拠として流用しない。Employee archiveのremote受入れ、Site自動終了、実data・IAM等の追加操作は個別承認のままとする。
 
 <details>
 <summary>初回Dev反映前のinventory・準備・停止・復旧の詳細履歴</summary>
@@ -68,7 +68,7 @@ Rulesの一部だけを旧版と組み合わせない。既存Dev Rulesとの差
 
 `onOperationResultChange`の依存先にはBilling、DailyAttendance、DailyOperationsByEmployee、SiteEmployeeHistoryの生成・再生成が含まれる。これらの共有module変更を、新規Callableだけの反映で済むとは扱わない。
 
-Employee archiveの通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`は既定空集合のままであり、Functions codeの反映候補とtenant開放を分離する。対象tenantを設定するまでは全tenant拒否とし、設定・開放は別承認事項である。
+Employee archiveは有効な認証済み本登録Userの同一tenant境界へ統一し、`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`によるtenant allowlistは現行経路から撤去した。Functions codeの反映、remote実data、利用者受入れは別承認・別検証であり、今回のprelocal実装だけでは完了扱いにしない。
 
 ### Firestore Indexes
 
@@ -101,7 +101,7 @@ Employee archiveの通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`は既定空集�
 - `functions/codex-test/**`、`firebase.codex-test.json`、`.codex-test/**`、Local UI build/server/fixture: Codex専用Local検証資産でありDevへ公開しない。
 - schema package、client/server adapter、Admin SDK repositoryの公開・更新: 現時点で必要性を確認しておらず別承認対象。
 - Firestore documentの補完、backfill、archive変換、migration、repair、snapshot、実data作成・更新・削除: No.6以降で必要性が確認された場合だけ別計画・別承認する。
-- IAM、Callable公開権限、App Check、Employee archive tenant開放、secret・credential変更、外部住所provider・通知・Stripe操作: code surface inventoryから承認を推論しない。
+- IAM、Callable公開権限、App Check、Employee archiveのremote受入れ、secret・credential変更、外部住所provider・通知・Stripe操作: code surface inventoryから承認を推論しない。
 - Customer/Site/Employeeのrestore・purge、Outsourcer archive、transaction系全体の刷新、未承認FUT: 今回の4マスターDev受入れへ混ぜない。
 - Prod、Git push、`main`統合、関連repository変更: 対象外。
 
@@ -135,7 +135,7 @@ Functions codebase全体の一括更新を既定にせず、4マスターと参�
 
 記録済みDev sourceの`runDailyTask`はcleanup後に旧`sitesAutoTermination()`を同じhandlerから実行し、errorを再throwしない。現行版は旧自動終了を外し、bounded cleanupだけを担うため、これを先行更新して旧挙動を止める。記録済みDev sourceの`onEmployeeDeleted`はEmployee削除eventからUser/Authを削除する。現行版の無作用handlerを先行更新し、archiveやRules切替より前に連鎖削除を止める。
 
-`archiveEmployee`のcode反映とtenant開放を分離する。初回反映では通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`を未設定または空集合に保ち、deny-by-defaultを維持する。tenant追加とそのための再反映は、No.6のdata・参照整合、No.7のbackup／停止／rollback、明示承認を満たした後の別操作とする。
+`archiveEmployee`のcode反映とremote受入れを分離する。追加allowlistは現行設計に含めず、No.6のdata・参照整合、No.7のbackup／停止／rollback、明示承認を満たした後にremote受入れを別途判断する。
 
 `runDailySiteTermination`はdeploy後に日次writeを開始し得るため、通常closureと同時に公開しない。No.6で対象field・予定・indexを確認し、No.7でbackup／停止／rollbackを確定し、明示承認を得た後に最後に反映する。
 
@@ -146,12 +146,12 @@ Functions codebase全体の一括更新を既定にせず、4マスターと参�
 1. release source、対象project、remote revision、選択function、無書込み時間帯をread-only preflightで固定する。
 2. 必要なFirestore indexだけを先に反映し、利用するindexがREADYになるまでquery・schedulerを有効化しない。既存で同一定義がREADYなら再反映しない。
 3. `runDailyTask`と`onEmployeeDeleted`を安全化先行で更新し、deployed revisionと正常状態を確認する。
-4. 残るserver closure 18件を限定反映し、Callable／triggerのdeployed revisionと正常状態を確認する。Employee archive allowlistは空のままとする。
+4. 残るserver closure 18件を限定反映し、Callable／triggerのdeployed revisionと正常状態を確認する。Employee archiveは同一tenant・有効な本登録User境界を確認し、remote受入れは別承認とする。
 5. 対象会社の無書込み時間帯を開始し、master・予定・実績・請求の旧tabで保存しないことを確認する。
 6. `firestore.rules`全体を反映する。Rulesの一部だけを旧版と組み合わせない。
 7. 同じrelease sourceから生成・identity確認したHosting artifactを反映する。RulesからHostingまでをboundedに連続実行する。
 8. 対象browserを再読込し、必要なactorは再ログインする。新clientとserver revisionの組合せで技術smokeを終えてから無書込み時間帯を解除する。
-9. `runDailySiteTermination`とEmployee archive tenant開放は、それぞれの追加条件と明示承認を満たした場合だけ別に実施する。
+9. `runDailySiteTermination`とEmployee archiveのremote受入れは、それぞれの追加条件と明示承認を満たした場合だけ別に実施する。
 
 Functionsを先行するのは、新clientが未反映APIを呼ぶ期間を作らないためである。RulesをHostingより先行するのは、archive UIを公開した後に旧Rulesが参照新設や直接writeを許す期間を作らないためである。Rules先行中は旧client保存が拒否され得るため、手順5の無書込み時間帯を組み合わせる。
 
@@ -184,7 +184,7 @@ Firestore接続を開始する最初の工程でdatabase一覧と対象database�
 | Site | SITE-08で欠損する略称・工期sourceを既定値で評価するLocal互換を確認済みで、全件backfillを要求しない | 選択tenantのSitesについて、一覧queryに必要な`status/updatedAt`、工期sourceと3つの派生boolean、任意`scheduleRevision`、Customer IDとexact埋込みprojection、archive envelope／同ID衝突を値非出力の集計で確認する。自動終了候補はACTIVE＋工期終了日時だけへ限定し、候補Siteに関係する予定のID・日付・実績化状態を確認する | 一覧から脱落する必須query field、工期派生値不一致、または不正revisionが実在すると確認した場合だけ限定補完を計画。現在値を過去snapshotとして推測補完しない |
 | Outsourcer | 現行一覧・検索・配置候補はstatusで絞らず、通常一覧は`nameKana`とdocument ID順である。`contractStatus + updatedAt` composite indexは現行受入れ経路の必須indexではない | 受入れに使う新規または指定対象だけ、exact 11 field、status、tokenMap、監査fieldと正規actorを確認する。既存archive、重複、参照件数の全件scanは行わない | archiveを提供せずlive保持するため一括migrationなし。通常編集で具体的な不適合が出た対象だけ再判断 |
 | Employee本体 | optional `insuranceOperationVersions`不存在はlegacy互換として検証済みであり、存在しないdocumentへ一括補完しない | 受入れ対象について既知field、雇用状態と退職日、保険map／世代値、同ID archive、User／Auth／予約／lifecycle状態を確認する | 本体一括migrationなし。対象の不正型・相関不一致は自動修復せずarchive開放を停止 |
-| Employee参照索引 | Localでは純粋検査と6 collectionの保存経路を確認済みだが、remote整合を証明しない | archive開放候補tenant全体の`SiteOperationSchedules`、`OperationResults`、`ArrangementNotifications`、`DailyAttendances`、`DailyOperationsByEmployee`、`Billings`について、raw明細から導くEmployee集合と`employeeIds`または`employeeId`の一致を完全走査する。6 collectionすべての取得完了が必要。User、予約、lock、head、LifecycleOperations、SiteEmployeeHistoriesはarchive exact対象の12従属queryで別確認する | 欠損・不一致が1件でもあればtenant開放不可。所属Employeeを一意に導出できる範囲だけ、別承認のbackfill dry-run／apply／post-checkを設計する |
+| Employee参照索引（Historical） | Localでは純粋検査と6 collectionの保存経路を確認済みだが、remote整合を証明しない | 旧EMP設計でarchive開放候補tenant全体の走査を想定した記録。SCR-10-Aの現行archive actor・Rulesはこのallowlist／全tenant走査へ依存しない | 現行のremote受入れ・実data確認は別承認で判断し、旧allowlist開放条件を適用しない |
 
 `functions/modules/employees/inspectEmployeeReferences.js`は、callerが供給したrawだけを検査するlibraryであり、remoteへ接続するCLIではない。既存Customer toolをEmployeeへ流用せず、Employee archive開放を必要とする場合は、明示tenant、取得上限または完全走査、pagination、値・ID非出力、全6 collection完了、digest、credential／Emulator拒否を備えたread-only readerを別Checkpointで実装・検証する。dry-runの`archiveReady`は常にfalseのままとし、検査成功だけで開放しない。
 
@@ -199,9 +199,9 @@ Firestore接続を開始する最初の工程でdatabase一覧と対象database�
 
 remoteで同一定義がREADYなら再作成・再deployしない。不足分だけを追加候補とし、BUILDING／ERRORはREADYになるまで依存query・scheduler・受入れを開始しない。exact remote状態の取得、index追加、data読取りはbounded Dev release checkpointの承認後に行う。
 
-### No.6の判断結果
+### No.6の判断結果（Historical release案）
 
-初回releaseはEmployee archive tenant allowlistを空、`runDailySiteTermination`を未公開に保てば、既存dataの補完・migrationを前提にせず進められる。初回release前の全tenant既存data scanも不要である。既存data確認が必須なのは、後段のSite自動終了に関係するquery／工期候補と、Employee archiveを開放するtenantの参照索引である。結果が得られる前に「archive開放可能」「scheduler実行可能」とは確定しない。
+初回releaseはEmployee archiveのremote受入れを未実施、`runDailySiteTermination`を未公開に保つ。既存dataの補完・migration・allowlist設定を前提にしない。結果が得られる前に「archive受入れ済み」「scheduler実行可能」とは確定しない。
 
 ## No.7 backup・停止・rollback計画
 
@@ -221,8 +221,8 @@ remoteで同一定義がREADYなら再作成・再deployしない。不足分だ
 
 | 段階 | 含めるもの | data作用 | backup判断 |
 |---|---|---|---|
-| A. 初回4マスターrelease | No.5のindex不足分、Functions安全化2件、server closure 18件、Rules、Hosting。Employee archive allowlistは空、Site自動終了Functionは未公開 | deploy自体による既存document変換なし。受入れは原則として区分3の合成dataを使い、区分1の既存data操作は利用者が明示した対象だけ | 全体snapshot、全tenant scan、migration dry-run、System／Company maintenanceを要求しない。remote revision、既知正常source、index／Rules／Functions／Hosting identityを復旧根拠として保存する。合成dataはexact ID、開始時不存在、許可した作成・cleanupだけを記録する |
-| B. data作用を伴う後段 | 必要と確認されたEmployee参照索引backfill、Employee archive tenant開放、`runDailySiteTermination` | 既存document更新、live Employeeのarchive移動、Site status変更が起こり得る | 別の明示承認、Transitional quiet mode、連続dry-run、整合snapshot、fresh dry-run、post-checkを必須とする |
+| A. 初回4マスターrelease | No.5のindex不足分、Functions安全化2件、server closure 18件、Rules、Hosting。Employee archive remote受入れとSite自動終了Functionは未実施 | deploy自体による既存document変換なし。受入れは原則として区分3の合成dataを使い、区分1の既存data操作は利用者が明示した対象だけ | 全体snapshot、全tenant scan、migration dry-run、System／Company maintenanceを要求しない。remote revision、既知正常source、index／Rules／Functions／Hosting identityを復旧根拠として保存する。合成dataはexact ID、開始時不存在、許可した作成・cleanupだけを記録する |
+| B. data作用を伴う後段 | 必要と確認されたEmployee参照確認、Employee archive remote受入れ、`runDailySiteTermination` | 既存document更新、live Employeeのarchive移動、Site status変更が起こり得る | 別の明示承認、Transitional quiet mode、連続dry-run、整合snapshot、fresh dry-run、post-checkを必須とする |
 
 既存Admin SDKの会社backupは`LEGACY_COMPANY_LOGICAL` v1／coverage `INCOMPLETE`である。16 legacy collectionには今回必要な`DailyOperationsByEmployee`、`SiteEmployeeHistories`、Employee lifecycle／予約系等が含まれず、PrivateSettings等も除外される。このためNo.7の完全backupまたは全面restoreとして採用しない。関連repositoryはread-only確認だけで、変更・実行しない。
 
@@ -237,7 +237,7 @@ remoteで同一定義がREADYなら再作成・再deployしない。不足分だ
 - 初回受入れは区分3の新規合成dataを基本とする。区分1での確認は既存dataを変更しないreadと、利用者が対象・復元を明示した通常操作だけにする。
 - 区分1の停止確認、Functions安全化、Rules→Hostingの連続反映、再読込、技術smokeを一つの短いcutoverにする。固定時間のmaintenance待機、連続data digest、snapshotは追加しない。
 
-段階Bで区分1または全tenantへ既存data変更が及ぶ場合は、現行maintenanceが通常writeをserverで完全拒否しないため**Transitional quiet mode**を選ぶ。Gate-ready成功とは報告しない。Employee archiveはまず区分3だけを開放候補にできるが、確認済み仕様にあるtenant全体の6 collection整合検査を省略するには仕様変更承認が必要であり、No.7の簡素化からは推論しない。`runDailySiteTermination`は全tenantへ作用するため、区分2・3のrisk受容だけでは区分1の確認・snapshot条件を省略できない。
+段階Bで区分1または全tenantへ既存data変更が及ぶ場合は、現行maintenanceが通常writeをserverで完全拒否しないため**Transitional quiet mode**を選ぶ。Gate-ready成功とは報告しない。Employee archiveのremote受入れは同一tenant・有効な本登録User境界、Rules、標準archive失敗時の停止を確認してから判断する。`runDailySiteTermination`は全tenantへ作用するため、区分2・3のrisk受容だけでは区分1の確認・snapshot条件を省略できない。
 
 1. 段階Aでは区分1の利用者が作業停止し、区分3のCodex操作も止める。段階Bでは作用するtenantとbackground writerに応じて停止対象を追加する。
 2. 対象のmaster、予定、実績、請求tabを閉じる。maintenance画面を使う場合も補助であり排他証拠にしない。
@@ -250,7 +250,7 @@ remoteで同一定義がREADYなら再作成・再deployしない。不足分だ
 
 - project、database、edition、location、commit、operator、remote revisionのいずれかが計画と一致しない。
 - indexに未知差分、削除候補、ERRORがある、または必要定義がREADYでない。
-- Functions公開集合、runtime config、Employee archive allowlistが計画と異なる。
+- Functions公開集合、runtime config、Employee archiveの認証・tenant境界が計画と異なる。
 - quiet開始後も通常client／Callable／scheduled／trigger writeが続く、または連続dry-runが一致しない。
 - Site／Employeeの不正shape、orphan、参照索引不一致、同ID archive衝突、対象増加がある。
 - snapshot scope・完了receipt・復元制約を確認できない、またはAdmin SDKの不完全backupしか用意できない。
@@ -264,7 +264,7 @@ remoteで同一定義がREADYなら再作成・再deployしない。不足分だ
 | Rules成功・Hosting失敗 | 無書込みを維持。旧Rulesへ自動復帰せず、同じsourceのHosting是正を優先 |
 | Hosting後のclient不具合 | 旧clientを再開しない。新clientとserverのどちらを是正するかを影響差分から決め、単独Hosting rollbackを安全とみなさない |
 | migration部分失敗 | maintenance／quietを維持し、現在状態を再読込してdry-runを作り直す。推測delete・全体restore・同じapplyの無条件再送をしない |
-| Employee archive後 | allowlistから対象tenantを外して新規操作を止める。旧`onEmployeeDeleted`や直接writerを戻さず、archiveをgeneric restoreしない。exact preimageと現在状態から別承認repairを作る |
+| Employee archive後 | 正規archive入口を停止して状態を確認する。旧`onEmployeeDeleted`や直接writerを戻さず、archiveをgeneric restoreしない。exact preimageと現在状態から別承認repairを作る |
 | Site自動終了後 | schedulerを止め、対象Siteの前後証拠を固定する。statusだけを推測でACTIVEへ戻さず、予定・工期・競合を再確認した限定repairを別承認する |
 
 段階Aのrollbackはdata restoreではなく、書込み停止下のcorrective／forward releaseを第一候補とする。段階BはGit revertだけでdataを戻せない。managed exportも通常の全体restoreを自動実行する許可ではなく、復旧はexact対象・precondition・影響を提示した別承認操作とする。

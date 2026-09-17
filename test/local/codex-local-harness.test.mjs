@@ -108,11 +108,10 @@ function emp05Command(raw, action, changes = {}, extra = {}) {
 }
 const emp05Overview = (siteId) => ({ siteId, securityType: "TRAFFIC", dateAt: "2028-05-01", startTime: "08:00", endTime: "17:00", requiredPersonnel: 10 });
 
-// Dedicated, synthetic D tenant. Startup authorization is explicitly supplied
-// by the coordinator; a successful raw checker never populates the allowlist.
+// Dedicated, synthetic D tenant used only to keep the fixture isolated from
+// the other synthetic company data.
 const EMP05_ARCHIVE_COMPANY_ID = "codex-emp05-d-archive";
 async function emp05ArchiveFixture(suffix) {
-  assert.equal(process.env.AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS, JSON.stringify([EMP05_ARCHIVE_COMPANY_ID]), "ordinary harness must supply only its dedicated archive tenant");
   await loadRebuildApis();
   const companyId = EMP05_ARCHIVE_COMPANY_ID, uid = `emp05-d-${suffix}-actor`;
   const email = `${uid}@codex-test.invalid`, password = "CodexLocalOnly-Archive-2026!";
@@ -155,111 +154,91 @@ async function emp05ArchiveFixture(suffix) {
   await admin.doc(`${prefix}/Employees/${employeeId}`).set(original);
   const identity = { uid, companyId, isSuperUser: false };
   const { archiveEmployee } = await import("../../functions/modules/employees/archiveEmployee.js");
-  const request = (id) => ({ employeeId: id, reason: "合成誤登録", operationId: `${id}-archive` });
-  const archive = (id, firestore = admin) => archiveEmployee({ firestore, resolveIdentity: async () => identity, resolveAllowedTenants: () => [companyId], input: request(id) });
+  const request = (id) => ({ employeeId: id });
+  const archive = (id, firestore = admin, currentIdentity = identity) => archiveEmployee({ firestore, resolveIdentity: async () => currentIdentity, input: request(id) });
   return { admin, actor, prefix, employeeId, original, identity, archive, request,
     cleanup: async () => { await admin.recursiveDelete(admin.doc(prefix)); await getAdminAuth().deleteUser(uid); } };
 }
-function emp05BeforeTransactionGate(admin) {
-  let enter, release, first = true;
-  const entered = new Promise((resolve) => { enter = resolve; }), held = new Promise((resolve) => { release = resolve; });
-  const firestore = { doc: admin.doc.bind(admin), collection: admin.collection.bind(admin), collectionGroup: admin.collectionGroup.bind(admin), runTransaction: async (...args) => {
-    if (first) { first = false; enter(); await held; }
-    return admin.runTransaction(...args);
-  } };
-  return { firestore, release, entered };
-}
-test("EMP05-D HTTP archive preserves raw, checks identity/lifecycle dependencies, and keeps transaction references", async () => {
-  const state = await emp05ArchiveFixture("http"), { admin, actor, prefix, employeeId } = state;
-  const { EMPLOYEE_ARCHIVE_QUERIES, EMPLOYEE_ARCHIVE_DOCUMENTS } = await import("../../functions/modules/employees/archiveEmployee.js");
-  const ref = admin.doc(`${prefix}/Employees/${employeeId}`), archiveRef = admin.doc(`${prefix}/Employees_archive/${employeeId}`);
-  const call = (data = state.request(employeeId)) => callSiteLifecycleTransport({ actor, functionName: "archiveEmployee", data });
+
+test("EMP05-D archive preflight uses exact employeeId, is role-independent, and performs zero writes", async () => {
+  const state = await emp05ArchiveFixture("preflight"), { admin, actor, prefix, employeeId } = state;
+  const live = admin.doc(`${prefix}/Employees/${employeeId}`), archived = admin.doc(`${prefix}/Employees_archive/${employeeId}`);
+  const dependencyPaths = [
+    `${prefix}/Users/linked-user`,
+    `${prefix}/EmployeeUserReservations/${employeeId}`,
+    `${prefix}/EmployeeLifecycleLocks/${employeeId}`,
+  ];
   try {
-    const { GeoPoint: AdminGeoPoint } = requireFromFunctions("firebase-admin/firestore");
-    await ref.update({ unknown: { stamp: new AdminTimestamp(1788200000, 123456789), point: new AdminGeoPoint(35, 139), nested: [null, { retain: true }] } });
-    const before = (await ref.get()).data();
-    for (const [name, field] of EMPLOYEE_ARCHIVE_QUERIES) {
-      const dependency = admin.doc(`${prefix}/${name}/dependency`);
-      await dependency.set({ [field]: field === "employeeIds" ? [employeeId] : employeeId, state: "completed", isTemporary: true, disabled: true });
-      const rejected = await call(); assert.equal(rejected.payload.error.status, "FAILED_PRECONDITION", name);
-      assert.deepEqual((await ref.get()).data(), before); assert.equal((await archiveRef.get()).exists, false); await dependency.delete();
+    for (const roles of [[], ["unknown"], ["manager"], ["human-resource"]]) {
+      await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: false, roles, disabled: false, isTemporary: false });
+      assert.deepEqual(await state.archive(employeeId), { success: true, allowed: true, employeeId });
     }
-    for (const name of EMPLOYEE_ARCHIVE_DOCUMENTS) {
-      const dependency = admin.doc(`${prefix}/${name}/${employeeId}`); await dependency.set({ malformed: true });
-      assert.equal((await call()).payload.error.status, "FAILED_PRECONDITION", name); await dependency.delete();
+    await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: true, roles: [] });
+    assert.deepEqual(await state.archive(employeeId), { success: true, allowed: true, employeeId });
+    for (const path of dependencyPaths) {
+      await admin.doc(path).set(path.includes("Users/") ? { docId: "linked-user", companyId: actor.companyId, employeeId } : { operationId: "lock" });
+      await assert.rejects(state.archive(employeeId), { code: "failed-precondition" });
+      await admin.doc(path).delete();
     }
-    const retainedTransactions = [
-      ["SiteOperationSchedules", { employeeIds: [employeeId] }],
-      ["OperationResults", { employeeIds: [employeeId] }],
-      ["ArrangementNotifications", { employeeId }],
-      ["SiteEmployeeHistories", { employeeId }],
-      ["Billings", { employeeIds: [employeeId] }],
-      ["DailyAttendances", { employeeIds: [employeeId] }],
-      ["DailyOperationsByEmployee", { employeeIds: [employeeId] }],
-    ];
-    for (const [name, value] of retainedTransactions) await admin.doc(`${prefix}/${name}/retained`).set(value);
-    await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: false, roles: ["human-resource"] });
-    assert.equal((await call()).payload.error.status, "PERMISSION_DENIED");
-    await admin.doc(`${prefix}/Users/${actor.uid}`).update({ roles: ["manager"] });
-    assert.equal((await call()).response.status, 200);
-    const saved = (await archiveRef.get()).data(); assert.deepEqual(saved.employee, before); assert.equal(saved.schemaVersion, 1);
-    assert.equal(saved.audit.actorUid, actor.uid); assert.equal((await ref.get()).exists, false);
-    for (const [name, value] of retainedTransactions) assert.deepEqual((await admin.doc(`${prefix}/${name}/retained`).get()).data(), value);
-    assert.equal((await call()).response.status, 200); assert.deepEqual((await archiveRef.get()).data(), saved);
-    assert.equal((await call({ ...state.request(employeeId), reason: "別要求" })).payload.error.status, "ALREADY_EXISTS");
-    const client = authenticatedFirestore(actor.uid, { companyId: actor.companyId });
-    await assertFails(setDoc(doc(client, "Companies", actor.companyId, "Employees", employeeId), {
-      docId: employeeId,
-      employmentStatus: "ACTIVE",
-      uid: actor.uid,
-    }));
-    assert.equal((await ref.get()).exists, false);
+    await admin.doc(`${prefix}/Employees_archive/${employeeId}`).set({ collision: true });
+    await assert.rejects(state.archive(employeeId), { code: "already-exists" });
+    await admin.doc(`${prefix}/Employees_archive/${employeeId}`).delete();
+    await admin.doc("System/system").set({ isMaintenance: true });
+    await assert.rejects(state.archive(employeeId), { code: "failed-precondition" });
+    assert.equal((await live.get()).exists, true);
+    assert.equal((await archived.get()).exists, false);
   } finally { await state.cleanup(); }
 });
 
-for (const writerKind of ["user", "retirement"]) test(`EMP05-D archive versus actual ${writerKind} writer protects both commit orders and concurrency`, async () => {
-  const state = await emp05ArchiveFixture(writerKind), { admin, actor, prefix, identity } = state;
-  const { createEmployeeLinkedTemporaryUser } = await import("../../functions/modules/auth/createTemporaryUser.js");
-  const { terminateEmployee } = await import("../../functions/modules/auth/lifecycle/terminateEmployee.js");
-  const authBefore = (await getAdminAuth().getUser(actor.uid)).toJSON(), actorBefore = (await admin.doc(`${prefix}/Users/${actor.uid}`).get()).data();
-  const emailReservations = [];
-  try {
-    let index = 0;
-    for (const order of ["writer-first", "archive-first", "concurrent"]) {
-      const employeeId = `${state.employeeId}-${order}`, ref = admin.doc(`${prefix}/Employees/${employeeId}`), archiveRef = admin.doc(`${prefix}/Employees_archive/${employeeId}`);
-      await ref.set({ ...state.original, docId: employeeId });
-      const operationId = `05000000-0000-4000-8000-${String(900 + ++index).padStart(12, "0")}`, email = `d-${writerKind}-${index}@codex-test.invalid`;
-      emailReservations.push(`UserEmailReservations/${createUserEmailReservationId(email)}`);
-      const write = (firestore = admin) => {
-        if (writerKind === "user") return createEmployeeLinkedTemporaryUser({ firestore, auth: getAdminAuth(), companyId: actor.companyId, actorUid: actor.uid, input: { employeeId, email } });
-        return terminateEmployee({ firestore, auth: getAdminAuth(), cleanupFcm: async () => { assert.fail("employee-only retirement must not clean User tokens"); }, identity, serverTodayJst: "2026-09-07", input: { operationId, employeeId, terminationDate: "2026-08-20", reasonOfTermination: "合成退職" } });
-      };
-      if (order === "writer-first") { await write(); await assert.rejects(state.archive(employeeId), { code: "failed-precondition" }); }
-      else if (order === "archive-first") {
-        // Pause after the actual writer's preflight, before any native Tx lock.
-        const gate = emp05BeforeTransactionGate(admin), pending = write(gate.firestore);
-        const rejected = assert.rejects(pending); await Promise.race([gate.entered, pending.then(() => { throw new Error("writer completed before the transaction gate"); })]);
-        try { await state.archive(employeeId); } finally { gate.release(); }
-        await rejected;
-      } else {
-        const outcomes = splitSettled(await Promise.allSettled([write(), state.archive(employeeId)]));
-        assert.equal(outcomes.fulfilled.length, 1); assert.equal(outcomes.rejected.length, 1);
-      }
-      const live = await ref.get(), archived = await archiveRef.get(); assert.notEqual(live.exists, archived.exists);
-      const users = await admin.collection(`${prefix}/Users`).where("employeeId", "==", employeeId).get();
-      const employeeReservation = await admin.doc(`${prefix}/EmployeeUserReservations/${employeeId}`).get(), emailReservation = await admin.doc(`UserEmailReservations/${createUserEmailReservationId(email)}`).get();
-      const operation = await admin.doc(`${prefix}/LifecycleOperations/${operationId}`).get(), head = await admin.doc(`${prefix}/EmployeeLifecycleHeads/${employeeId}`).get(), lock = await admin.doc(`${prefix}/EmployeeLifecycleLocks/${employeeId}`).get();
-      if (archived.exists) {
-        assert.equal(users.size, 0); for (const snapshot of [employeeReservation, emailReservation, operation, head, lock]) assert.equal(snapshot.exists, false);
-      } else if (writerKind === "user") { assert.equal(users.size, 1); assert.equal(employeeReservation.exists, true); assert.equal(emailReservation.exists, true); }
-      else { assert.equal(live.data().employmentStatus, "RESIGNED"); assert.equal(operation.data().state, "completed"); assert.equal(head.exists, true); assert.equal(lock.exists, false); }
-      await assert.rejects(getAdminAuth().getUserByEmail(email), (error) => error.code === "auth/user-not-found");
-    }
-    assert.deepEqual((await admin.doc(`${prefix}/Users/${actor.uid}`).get()).data(), actorBefore);
-    assert.deepEqual((await getAdminAuth().getUser(actor.uid)).toJSON(), authBefore);
-  } finally { await Promise.all(emailReservations.map((path) => admin.doc(path).delete())); await state.cleanup(); }
+test("EMP05-D Rules permit only same-tenant active registered raw same-ID archive moves", async () => {
+  for (const [index, roles] of [[], ["unknown"], ["manager"], ["human-resource"]].entries()) {
+    const state = await emp05ArchiveFixture(`rules-${index}`), { admin, actor, prefix, employeeId, original } = state;
+    const client = authenticatedFirestore(actor.uid, { companyId: actor.companyId });
+    const live = doc(client, "Companies", actor.companyId, "Employees", employeeId), archive = doc(client, "Companies", actor.companyId, "Employees_archive", employeeId);
+    try {
+      await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: false, roles });
+      const batch = writeBatch(client); batch.set(archive, original); batch.delete(live);
+      await assertSucceeds(batch.commit());
+      assert.equal((await admin.doc(`${prefix}/Employees/${employeeId}`).get()).exists, false);
+      assert.deepEqual((await admin.doc(`${prefix}/Employees_archive/${employeeId}`).get()).data(), original);
+    } finally { await state.cleanup(); }
+  }
 });
 
+test("EMP05-D Rules reject invalid archive moves and keep archive read separate from write", async () => {
+  const cases = [
+    { name: "disabled", user: { disabled: true } },
+    { name: "temporary", user: { isTemporary: true } },
+    { name: "other-tenant", claims: { companyId: "codex-emp05-other-tenant" } },
+    { name: "unauthenticated", unauthenticated: true },
+  ];
+  for (const entry of cases) {
+    const state = await emp05ArchiveFixture(`deny-${entry.name}`), { admin, actor, prefix, employeeId, original } = state;
+    const client = entry.unauthenticated ? testEnvironment.unauthenticatedContext().firestore() : authenticatedFirestore(actor.uid, entry.claims ? { companyId: entry.claims.companyId } : { companyId: actor.companyId });
+    const live = doc(client, "Companies", actor.companyId, "Employees", employeeId), archive = doc(client, "Companies", actor.companyId, "Employees_archive", employeeId);
+    try {
+      if (entry.user) await admin.doc(`${prefix}/Users/${actor.uid}`).update({ isAdmin: false, roles: [], ...entry.user });
+      const batch = writeBatch(client); batch.set(archive, original); batch.delete(live);
+      await assertFails(batch.commit());
+    } finally { await state.cleanup(); }
+  }
+  const state = await emp05ArchiveFixture("deny-shapes"), { admin, actor, prefix, employeeId, original } = state;
+  const client = authenticatedFirestore(actor.uid, { companyId: actor.companyId });
+  const live = doc(client, "Companies", actor.companyId, "Employees", employeeId), archive = doc(client, "Companies", actor.companyId, "Employees_archive", employeeId);
+  try {
+    const mismatch = writeBatch(client); mismatch.set(archive, { ...original, docId: "other" }); mismatch.delete(live); await assertFails(mismatch.commit());
+    const oneSided = writeBatch(client); oneSided.set(archive, original); await assertFails(oneSided.commit());
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "Companies", actor.companyId, "Employees_archive", employeeId), original);
+      await deleteDoc(doc(context.firestore(), "Companies", actor.companyId, "Employees", employeeId));
+    });
+    await assertFails(deleteDoc(archive));
+    await assertFails(setDoc(doc(client, "Companies", actor.companyId, "Employees_archive", employeeId, "Nested", "child"), original));
+    await assertFails(setDoc(live, original));
+    assert.equal((await admin.doc(`${prefix}/Employees/${employeeId}`).get()).exists, false);
+    assert.deepEqual((await admin.doc(`${prefix}/Employees_archive/${employeeId}`).get()).data(), original);
+  } finally { await state.cleanup(); }
+});
 test("EMP05-C background aggregates preserve raw references and protected client writes", async () => {
   const actor = await seedSiteLifecycleTransportActor({ uid: "emp05-c-payment-user", roles: [], isAdmin: false });
   const { companyId } = actor, admin = getAdminFirestore(), root = `Companies/${companyId}`;

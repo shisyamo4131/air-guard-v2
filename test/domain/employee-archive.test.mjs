@@ -1,126 +1,164 @@
-import test from "node:test";
 import assert from "node:assert/strict";
-import { Employee, Certification } from "@shisyamo4131/air-guard-v2-schemas";
-import { Timestamp, GeoPoint } from "../../functions/node_modules/firebase-admin/lib/firestore/index.js";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import { Employee } from "@shisyamo4131/air-guard-v2-schemas";
+import LocalEmployee from "../../schemas/Employee.js";
+import { Timestamp } from "../../functions/node_modules/firebase-admin/lib/firestore/index.js";
 import { parseDate, plain } from "../../functions/shared/employeeContract.js";
 import { parseEmployeeArchiveInput, validateEmployeeArchiveRaw } from "../../functions/shared/employeeArchiveContract.js";
-import { archiveEmployee, EMPLOYEE_ARCHIVE_QUERIES, EMPLOYEE_ARCHIVE_DOCUMENTS, parseArchiveTenants } from "../../functions/modules/employees/archiveEmployee.js";
-import { demoEmployeeArchiveTenants } from "../../functions/codex-test/employeeArchive.js";
+import { archiveEmployee, EMPLOYEE_ARCHIVE_DOCUMENTS, EMPLOYEE_ARCHIVE_QUERIES } from "../../functions/modules/employees/archiveEmployee.js";
+import { createEmployeeOnlyRetirementOperationRecord, createEmployeeReinstatementOperationRecord, createNextEmployeeLifecycleHead, LIFECYCLE_OPERATION_TYPES } from "../../functions/modules/auth/lifecycle/lifecycleOperationSchema.js";
 
 const root = "Companies/company", live = `${root}/Employees/employee`, archive = `${root}/Employees_archive/employee`;
 const identity = { uid: "actor", companyId: "company", isSuperUser: false };
 const actor = { docId: "actor", companyId: "company", isAdmin: false, disabled: false, isTemporary: false, roles: ["manager"] };
-// Only identity/lifecycle records block Employee archive. Historical transaction
-// documents may retain the archived employee ID.
-// Never generate these fixtures from the implementation's exports: removing a
-// production query must fail coverage instead of removing its refusal test.
-const REQUIRED_QUERIES = [
-  ["Users", "employeeId", "=="],
-  ["LifecycleOperations", "employeeId", "=="],
-];
-const REQUIRED_DOCUMENTS = ["EmployeeUserReservations", "EmployeeLifecycleLocks", "EmployeeLifecycleHeads"];
-function independentRaw(value) {
-  if (value instanceof Timestamp) return new Timestamp(value.seconds, value.nanoseconds);
-  if (value instanceof GeoPoint) return new GeoPoint(value.latitude, value.longitude);
-  if (Array.isArray(value)) return value.map(independentRaw);
-  if (value !== null && typeof value === "object") {
-    assert.equal(Object.getPrototypeOf(value), Object.prototype, "unexpected raw type must not remain shared");
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, independentRaw(item)]));
-  }
-  return value;
-}
+const timestamp = new Timestamp(1788200000, 123456789);
+
 function employee() {
   const model = new Employee({ docId: "employee", lastName: "合成", firstName: "太郎", lastNameKana: "ゴウセイ", firstNameKana: "タロウ", displayName: "合成太郎", displayNameKana: "ゴウセイタロウ", gender: "MALE", dateOfBirth: parseDate("1990-01-01"), dateOfHire: parseDate("2026-01-01"), zipcode: "1000001", prefCode: "13", city: "合成市", address: "合成一丁目" });
-  const raw = model.toObject(), convert = (value) => value instanceof Date ? Timestamp.fromDate(value) : Array.isArray(value) ? value.map(convert) : plain(value) ? Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, convert(entry)])) : value;
-  return { ...convert(raw), uid: "registered-by", createdAt: new Timestamp(1788200000, 123456789), updatedAt: new Timestamp(1788200001, 987654321) };
-}
-function setup(options = {}) {
-  const records = new Map([[live, options.raw || employee()], [`${root}/Users/actor`, options.actor || actor], ["System/system", { isMaintenance: false }]]);
-  const reads = [], writes = []; let identities = 0;
-  const ref = (path, filter = null) => ({ path, filter, where: (field, operator, id) => ref(path, [field, operator, id]), limit: (n) => { assert.equal(n, 1); return ref(path, filter); } });
-  const firestore = { doc: ref, collection: ref, runTransaction: async (callback) => {
-    const pending = [];
-    await callback({ get: async (reference) => {
-      assert.equal(pending.length, 0, "all reads before writes"); reads.push(reference);
-      if (options.failRead?.(reference)) throw new Error("read failure");
-      if (reference.filter) return { size: [...records].filter(([path, raw]) => path.startsWith(`${reference.path}/`) && (reference.filter[1] === "==" ? raw[reference.filter[0]] === reference.filter[2] : raw[reference.filter[0]]?.includes(reference.filter[2]))).length ? 1 : 0 };
-      return { exists: records.has(reference.path), data: () => records.get(reference.path) };
-    }, create: (reference, raw) => pending.push([reference.path, raw]), delete: (reference) => pending.push([reference.path, null]) });
-    if (options.commitError) throw new Error("commit refused");
-    for (const [path, raw] of pending) { writes.push(path); if (raw === null) records.delete(path); else records.set(path, raw); }
-  } };
-  const resolveIdentity = async () => { identities++; return options.identity?.(identities) || identity; };
-  const run = (input = { employeeId: "employee", reason: " 誤登録 ", operationId: "attempt" }, extra = {}) => archiveEmployee({ firestore, resolveIdentity, input, resolveAllowedTenants: () => ["company"], timestamp: () => new Timestamp(1788200100, 111222333), ...extra });
-  return { records, reads, writes, run, firestore, resolveIdentity };
+  const convert = (value) => value instanceof Date ? Timestamp.fromDate(value) : Array.isArray(value) ? value.map(convert) : plain(value) ? Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, convert(entry)])) : value;
+  return { ...convert(model.toObject()), uid: "registered-by", createdAt: new Timestamp(1788200000, 123456789), updatedAt: new Timestamp(1788200001, 987654321) };
 }
 
-test("archive implements the identity and lifecycle dependency catalog", () => {
-  assert.deepEqual(EMPLOYEE_ARCHIVE_QUERIES, REQUIRED_QUERIES);
-  assert.deepEqual(EMPLOYEE_ARCHIVE_DOCUMENTS, REQUIRED_DOCUMENTS);
-});
-test("archive copies complete raw without changing unknown/null/missing/nanos/GeoPoint and is idempotent", async () => {
-  const raw = employee(); delete raw.dateOfTermination; delete raw.reasonOfTermination; delete raw.insuranceOperationVersions;
-  raw.fullName = "古い派生名"; raw.unknown = { stamp: new Timestamp(1788200000, 123456789), point: new GeoPoint(35, 139), nil: null, nested: [{ keep: true }] };
-  raw.geopoint = raw.unknown.point;
-  raw.securityCertifications = [{ name: "合成資格", type: Certification.classProps.type.component.attrs.items[0].value, issueDateAt: new Timestamp(1788200000, 123456789), nestedUnknown: { entries: [{ stamp: raw.updatedAt, point: raw.geopoint, nil: null }] } }];
-  raw.healthInsurance.history = [{ status: "ENROLLED", previousStatus: null, enrollmentDateAt: raw.createdAt, number: "合成番号", lossDateAt: raw.updatedAt, unknown: { entries: [raw.createdAt, null, { keep: true }] } }];
-  const before = independentRaw(raw), state = setup({ raw });
-  assert.notStrictEqual(before.unknown.nested, raw.unknown.nested);
-  assert.notStrictEqual(before.healthInsurance.history[0], raw.healthInsurance.history[0]);
-  assert.notStrictEqual(before.securityCertifications[0].nestedUnknown, raw.securityCertifications[0].nestedUnknown);
-  assert.notStrictEqual(before.createdAt, raw.createdAt); assert.ok(before.createdAt instanceof Timestamp);
-  assert.notStrictEqual(before.geopoint, raw.geopoint); assert.ok(before.geopoint instanceof GeoPoint);
-  assert.deepEqual(await state.run(), { success: true, archived: true });
-  assert.equal(state.records.has(live), false); const envelope = state.records.get(archive);
-  assert.deepEqual(Object.keys(envelope).sort(), ["audit", "employee", "schemaVersion"]); assert.deepEqual(envelope.employee, before); assert.strictEqual(envelope.employee, raw);
-  assert.equal(Object.hasOwn(envelope.employee, "dateOfTermination"), false); assert.equal(Object.hasOwn(envelope.employee, "insuranceOperationVersions"), false);
-  assert.equal(envelope.audit.reason, "誤登録"); assert.equal(envelope.audit.archivedAt.nanoseconds, 111222333);
-  assert.deepEqual(state.reads.filter((reference) => reference.filter).map(({ path, filter }) => [path, ...filter]), REQUIRED_QUERIES.map(([name, field, operator]) => [`${root}/${name}`, field, operator, "employee"]));
-  for (const name of REQUIRED_DOCUMENTS) assert.equal(state.reads.filter((reference) => reference.path === `${root}/${name}/employee`).length, 1);
-  await state.run(); assert.equal(state.writes.length, 2);
-  for (const changes of [{ operationId: "other" }, { reason: "別理由" }]) await assert.rejects(state.run({ employeeId: "employee", reason: "誤登録", operationId: "attempt", ...changes }), { code: "already-exists" });
-  state.records.set(`${root}/Users/other-actor`, { ...actor, docId: "other-actor" });
-  await assert.rejects(state.run(undefined, { resolveIdentity: async () => ({ ...identity, uid: "other-actor" }) }), { code: "already-exists" });
-});
-for (const lifecycleState of ["access-revoke-pending", "access-revoked", "auth-delete-intent", "data-finalized", "completed", "failed-retryable"]) test(`archive refuses LifecycleOperations state ${lifecycleState}`, async () => {
-  const state = setup(); state.records.set(`${root}/LifecycleOperations/op`, { employeeId: "employee", state: lifecycleState });
-  await assert.rejects(state.run(), { code: "failed-precondition" }); assert.equal(state.writes.length, 0);
-});
-test("archive reads current User after initial authorization and rejects lost role", async () => {
-  const state = setup(); let calls = 0;
-  await assert.rejects(state.run(undefined, { resolveIdentity: async () => { if (++calls === 2) state.records.set(`${root}/Users/actor`, { ...actor, roles: [] }); return identity; } }), { code: "permission-denied" });
+function snapshot(value) { return { exists: value !== undefined, data: () => value }; }
+
+function setup(options = {}) {
+  const records = new Map([
+    [live, options.raw || employee()],
+    [`${root}/Users/actor`, Object.hasOwn(options, "actor") ? options.actor : actor],
+    ["System/system", { isMaintenance: options.maintenance === true }],
+  ]);
+  if (options.archived) records.set(archive, { legacy: true });
+  if (options.reservation) records.set(`${root}/EmployeeUserReservations/employee`, { active: true });
+  if (options.lock) records.set(`${root}/EmployeeLifecycleLocks/employee`, { active: true });
+  if (options.head !== undefined) records.set(`${root}/EmployeeLifecycleHeads/employee`, options.head);
+  for (const [id, operation] of options.operations || []) records.set(`${root}/LifecycleOperations/${id}`, operation);
+  const reads = [], writes = [];
+  const firestore = {
+    doc: (path) => ({ path }),
+    collection: (path) => ({ where: (field, operator, value) => ({ path, filter: [field, operator, value], limit: () => ({ path, filter: [field, operator, value] }) }) }),
+    runTransaction: async (callback) => callback({
+      get: async (reference) => {
+        reads.push(reference);
+        if (options.failRead?.(reference)) throw new Error("read failure");
+        if (reference.filter) {
+          const docs = [...records.entries()].filter(([path, value]) => path.startsWith(`${reference.path}/`) && value?.[reference.filter[0]] === reference.filter[2]).map(([, value]) => ({ data: () => value }));
+          return { size: docs.length, empty: docs.length === 0, docs };
+        }
+        return snapshot(records.get(reference.path));
+      },
+      set: (...args) => writes.push(["set", args]),
+      delete: (...args) => writes.push(["delete", args]),
+    }),
+  };
+  const run = () => archiveEmployee({ firestore, input: { employeeId: "employee" }, resolveIdentity: options.resolveIdentity || (async () => ({ ...identity, ...options.identity })) });
+  return { records, reads, writes, run };
+}
+
+function retirement(operationId = "11111111-1111-4111-8111-111111111111") {
+  return createEmployeeOnlyRetirementOperationRecord({ operationId, actorUid: "actor", actorDisplayName: "管理者", employeeId: "employee", terminationDate: "2026-08-24", reasonOfTermination: "本人都合", requestFingerprint: "a".repeat(64), timestamp });
+}
+function reinstatement(operationId = "22222222-2222-4222-8222-222222222222") {
+  return createEmployeeReinstatementOperationRecord({ operationId, actorUid: "actor", actorDisplayName: "管理者", employeeId: "employee", reversesOperationId: "11111111-1111-4111-8111-111111111111", correctionReasonCode: "MISTAKEN_RETIREMENT", requestFingerprint: "b".repeat(64), timestamp });
+}
+
+test("archive preflight accepts exact employeeId and declares current dependencies", async () => {
+  assert.deepEqual(EMPLOYEE_ARCHIVE_QUERIES, [["Users", "employeeId", "=="]]);
+  assert.deepEqual(EMPLOYEE_ARCHIVE_DOCUMENTS, ["EmployeeUserReservations", "EmployeeLifecycleLocks", "EmployeeLifecycleHeads"]);
+  assert.deepEqual(parseEmployeeArchiveInput({ employeeId: "employee" }), { employeeId: "employee" });
+  for (const input of [undefined, {}, { employeeId: "employee", reason: "x" }, { employeeId: "../employee" }]) assert.throws(() => parseEmployeeArchiveInput(input));
+  const state = setup();
+  assert.deepEqual(await state.run(), { success: true, allowed: true, employeeId: "employee" });
   assert.equal(state.writes.length, 0);
 });
-for (const [collection, field] of REQUIRED_QUERIES) test(`archive refuses ${collection} in any state`, async () => {
-  const state = setup(); state.records.set(`${root}/${collection}/dependency`, { [field]: field === "employeeIds" ? ["employee"] : "employee", status: "COMPLETED", disabled: true, isTemporary: true });
-  await assert.rejects(state.run(), { code: "failed-precondition" }); assert.equal(state.writes.length, 0); assert.equal(state.records.has(live), true);
+
+test("Employee schema owns the three archive hasMany references and preflight does not duplicate them", async () => {
+  assert.equal(LocalEmployee.logicalDelete, true);
+  assert.deepEqual(LocalEmployee.hasMany, [
+    { collectionPath: "SiteOperationSchedules", field: "employeeIds", condition: "array-contains", type: "collection" },
+    { collectionPath: "OperationResults", field: "employeeIds", condition: "array-contains", type: "collection" },
+    { collectionPath: "ArrangementNotifications", field: "employeeId", condition: "==", type: "collection" },
+  ]);
+  const source = await readFile(new URL("../../functions/modules/employees/archiveEmployee.js", import.meta.url), "utf8");
+  for (const dependency of ["SiteOperationSchedules", "OperationResults", "ArrangementNotifications"]) assert.doesNotMatch(source, new RegExp(dependency, "u"));
 });
-for (const collection of REQUIRED_DOCUMENTS) test(`archive refuses even malformed ${collection} existence`, async () => {
-  const state = setup(); state.records.set(`${root}/${collection}/employee`, { malformed: true }); await assert.rejects(state.run(), { code: "failed-precondition" }); assert.equal(state.writes.length, 0);
-});
-for (const options of [{ actor: { ...actor, isAdmin: true, roles: [] } }, {}]) test("archive allows only administrator or manager", async () => { const state = setup(options); await state.run(); assert.equal(state.writes.length, 2); });
-for (const change of [{ roles: ["human-resource"] }, { roles: ["controller"] }, { roles: [] }, { roles: ["manager", "unknown"] }, { disabled: true }, { isTemporary: true }, { companyId: "other" }]) test("archive refuses unapproved current actor", async () => { const state = setup({ actor: { ...actor, ...change } }); await assert.rejects(state.run(), { code: "permission-denied" }); assert.equal(state.writes.length, 0); });
-test("archive rechecks identity, maintenance, destination collisions and errors without writes", async () => {
-  const states = [setup({ identity: (call) => ({ ...identity, companyId: call === 1 ? "company" : "other" }) }), setup({ failRead: (ref) => !!ref.filter }), setup({ commitError: true })];
-  const maintenance = setup(); maintenance.records.set("System/system", { isMaintenance: true }); states.push(maintenance);
-  const both = setup(); both.records.set(archive, { legacy: true }); states.push(both);
-  const legacy = setup(); legacy.records.delete(live); legacy.records.set(archive, employee()); states.push(legacy);
-  const missing = setup(); missing.records.delete(live); states.push(missing);
-  for (const state of states) { await assert.rejects(state.run()); assert.equal(state.writes.length, 0); }
-});
-test("archive validates known raw before Class normalization while preserving valid resignation", async () => {
-  for (const patch of [{ docId: "other" }, { createdAt: new Date() }, { dateOfHire: undefined }, { isForeigner: "false" }, { healthInsurance: null }, { securityCertifications: [{}] }, { insuranceOperationVersions: null }, { location: { lat: Infinity, lng: 0, formattedAddress: "x" } }]) {
-    const state = setup({ raw: { ...employee(), ...patch } }); await assert.rejects(state.run()); assert.equal(state.writes.length, 0);
+
+test("archive preflight refuses auth, tenant, maintenance, state, User, reservation, lock, collision, and read failures", async () => {
+  const cases = [
+    [setup({ actor: null }), "permission-denied"],
+    [setup({ maintenance: true }), "failed-precondition"],
+    [setup({ raw: { ...employee(), employmentStatus: "RESIGNED" } }), "failed-precondition"],
+    [setup({ actor: { ...actor, employeeId: "employee" } }), "failed-precondition"],
+    [setup({ reservation: true }), "failed-precondition"],
+    [setup({ lock: true }), "failed-precondition"],
+    [setup({ archived: true }), "already-exists"],
+    [setup({ failRead: () => true }), null],
+    [setup({ resolveIdentity: async () => ({ ...identity, companyId: "other-company" }) }), "permission-denied"],
+  ];
+  for (const [state, code] of cases) {
+    if (code) await assert.rejects(state.run(), { code });
+    else await assert.rejects(state.run());
+    assert.equal(state.writes.length, 0);
   }
-  const raw = { ...employee(), employmentStatus: "RESIGNED", dateOfTermination: Timestamp.fromDate(parseDate("2026-08-01")), reasonOfTermination: "退職" };
-  validateEmployeeArchiveRaw(raw, "employee"); const state = setup({ raw }); await state.run(); assert.strictEqual(state.records.get(archive).employee, raw);
 });
-test("archive input and startup configuration are strict and demo injection cannot authorize normal execution", async () => {
-  for (const input of [{ employeeId: "../employee", reason: "x", operationId: "op" }, { employeeId: "employee", reason: " ", operationId: "op" }, { employeeId: "employee", reason: "x", operationId: "op", companyId: "company" }]) assert.throws(() => parseEmployeeArchiveInput(input));
-  assert.deepEqual(parseArchiveTenants(undefined), []); assert.deepEqual(parseArchiveTenants('["company"]'), ["company"]);
-  for (const setting of ["", "null", "{}", '["company","company"]', '["../company"]', '[1]']) assert.throws(() => parseArchiveTenants(setting));
-  const state = setup(); await assert.rejects(state.run(undefined, { resolveAllowedTenants: () => [] }), { code: "permission-denied" }); assert.equal(state.writes.length, 0);
-  const env = { GCLOUD_PROJECT: "demo-air-guard-v2-codex", FUNCTIONS_EMULATOR: "true", AIR_GUARD_EXTERNAL_EFFECTS: "deny", FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080", AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS: '["company"]' };
-  assert.deepEqual(demoEmployeeArchiveTenants(env), ["company"]);
-  for (const field of ["GCLOUD_PROJECT", "FUNCTIONS_EMULATOR", "AIR_GUARD_EXTERNAL_EFFECTS", "FIRESTORE_EMULATOR_HOST"]) assert.throws(() => demoEmployeeArchiveTenants({ ...env, [field]: "invalid" }));
+
+test("archive accepts every current same-tenant registered role shape and rejects invalid User identity", async () => {
+  for (const roles of [[], ["unknown"], ["manager"], ["human-resource"]]) {
+    const state = setup({ actor: { ...actor, roles } });
+    assert.deepEqual(await state.run(), { success: true, allowed: true, employeeId: "employee" });
+    assert.equal(state.writes.length, 0);
+  }
+  const admin = setup({ actor: { ...actor, isAdmin: true, roles: [] } });
+  assert.deepEqual(await admin.run(), { success: true, allowed: true, employeeId: "employee" });
+  const superUser = setup({ actor: { ...actor, roles: [] }, identity: { isSuperUser: true } });
+  assert.deepEqual(await superUser.run(), { success: true, allowed: true, employeeId: "employee" });
+  for (const change of [{ docId: "other" }, { companyId: "other-company" }, { disabled: true }, { isTemporary: true }]) {
+    const state = setup({ actor: { ...actor, ...change } });
+    await assert.rejects(state.run(), { code: "permission-denied" });
+    assert.equal(state.writes.length, 0);
+  }
+  for (const invalid of [{ uid: "" }, { companyId: "" }]) {
+    const state = setup({ resolveIdentity: async () => ({ ...identity, ...invalid }) });
+    await assert.rejects(state.run(), { code: "permission-denied" });
+    assert.equal(state.writes.length, 0);
+  }
+});
+
+test("archive validates lifecycle operations and head consistency without rejecting a completed reinstatement", async () => {
+  const completedRetirement = retirement();
+  const retirementState = setup({ operations: [[completedRetirement.operationId, completedRetirement]], head: createNextEmployeeLifecycleHead({ operationId: completedRetirement.operationId, operationType: LIFECYCLE_OPERATION_TYPES.EMPLOYEE_RETIREMENT, timestamp }) });
+  await assert.rejects(retirementState.run(), { code: "failed-precondition" });
+  assert.equal(retirementState.writes.length, 0);
+
+  const completedReinstatement = reinstatement();
+  const reinstatementState = setup({ operations: [[retirement().operationId, retirement()], [completedReinstatement.operationId, completedReinstatement]], head: createNextEmployeeLifecycleHead({ operationId: completedReinstatement.operationId, operationType: LIFECYCLE_OPERATION_TYPES.EMPLOYEE_REINSTATEMENT, timestamp }) });
+  assert.deepEqual(await reinstatementState.run(), { success: true, allowed: true, employeeId: "employee" });
+  assert.equal(reinstatementState.writes.length, 0);
+
+  for (const options of [
+    { operations: [[completedRetirement.operationId, completedRetirement]] },
+    { operations: [[completedRetirement.operationId, { malformed: true }]], head: {} },
+    { operations: [[completedRetirement.operationId, completedRetirement]], head: createNextEmployeeLifecycleHead({ operationId: "33333333-3333-4333-8333-333333333333", operationType: LIFECYCLE_OPERATION_TYPES.EMPLOYEE_RETIREMENT, timestamp }) },
+  ]) {
+    const state = setup(options);
+    await assert.rejects(state.run(), { code: "failed-precondition" });
+    assert.equal(state.writes.length, 0);
+  }
+});
+
+test("archive validates raw Employee before any archive side effect", async () => {
+  const raw = employee();
+  validateEmployeeArchiveRaw(raw, "employee");
+  for (const patch of [{ docId: "other" }, { createdAt: new Date() }, { employmentStatus: "UNKNOWN" }, { dateOfHire: undefined }]) {
+    const state = setup({ raw: { ...raw, ...patch } });
+    await assert.rejects(state.run());
+    assert.equal(state.writes.length, 0);
+  }
+});
+
+test("archive Callable is preflight-only and does not write or delete archive data", async () => {
+  const source = await readFile(new URL("../../functions/modules/employees/archiveEmployee.js", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /transaction\.(set|delete)|archiveRef\.set|activeRef\.delete/u);
+  assert.match(source, /return \{ success: true, allowed: true, employeeId: parsed\.employeeId \}/u);
+  assert.doesNotMatch(source, /Employees_archive.*set|Employees\/.*delete/u);
 });

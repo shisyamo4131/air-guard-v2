@@ -1,5 +1,9 @@
 # Employee（従業員）マスター実装調査
 
+## Current SCR-10（2026-09-17、prelocal・検証待ち）
+
+Employee archiveの正規入口は、詳細画面のread-only Callable preflight成功後に`EmployeeManager`から`Employee.delete()`へ渡す標準処理である。preflightはUser連携、予約、processing lock、LifecycleOperationsとEmployeeLifecycleHeadsの整合、ACTIVE状態、同ID archive衝突を確認する。完了済みの誤退職訂正履歴は、それだけでは拒否しない。保存はSchema/ClientAdapterのraw同ID移動に委譲し、preflight拒否・Callable失敗・標準保存失敗はいずれも成功扱いにしない。既存archive data、User/Auth保護、退職・訂正Callable、`statusChangedAt = new Date()`は維持する。direct SDK bypassとraceは今回許容し、restore・purge・package・migration・remote反映は対象外である。以下の旧EMP archive設計はHistoricalとして読む。
+
 2026-09-16現行補正: SCR-02の実績化では、GeneratorからSchemas標準`SiteOperationSchedule.syncToOperationResult`へ接続する。最終確定は通知を変更せず、既存通知のactual値を読むだけで、通知なしは予定値へfallbackする。通知map readとOperationResult・schedule link transactionはatomicではない。worker鉛筆の個別編集だけが既存通知をLEAVEDへ更新する。旧server transaction／notify(false)事前作成／通知expectation比較の記述は現行方針として扱わない。
 
 ## FGA-04での情報分類
@@ -48,7 +52,7 @@ Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連�
 
 取引先請求の入金予定日は`updateBillingPaymentDate`と専用`PaymentDateEditor`/`useBillingPaymentDate`へ移した。日付3fieldと監査だけを部分保存し、日次2種・Billing・履歴の直接client CUDを閉じる。専用UIの背景trigger実行は既定offの明示opt-inで、通常API harnessへの継承はrunnerが除去する。
 
-05-Dのarchiveは`employeeArchiveContract.js`で既知raw/入力/actor/envelopeを検証し、`functions/modules/employees/archiveEmployee.js`で現在Auth・User・System・12従属・同ID衝突を同transactionで確認する。コピーは取得rawを使用し、archive作成と通常原本削除を同時に確定する。通常作成の同ID archive拒否、既存7actor read/直接CUD拒否は再利用した。Dev反映前準備でAPI factoryを通常`functions/apis/index.js`へ接続したが、remote未反映である。許可tenant設定は通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`と専用用`AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS`を分け、厳密なJSON文字列配列・既定空集合とする。通常entrypointも許可tenant未設定時は全tenantを拒否する。
+05-Dのarchive記述はHistoricalであり、SCR-10の現行経路ではない。現在は有効な認証済み本登録Userの同一tenant境界で、read-only preflight後に標準Schema／ClientAdapterへ委譲する。tenant allowlist、admin/manager限定、旧envelope、旧demo注入は現行経路に含めない。既存archive data、User/Auth保護、Lifecycle履歴保護は維持する。
 
 専用`ArchiveDialog`/`useEmployeeArchive`は詳細原本の表示領域外に保持し、原本消失後も同sessionの不明な操作結果を確認できるようにする。raw/User表示の破棄と最小attemptの保持を分離し、通常成功後は一覧へ戻る。EMP-05の前回local受入れ判定は2026-09-07のUI回帰確認により撤回した。各内部単位の受入れ範囲・未検証・EMP-06へ渡す境界は[EMP-05 local記録](../verification/employee-05-local.md#05-e-統合次工程review)、現在地はロードマップを正とする。
 
@@ -178,7 +182,7 @@ EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業�
 
 2026-09-06の利用者回答により、会社管理者と既知6業務roleには現時点でEmployee全項目readを許可する。[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)に従い、単一原本と既存リアルタイム購読を維持する。項目限定API・DTO/projection・通知signal・定期再取得の比較案は今回採用せず、将来項目制限が必要になった時に再検討する。
 
-- 原本get/listの許可actorとtenantを保存境界へ揃える。roleなし、未知role、直接permission、仮/無効User、他tenant、developer/super-userだけの許可を閉じる。本人Self Accessと既存archiveは別境界であり、原本全項目回答を根拠に広げない。
+- 原本get/listは同一tenantの有効な認証済み本登録User境界へ揃える。仮/無効User、他tenant、claim不正を閉じ、role・直接permission・super-user区分を通常Employeeの認可根拠にしない。本人Self Accessと既存archive readは別境界である。
 - 既存のEmployee Class、姓名/表示名、性別・外国籍表示、検索token、在籍期間queryを項目maskのために置き換えない。全文取得を続けても、保存はoperation所有fieldの部分更新に限定する。
 - 既存ID cacheの更新・削除反映、初期選択ID、期間内退職者、tenant/権限変更時の購読停止・cache破棄・古い応答無視を直接互換として確認する。既取得PIIの回収を保証しない。
 - 勤怠Selectは原簿氏名を表示し、打刻CSVもfullNameを優先する。現page設定はDEVELOPERである（`utils/pageSettings.js`、`components/Employee/Select.vue`、`utils/attendance/createAttendancePunchRows.js`）。そのpageを業務roleへ新公開せず、page条件とEmployee原本readの両方を満たすactorだけを対象とする。
@@ -188,6 +192,10 @@ EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業�
 ### EMP-01から次工程へのreview結果
 
 全項目read・保存契約・archive形式・依存query/必要writer・操作表示・段階移行/提供工程を確定した。最終採用反映の独立review・検証結果と次工程判定は[ロードマップ](../roadmaps/employee.md)へ集約する。以下の設計をruntime検証済みとは扱わず、EMP-02以降の実装・検証で確認する。
+
+## Historical: EMP-01〜05 archive設計と実装前契約
+
+以下はSCR-10-A以前に作成したEMP設計・レビュー入力であり、現在のarchive保存契約ではない。現行は本文冒頭の「Current SCR-10」を正とする。旧ArchiveDialog、理由・operationId、独自envelope、12従属catalog、admin/manager actor、tenant allowlist、atomic Callable保存の記述は履歴として保持し、実装・検証条件へ再適用しない。
 
 ## Employeeのarchive設計
 
@@ -425,15 +433,15 @@ clientに残せる更新は、参照を含むraw配列・識別field・索引を
 
 `array-contains`で0件でも、索引が欠けたdocumentの埋込み参照は検出できない。したがって「未確認なら拒否」はarchive要求内のqueryだけで実現しない。次を満たす**検査済みtenantのserver側許可集合**で開放を制御する。新しい参照counter/ledgerやarchive要求ごとの全件scanは追加しない。
 
-- 設定はserver起動設定を使い、既定は空集合、不正設定・対象外は拒否。Callable入力、client flag、未認証read可能な`System/system`へ許可tenant一覧や検査詳細を置かない。config名等の内部命名は実装時に決められるが、対象tenantの厳密照合とdefault denyは変更しない。
-- EMP-05のarchive APIは専用demo entrypointで明示公開し、Dev反映前準備で通常`functions/apis/index.js`にも接続した。demo用許可注入は通常実行から利用できないようにし、通常用設定の既定空集合による拒否を維持する。remote公開と対象tenant開放はEMP-09の別承認まで実行しない。
+- Historical: 当時はserver起動設定による検査済みtenant集合と専用demo注入を想定していた。SCR-10-Aでtenant allowlist・demo allowlist依存を撤去し、同一tenantの認証・本登録User境界へ統一した。
+- Historical: 当時はEMP-05のarchive APIを専用demo entrypointから開放する計画だった。現行のCallable entrypointは`archiveEmployee`を維持し、追加grantや新管理documentは設けない。
 - EMP-05では限定整合確認の純粋検査/実行手段を作り、合成dataで正常/欠損/型不正/明細不一致を試験する。remote操作や利用者saved-dataの読取り・補完を実行しない。対象は選択したtenantの予定・実績・通知・日次2種・Billingとし、元rawと導出集合の一致を検査する。
 - EMP-09では別承認のbounded maintenanceで旧client/背景writeを止め、対象・backup・dry-run・必要補完・post-check・旧trigger反映/実行中旧revision停止を確認する。書込み継続中のページ走査結果だけで整合済みとしない。欠損の所属Employeeを特定できない場合はtenant全体を開放しない。
 - 開放前に直接/旧writerの迂回閉鎖、既存索引整合、旧User削除作用停止の全てを確認する。正常な新規writeが索引一致を維持することを前提とし、運営者による契約外の直接変更まで自動検知できると表現しない。不整合判明時は対象tenantを許可集合から外して操作停止し、限定repairを別承認する。
 
 ### Archive UIと結果契約
 
-初回操作の入口は既存Employee詳細の操作領域に置き、退職操作と独立した理由入力・確認dialogにする。初回は原本と対象IDが確定し、会社管理者/統括の操作判定が許可するときだけ実行可能。人事を許す通常`employeeAllowed(write=true)`をarchiveへ流用しない。単なるread許可・super-user文字列を実行根拠にしない。
+Historical: 初回操作の入口は既存Employee詳細の操作領域に置き、旧設計では会社管理者/統括の操作判定を想定していた。現行SCR-10は有効な認証済み本登録Userかつ同一tenantへ統一し、通常Employee actor境界をCallable・Rules・UIで共有する。
 
 - 送信は上記exact inputのみ。dialogごとのoperationIdと理由をmemoryで保持し、処理中は再送/入力変更を防ぐ。PIIや理由をlocalStorage/logへ残さない。
 - 確定拒否は理由入力を保持し、従属あり/権限不足/原本不正/衝突/未開放/検査失敗を安全なmessageへ対応させる。他tenant情報や従属document本文を表示しない。

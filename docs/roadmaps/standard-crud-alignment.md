@@ -48,7 +48,7 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 | SCR-07 Site archive整合 | 10 | 0 | Implementation（prelocal・検証待ち） | [個別完了条件](#scr-07-siteアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、不要経路撤去・Rules簡素化・通常CRUDと終了再開の維持を確認する。既存archiveは保持し、復元対応は後続とする |
 | SCR-08 提供済み請求操作の標準CRUD整合 | 10 | 0 | Implementation（prelocal・検証待ち） | 現提供範囲はpaymentDueDateAtのみで、既存標準Manager／Schemaが充足することを確認した。BankAccount／PaymentMethod／WorkerOrder画面は未提供のため対象外。direct tests 2+13+16を確認し、Local／Dev受入れまでは完了としない |
 | SCR-09 Employee退職・誤退職訂正の専用経路維持 | 10 | 0 | Implementation（prelocal・検証待ち） | 既存退職／誤退職訂正Callableを維持し、変更不要であることを確認した。direct tests 7+14+18+4+3=46を確認し、Local／Dev受入れまでは完了としない |
-| SCR-10 Employee archive整合 | 10 | 0 | Hold（判断待ち） | Callable事前検証後にブラウザ標準archiveを実行する現行正本を確認した。direct SDKによる事前検証迂回の扱いが未承認のため、方式決定までcode／test変更を行わない。復元・保持・物理削除は後続とする |
+| SCR-10 Employee archive整合 | 10 | 0 | Implementation（prelocal・検証待ち） | Callableはread-only preflight（User連携・予約・processing lock・LifecycleOperations/Head整合）に限定し、成功後だけEmployeeManager→Schema/ClientAdapterのraw same-ID archiveへ委譲する。direct SDK bypassとraceは今回許容する。自動検証・security review・Local/Dev受入れ完了までは得点0。復元・保持・物理削除は後続とする |
 
 SCR番号は2026-09-15時点の改修優先順位に合わせて付番し直した。SCR-01から順に各項目の現状と影響を確認して進める。新しい依存や影響が判明した場合は、その理由を示して優先順位を見直す。SCR-04とSCR-05など共有Rulesを扱う変更は並列編集せず、前工程との依存を確認する。既存の大項目も、独立して受入れ可能なら操作単位へ分け、配点は親項目の合計を維持する。
 
@@ -80,6 +80,7 @@ SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路
 - 目的: Siteの手動終了・再開をAir Manager経由でSchemaの標準更新へ委譲し、専用保存経路と重複する検査・状態管理を解消する。
 - 対象: 提供済みの手動終了・再開と、それに必要なManager、Schemaクラス、Rules、不要になった専用経路の整理。
 - 維持: 現行の終了・再開の業務条件・入力項目、終了後の通常編集条件、自動終了の条件・実行タイミング。SiteのアーカイブはSCR-07で扱う。
+- 現行実装事実: 状態遷移の終端で`statusChangedAt = new Date()`を保存する。これは端末時刻の現行契約であり、server時刻化をSCR-03の残作業とはしない。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)の2026-09-17補足を参照する。
 
 ### 完了条件
 
@@ -238,7 +239,7 @@ Siteの復元画面・旧形式archiveの復元対応は本節に後続事項と
 | Rulesと既存操作 | ブラウザの標準archiveに必要なRulesを整合し、認証・同一tenantとUser/Auth固有の保護を維持する。Employeeの通常編集、退職・誤退職訂正へ回帰を起こさない |
 | 検証と最終判断 | 上記の許可・拒否、hasManyによる従属あり拒否、同IDの標準archiveと原本削除、一覧・詳細への反映、検証失敗・保存失敗時の表示と成功扱いしない動作を確認する。有効な既存証拠は再利用し、不足・失効した範囲だけを追加検証する。対象のreview・必要な検証・Dev受入れ証拠が揃ってから製品完了を判断する |
 
-着手時に対象file・現行経路・有効な証拠を照合し、client・Callable・Rulesの互換性とrollback単位を具体化する。復元対応、server-adapter改修、将来の段階的削除は本工程の完了条件に含めない。SCR-10はHold（判断待ち）・得点0で、方式決定までcode／test変更を行わない。
+着手時に対象file・現行経路・有効な証拠を照合し、client・Callable・Rulesの互換性とrollback単位を具体化する。復元対応、server-adapter改修、将来の段階的削除は本工程の完了条件に含めない。SCR-10はImplementation（prelocal・検証待ち）・得点0で、preflight後の標準保存、direct SDK bypassの明示受容、grant／新管理documentなしの判断を採用済みとする。
 
 ## 影響確認から次の1件を選ぶ
 
@@ -303,13 +304,13 @@ code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-
 
 ## 次の作業
 
-### SCR-03〜10の現時点ファクト（2026-09-16）
+### SCR-03〜10の現時点ファクト（2026-09-17）
 
 - SCR-03／SCR-05／SCR-06／SCR-07はImplementation（prelocal・検証待ち）で、得点は0。実装差分はそれぞれのCurrent実装記録と本表を正とする。SCR-02はPending（Dev反映済み・会社管理者受入れ待ち）のまま変更しない。
 - SCR-04はPlanned・得点0。SCR-02で整合した標準実績化を二重計上しない。
 - SCR-08は、現提供範囲のpaymentDueDateAtが既存標準Manager／Schemaで充足することを確認した。BankAccount／PaymentMethod／WorkerOrder画面は未提供で対象外。direct tests 2+13+16はすべてexit 0だが、Local／Dev前のため完了扱いにしない。
 - SCR-09は、既存退職／誤退職訂正Callableを維持し変更不要であることを確認した。direct tests 7+14+18+4+3=46はすべてexit 0だが、Local／Dev前のため完了扱いにしない。
-- SCR-10はHold（判断待ち）・得点0。現行正本のCallable事前検証後の標準archiveと、事前検証を省略できるdirect SDK経路の扱いは別問題であり未承認。方式候補は、A: one-time approval/grant、B: bypass riskの明示受容、C:別案。決定までcode／test変更を行わない。
+- SCR-10はImplementation（prelocal・検証待ち）・得点0。Callableはread-only preflightに限定し、正規画面では拒否・失敗時に標準保存へ進まない。direct SDKはpreflightを迂回し得るが、アプリ想定外経路まで保証しないことを明示受容し、one-time grant・追加role・新管理documentは設けない。
 - Local Emulator、browser、build、Dev受入れは今回確認していない。
 
 2026-09-16訂正: 今回の標準CRUD・通知不変・旧convert撤去・OperationResult標準sync整合はSCR-02へ含める。追加修正はcommit `f3b1e01891f6a14605d17b2e7fb5c67daabec15a`でDevへ反映済みだが、対象data発生後の会社管理者受入れを残すためSCR-02は0点のままとする。SCR-04はPlannedのまま維持し、SCR-02で整合した実績化範囲を再実装・二重計上しない。

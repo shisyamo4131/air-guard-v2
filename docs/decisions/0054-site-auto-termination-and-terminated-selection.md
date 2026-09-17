@@ -7,6 +7,10 @@
 - 関連仕様: [取引先・現場・取極め](../specification.md#取引先現場取極め)
 - 関連判断: [0031 必要十分なデータ境界](0031-proportional-data-boundary-and-change-safeguards.md)、[0048 SiteのCustomer変更と既存実績snapshot](0048-site-customer-change-and-historical-snapshots.md)、[0051 Siteの誤登録archive](0051-site-mistaken-registration-archive-boundary.md)、[0052 Site下流情報のsnapshot時点](0052-site-downstream-snapshot-timing.md)
 
+## 2026-09-17補足：SCR-03現行実装事実
+
+SCR-03の手動終了・再開では、現行の端末側標準保存が状態遷移の終端で`statusChangedAt = new Date()`を保存する。これは今回の標準CRUD整合で確認した現行実装事実であり、server時刻化を残作業または本ADRの追加要件とはしない。`statusChangedAt`を含む既存の状態遷移条件・表示契約を維持し、時刻の信頼性を新しい監査・履歴機構へ拡張しない。
+
 ## 背景
 
 警備現場では、実際の稼働終了が判明してもSite masterを更新する定常運用が乏しく、ACTIVEのまま放置されやすい。類似名称のACTIVE Siteが蓄積すると、利用者が新しい予定等で選ぶべき現場を識別しにくくなる。この問題を軽減するため、現行scheduled taskは工期終了から3か月を超えたACTIVE Siteを自動的にTERMINATEDへ変更している。

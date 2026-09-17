@@ -289,6 +289,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 通常編集、退職・誤退職訂正、archive・restore、User/Auth操作を区別する。退職・誤退職訂正は[テナントと認証](#テナントと認証)の専用Callable契約、通常編集は[標準CRUDと後続処理](#標準crudと後続処理)、archive・restoreは[共通仕様](#ドキュメントのアーカイブと物理削除)に従う。Employeeの編集からUser/Authのrole管理・account変更の権限を導かない。
 - Employeeのarchive・restore方式と従属確認は[共通仕様](#ドキュメントのアーカイブと物理削除)に従う。通常退職はEmployeeをRESIGNEDとして業務記録とともに保持し、archiveでUser/Authや従属documentを連鎖削除しない。
 - Employeeのアーカイブは、CallableでUser連携・予約・退職状態・処理中lockと履歴の整合性を検証し、許可された場合にブラウザのDomain ManagerからSchema／ClientAdapterの標準アーカイブを実行する。退職状態、User連携あり、未解消の予約・処理中・不整合は拒否する。誤退職訂正が完了して在職状態へ戻った履歴だけでは拒否せず、既存の操作履歴を削除しない。通常の従属確認はSchemaのhasManyに委譲する。
+- 正規画面ではCallableの事前検証が拒否または失敗した場合、標準保存へ進まない。事前検証と標準保存の間の状態変化は許容する。正規画面を使わないdirect SDK操作は事前検証を迂回し得るが、アプリが想定しない経路まで保証しない。この判断のためのone-time grant、追加の管理document、追加roleは設けず、既存の認証・同一tenant境界とUser/Auth保護を維持する。
 - 上記の事前検証とブラウザ保存は同じtransactionではない。利用者は、その間にUser連携等が生じる可能性を低いと判断して受容し、この競合の完全防止を要求しない。Callableの許可は保存成功や保存時点の条件を保証しない。User/Authの作成・変更・削除に対する既存の専用認可は維持する。Employeeの復元画面・旧形式の復元対応はSCR-10の後続とする。
 - トランザクション文書はlive Employeeの存在を通常保存・背景同期の必須条件にせず、archive検索専用の集約`employeeIds`も保持しない。同じ作業員が同じ文書内に複数回含まれることを整合性検査だけで拒否しない。全masterの同時変更や既存archive・実dataの削除・変換、通常restoreの提供、定期purgeの実行は含めない。変更理由・境界は[ADR 0074](decisions/0074-transaction-parent-reference-independence.md)を正とする。
 - 自宅座標は、将来の配置先現場と従業員自宅の経路図に利用するため必要とする。Employeeの住所から座標を取得・保存する機能を継続する。経路図の描画、経路検索、距離による配置判断は将来工程であり、今回のCRUD改修では追加しない。座標を含むEmployeeの閲覧は上記の全項目read境界に従う。

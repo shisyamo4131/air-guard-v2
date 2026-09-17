@@ -414,7 +414,7 @@ service cloud.firestore {
 
     // --- Rules for 'Employees' subcollection under 'Companies' ---
     // 通常Employeeは同一tenantの有効な本登録Userへrole非依存で許可する。
-    // 退職・archive・User/Authは専用操作を維持し、client deleteは許可しない。
+    // archiveは同一transactionのraw moveだけを許可し、User/Auth保護と通常更新境界を維持する。
     match /Companies/{companyId}/Employees/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if isAuthenticated()
@@ -427,16 +427,27 @@ service cloud.firestore {
                     && resource.data.employmentStatus == 'ACTIVE'
                     && request.resource.data.uid == request.auth.uid
                     && preservesEmployeeLifecycleFields();
-      allow delete: if false;
+      allow delete: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
+                    && !exists(/databases/$(database)/documents/Companies/$(companyId)/Employees_archive/$(docId))
+                    && existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Employees_archive/$(docId))
+                    && getAfter(/databases/$(database)/documents/Companies/$(companyId)/Employees_archive/$(docId)).data == resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Employees/$(docId));
     }
 
     // --- Rules for 'Employees_archive' subcollection under 'Companies' ---
-    // Employees_archiveコレクションはCompaniesコレクションのサブコレクション。
-    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Employees_archive ドキュメントのみ Read/Write を許可。
+    // Employees_archiveは同一tenantの認証済みEmployee actorだけreadし、
+    // active Employeeとの同一ID raw moveのcreateだけを許可する。
     match /Companies/{companyId}/Employees_archive/{docId} {
       allow read: if isAuthenticated() && canReadEmployee(companyId);
-      allow write: if false;
+      allow update, delete: if false;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isSystemMaintenanceOff()
+                    && exists(/databases/$(database)/documents/Companies/$(companyId)/Employees/$(docId))
+                    && get(/databases/$(database)/documents/Companies/$(companyId)/Employees/$(docId)).data == request.resource.data
+                    && !existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Employees/$(docId));
     }
 
     // --- Rules for 'mets' subcollection under 'Companies' ---
