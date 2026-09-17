@@ -1,6 +1,6 @@
 # 現在の製品作業と再開案内
 
-2026-09-17現行更新: SCR-02はCompleted・10点を維持する。SCR-03/06/07/10の最終product contentは固定commit `1250f8ff8ef5fb1043d00b990bb8680fd53cadb0`で、Customer通常編集と明示archive入口の分離を含む。combined code reviewでMedium findingを検出し`1250f8ff...`で解消した。post-fix reviewとfinal security reviewはfinding 0、利用者環境LocalのCustomer非破壊再確認と最終UI buildも成功したが、Dev受入れ待ち・得点0は変更しない。詳細な実測値と未確認事項は[SCR-03〜10利用者環境Local receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)、状態と完了条件は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)を正本とする。
+2026-09-17現行更新: SCR-02はCompleted・10点を維持する。SCR-03〜10のproduct candidateはrelease commit `55566deb4dda486689587889f8237f3ec24a210f`として`main`へ統合し、GitHub Actions run `35207615314`でFirestore Rules・Functions・HostingをDevへ反映した。旧`archiveCustomer`、`archiveSite`、`reactivateSite`、`terminateSite`は明示削除し、remote read-only確認で不在を確認した。配信成功はDev画面受入れ完了ではなく、SCR-03/06/07/10はDev反映済み・Dev受入れ待ち、SCR-05は限定範囲の検証継続/受入れ待ち、いずれも得点0を維持する。詳細は[Dev release記録](../verification/scr-03-10-dev-release-2026-09-17.md)、状態と完了条件は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)を正本とする。
 
 この文書は現在の製品作業・未決事項・次の操作から正本へ進む案内です。通常startupは[文書案内](../README.md)と[project coordination](../runbooks/project-coordination.md)に従います。Git・remote・dataの現在状態は実targetで別途確認し、過去の実行記録を現在値として使いません。
 
@@ -8,7 +8,7 @@
 
 - SCR-02追加差分はユーザーcode review、domain-full 1434/1434、Local Emulator 180/180、Local UI build、`generate:dev`、GitHub Actions run `35066835154`によるHosting・Functions・Firestore RulesのDev反映まで成功し、利用者からLocal受入れ・コード検証の完了と上下番確定処理画面のDev受入れOKが報告された。実data状態の左右独立scroll、固定された確定操作、作業員鉛筆、上下番確定と再表示を含むSCR-02の受入れ範囲を完了とする。
 
-- 2026-09-17の専用snapshotによるLocal verificationは[SCR Local verification receipt](../verification/scr-local-verification-2026-09-17.md)に固定し、利用者環境でのSCR-03/06/07/10追加Local受入れとSCR-05の登録button非表示の限定UI証拠は[新receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)に記録した。SCR-03/06/07/10はLocal検証済み・Dev受入れ待ち、SCR-05はImplementation（prelocal・検証継続/待ち）で、取極め・調整・lock・稼働外売上は未確認、いずれも得点0とする。SCR-04/08/09に追加UI evidenceはなく、SCR-09の既存Callable挙動・受入れは維持する。`System/system`の注入・setup、restore、legacy/server-adapter、future lifecycle scopeは追加しない。
+- 2026-09-17の専用snapshotによるLocal verificationは[SCR Local verification receipt](../verification/scr-local-verification-2026-09-17.md)、利用者環境でのSCR-03/06/07/10追加Local受入れとSCR-05の登録button非表示の限定UI証拠は[Local receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)、Dev配信は[Dev release記録](../verification/scr-03-10-dev-release-2026-09-17.md)に固定した。SCR-03/06/07/10はDev反映済み・Dev受入れ待ち、SCR-05はImplementation（Dev反映済み・検証継続/受入れ待ち）で、取極め・調整・lock・稼働外売上は未確認、いずれも得点0とする。SCR-04/08/09に追加Dev UI evidenceはなく、SCR-09の既存Callable挙動・受入れは維持する。`System/system`の注入・setup、restore、legacy/server-adapter、future lifecycle scopeは追加しない。
 
 - 棚卸し解消の継続先は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)。解消順、状態、次checkpointは同roadmapを正とし、既存phaseとの関係も同書から確認します。
 - SCR-01「Billings入金予定日」は標準Manager／Class保存、Rules整合、旧Function撤去、Local自動検証、Dev反映・受入れまで完了し、同ロードマップで10点を加点済みです。SCR-02「配置通知の状態更新・編集」は標準Manager／Class接続、Schemas `3.0.0-dev.3`の導入、PostAdoption、直接対象test、TESTERのLocal UI確認、ユーザー本人の遷移確認、domain-full 1433/1433、Local Emulator 180/180、最終Local T21、Generatorのscroll補正とsource regression test、Hosting/Functions/Firestore RulesのDev反映、利用者のDev受入れまで完了しました。DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認してmigration/repair不要と判断しています。SCR-02はロードマップで10点を加点し、SCR-04はPlannedのまま維持します。[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)を参照してください。
@@ -24,7 +24,7 @@
 
 ## 次の作業
 
-SCR-02は利用者のDev受入れ報告により完了した。次の作業はSCR-03以降のroadmap順とし、SCR-04はSCR-02の実績化範囲を二重計上しない。Prod、FCM実配信、backend日付算術、dashboard本人表示は対象外のまま維持する。
+SCR-02は利用者のDev受入れ報告により完了した。SCR-03〜10のcandidateはDev反映済みで、次の作業はSCR-03/05/06/07/10の完了条件に沿う対象別Dev受入れとする。SCR-05は登録button非表示以外の取極め・調整・lock・稼働外売上を未確認として扱い、SCR-04/08/09の既存証拠を配信成功だけで受入れ済みにしない。SCR-04はSCR-02の実績化範囲を二重計上せず、Prod、FCM実配信、backend日付算術、dashboard本人表示は対象外のまま維持する。
 
 ### 既存FGA工程の参照（2026-09-15時点）
 

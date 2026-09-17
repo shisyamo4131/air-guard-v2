@@ -66,6 +66,7 @@
 | SCR-02 配置通知の標準CRUD Local検証 | [SCR-02 配置通知 Local検証記録](scr-02-arrangement-notification-local.md) |
 | SCR Local verification closeout（2026-09-17） | [SCR Local verification receipt](scr-local-verification-2026-09-17.md) |
 | SCR-03〜10 利用者環境Local受入れ（2026-09-17） | [SCR-03〜10 利用者環境Local受入れ receipt](scr-03-10-user-local-acceptance-2026-09-17.md) |
+| SCR-03〜10 Dev反映（2026-09-17） | [SCR-03〜10 Dev release記録](scr-03-10-dev-release-2026-09-17.md) |
 | PowerShell検証gateのNorton再検知防止 | [PowerShell検証runtime hardening記録](norton-powershell-gate-hardening.md) |
 | 検証選択の判断 | [ADR 0040](../decisions/0040-impact-based-staged-verification.md) |
 | 文書責務と最終状態検証の判断 | [ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md) |
