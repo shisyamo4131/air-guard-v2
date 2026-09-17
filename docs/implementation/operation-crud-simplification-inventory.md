@@ -12,7 +12,7 @@
 
 ## 2026-09-17 Local verification closeout（score変更なし）
 
-実行件数、UI smoke、System/system欠落による阻害、cleanup、未検証範囲は[SCR Local verification receipt](../verification/scr-local-verification-2026-09-17.md)に固定した。SCR-03/06/07/10のwrite acceptanceは未検証、SCR-04/08/09に追加UI evidenceはなく、SCR-09 callable挙動と既存受入れ記録を維持する。これはSCR-05等のprelocal状態や得点を変更しない。
+専用snapshotによる実行件数、UI smoke、System/system欠落による阻害、cleanup、未検証範囲は[SCR Local verification receipt](../verification/scr-local-verification-2026-09-17.md)に固定した。利用者環境でのSCR-03/06/07/10追加Local受入れとSCR-05の登録button非表示の限定UI証拠は[新receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)に固定した。SCR-03/06/07/10はLocal検証済み・Dev受入れ待ち、SCR-05はImplementation（prelocal・検証継続/待ち）、取極め・調整・lock・稼働外売上は未確認、いずれも得点0。SCR-04/08/09に今回追加UI evidenceはなく、SCR-09 callable挙動と既存受入れ記録を維持する。
 
 基準はlocal mainの`048e44e9cfd4ca887ec328e7e835c291579e68af`。対象は今回確定したarchive・状態変更・請求・実績lock・実績化・通知・後続Triggerである。実コードとinstalledクラスを読取り、同じ基準でmasterと請求を独立調査した。remote適用状態、実data、画面実操作、送信、runtime testは未確認。以下の優先度は改修順の判断であり、不具合の深刻度や実装承認ではない。
 
@@ -20,18 +20,18 @@
 |---|---|---|---|
 | Customer通常CRUD・取引状態／Outsourcer通常CRUD・取引状態 | 維持 | 単数・複数ManagerがClass.create/updateへ接続済み | 既存の標準保存を作り直さない。Outsourcerで未提供のarchive/restoreを自動追加しない |
 | Site・Employee通常CRUD | 大筋一致 | 標準Manager/Class保存は存在するが、状態変更を拒否するRulesが残る | Siteは状態変更工程で必要なRulesを合わせる。Employee退職・訂正の専用保護と退職後の通常情報編集禁止は維持する |
-| Customer／Site／Employee archive | SCR-06 Customer・SCR-07 Siteは標準化、SCR-10 Employeeはprelocal実装・検証待ち | Customer／Siteは標準Class.deleteへ移行し、Employeeはread-only preflight後に標準Class.deleteへ接続。既存archive形式は保持 | Customer／SiteのRules・旧形式保持・標準移動を確認。EmployeeはUser連携・予約・lock・lifecycle整合をpreflightで確認し、旧envelopeを標準restoreへ直接渡さない |
+| Customer／Site／Employee archive | SCR-06 Customer・SCR-07 Site・SCR-10 EmployeeはLocal検証済み・Dev受入れ待ち | Customer／Siteは標準Class.deleteへ移行し、Employeeはread-only preflight後に標準Class.deleteへ接続。既存archive形式は保持 | 利用者環境LocalでCustomer／Siteの拒否・標準archive、Employeeのpreflight拒否・標準archiveを確認済み。Dev受入れ、旧形式保持の継続確認、EmployeeのUser連携・予約・lock・lifecycle整合のsecurity reviewは残す |
 | Restore | 提供範囲確認・archiveと同時検討 | client-adapterに標準restoreはあるが、対象masterの通常復旧入口は今回の検索で見つからない | 基盤の存在と製品UI提供を区別する。既存dataの有無・変換要否は未確認で、自動migrationしない |
-| Site手動終了・再開 | SCR-03 prelocal実装 | 専用editorをSiteManagerへ接続し、Site schemaの状態遷移検査とRulesのactor／tenant／metadata境界を追加。手動Callable／専用actionは撤去し、自動終了のsystem処理は維持 | security review、直接test、Dev受入れ、Rules実行時構文確認を残す。package／data shape／migrationは変更しない |
+| Site手動終了・再開 | SCR-03 Local検証済み・Dev受入れ待ち | 専用editorをSiteManagerへ接続し、Site schemaの状態遷移検査とRulesのactor／tenant／metadata境界を追加。手動Callable／専用actionは撤去し、自動終了のsystem処理は維持 | 利用者環境Localで終了後のreload保持と再開直後の表示を確認済み。再開後reload、security review、Dev受入れ、Rules実行時構文確認を残す。package／data shape／migrationは変更しない |
 
 ## SCR-03 Site手動終了・再開（2026-09-16、PRELOCAL）
 
 - 確認範囲: `components/Site/**`、`components/Sites/**`、Site pages、`schemas/Site.js`、`firestore.rules`、Site lifecycle Functions／API／composableを静的確認した。Installed packageのSiteは終了のみで再開条件を持たないため、root schema subclassで状態遷移・理由・actor UID・工期・予定条件を補完した。
 - 実装: 手動終了・再有効化をSiteManagerの標準`update()`へ接続し、標準UIのsubmit・loading・error・listener経路を利用する。TERMINATEDの通常編集禁止、終了時の予定条件、再有効化時のCustomer不変と新工期・理由、同一tenantの有効な本登録Userとactor UID境界を維持する。手動Callable、manual mapper、専用site action／function exportは撤去し、自動終了処理だけをFunctionsに残した。
-- 未完了: testerによる直接test、security review、Rulesの実行時構文確認、Local Emulator／UI／Dev受入れは未実施。schemaの予定確認は標準client update前の非atomicな事前検査であり、同時変更を完全に防止するものではない。
+- 未完了: security review、Rulesの実行時構文確認、Dev受入れは未実施。利用者環境Localでは終了後のreload保持と再開直後の表示をreceiptで確認し、再開後reloadは未確認。schemaの予定確認は標準client update前の非atomicな事前検査であり、同時変更を完全に防止するものではない。
 - 影響: package／lock／node_modules、Firestore data shape、migration、remote data、外部環境、deployは変更していない。Rules差分はsecurity review承認前のprototypeであり、承認なしにrelease・deployしてはならない。
 | Employee退職・訂正 | 標準CRUD化の例外・既存Callable維持 | 2026-09-16コード確認: 退職Callableは予約と実Userを照合してUserなし／本登録を分岐し、仮登録・不整合を拒否する。訂正Callableは最新の完了済み退職・User連携なし・lockを検証する | [SCR-09の個別完了条件](../roadmaps/standard-crud-alignment.md#scr-09-employee退職誤退職訂正の目的と完了条件)に従い、既存証拠と不足を照合する。標準toTerminatedへの置換、Userなしの別保存経路、package改修を前提にしない |
-| 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | SCR-05 prelocal実装・検証待ち | 標準OperationBillingManager／ArticleDetailsManagerとroot OperationBilling schemaへ移行。旧Operation専用Manager、result/articles Callable経路、請求専用Functions分岐を撤去。Rulesはlock中updateを許可し、updateのisLocked型を要求 | operation direct test、SFC runtime、Rules Emulator、Local／Dev受入れ、live Site agreement検証を確認。経理画面アクセス制限とOperationResult／OperationBillingのlock差を維持 |
+| 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | SCR-05 Implementation（prelocal・検証継続/待ち） | 標準OperationBillingManager／ArticleDetailsManagerとroot OperationBilling schemaへ移行。旧Operation専用Manager、result/articles Callable経路、請求専用Functions分岐を撤去。Rulesはlock中updateを許可し、updateのisLocked型を要求 | 利用者環境Localでは登録button非表示だけを確認（既存receiptを参照）。取極め・調整・lock・稼働外売上、operation direct test、SFC runtime、Rules Emulator、Dev受入れ、live Site agreement検証は未確認 |
 | 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
 | Billings入金予定日 | SCR-01 Completed | 詳細画面はManager/Classの標準update、Rulesはtenant共通の既存update、旧PaymentDateEditor・Callable・expected比較はsourceとDevから撤去済み。標準保存、listener再表示、日付条件・解除、背景writerとの併存をLocal確認し、Devの会社管理者画面で変更・解除・再表示・既存表示維持を受け入れた | 残作業なし。失敗経路は自動test成功を受入証拠とし、backend停止時の画面確認は完了条件外 |
 | 請求確定・確定後の編集削除 | 中・未提供UIを含む | 顧客請求のC/U/D handlerがunsupported。詳細の編集入口は入金予定日。Billingにstatus/confirmはあるが確定画面・issuer snapshot保存経路は今回未確認 | 「既存確定ロックの撤去」と誤分類しない。提供UI・標準保存・Rulesを実装する単位。現在の入金予定日編集から分ける |
@@ -267,7 +267,7 @@ checkpointは後続07と同じDev release・受入れで完了した。schema変
 - 旧`OperationManager`、`OperationArrayManager`、`OperationRowsManager`、`OperationEditor`、`useOperationEditor`は正規callerがなくなったため撤去した。`saveOperation`のFunctions契約・dispatchから稼働請求専用の`overview`／`articles`／`agreement`／`adjusted`／`lock`経路と、正規callerのない実績`articles`経路を外し、予定・実績の残存操作と複製・通知経路は維持した。`saveOperation`本体とentrypointは、残存する予定・実績commandのため維持する。
 - RulesはOperationResultsの同一tenant境界と、OperationBillingのlock中updateを妨げない境界へ整合した。OperationResultのlock拒否はSchema／UI側で維持する。
 - OperationBillingの標準updateは、installed ClientAdapterの実在する`runTransaction`／`fetchDoc({ transaction })`／`update({ transaction })` APIを使い、Siteのlive agreement readとOperationResults writeを同一transactionへ渡す。OperationResultの通常更新は既存の標準update経路を維持する。runtime／Emulatorでの同時変更受入れは未確認である。
-- 状態はprelocal実装・検証待ち。schema、data shape、migration、既存data一括変更、remote、Local Emulator、build、Dev／Prodは未確認であり、SCR-05の得点は0のままとする。
+- 状態はImplementation（prelocal・検証継続/待ち）。利用者環境Localでは登録button非表示だけを確認し、取極め・調整・lock・稼働外売上は未確認。schema、data shape、migration、既存data一括変更、remote、Dev／Prodも未確認であり、SCR-05の得点0を維持する。
 
 ## 未確認事項
 
