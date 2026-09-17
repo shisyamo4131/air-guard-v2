@@ -10,6 +10,10 @@
 
 2026-09-16現行補正: SCR-02の今回差分で、GeneratorはSchemas `SiteOperationSchedule.syncToOperationResult`へ接続済み。最終確定はArrangementNotificationを作成・更新せず、既存通知のactual値を読むだけである。旧`useOperationGenerator`、`saveOperation`の`convert`、notification expectation比較は撤去済み。OperationResult Rulesは同一tenantの有効な本登録Userへ通常read/writeを許可し、field・lock・worker・docIdの業務検証はSchemas／正規applicationへ委譲する。SCR-04へ二重計上しない。
 
+## 2026-09-17 Local verification closeout（score変更なし）
+
+実行件数、UI smoke、System/system欠落による阻害、cleanup、未検証範囲は[SCR Local verification receipt](../verification/scr-local-verification-2026-09-17.md)に固定した。SCR-03/06/07/10のwrite acceptanceは未検証、SCR-04/08/09に追加UI evidenceはなく、SCR-09 callable挙動と既存受入れ記録を維持する。これはSCR-05等のprelocal状態や得点を変更しない。
+
 基準はlocal mainの`048e44e9cfd4ca887ec328e7e835c291579e68af`。対象は今回確定したarchive・状態変更・請求・実績lock・実績化・通知・後続Triggerである。実コードとinstalledクラスを読取り、同じ基準でmasterと請求を独立調査した。remote適用状態、実data、画面実操作、送信、runtime testは未確認。以下の優先度は改修順の判断であり、不具合の深刻度や実装承認ではない。
 
 | 対象 | 判定 | 現在の実装と仕様との差 | 最小の改修単位・維持条件 |

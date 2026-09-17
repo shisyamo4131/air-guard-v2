@@ -311,7 +311,7 @@ code・Rulesを戻す必要が生じた場合は[Git統合](../runbooks/project-
 - SCR-08は、現提供範囲のpaymentDueDateAtが既存標準Manager／Schemaで充足することを確認した。BankAccount／PaymentMethod／WorkerOrder画面は未提供で対象外。direct tests 2+13+16はすべてexit 0だが、Local／Dev前のため完了扱いにしない。
 - SCR-09は、既存退職／誤退職訂正Callableを維持し変更不要であることを確認した。direct tests 7+14+18+4+3=46はすべてexit 0だが、Local／Dev前のため完了扱いにしない。
 - SCR-10はImplementation（prelocal・検証待ち）・得点0。Callableはread-only preflightに限定し、正規画面では拒否・失敗時に標準保存へ進まない。direct SDKはpreflightを迂回し得るが、アプリ想定外経路まで保証しないことを明示受容し、one-time grant・追加role・新管理documentは設けない。
-- Local Emulator、browser、build、Dev受入れは今回確認していない。
+- 2026-09-17 Local verificationの実行結果とSCR-05 UI smoke、System/system欠落によるwrite阻害、未検証範囲は[SCR Local verification receipt](../verification/scr-local-verification-2026-09-17.md)を参照する。SCR-03/06/07/10のwrite acceptanceは未検証、SCR-04/08/09に追加UI evidenceはなく、SCR-09 callableと既存受入れは維持する。SCR-03〜10の得点・製品完了状態は変更しない。
 
 2026-09-17訂正: 2026-09-16時点では対象data不足により会社管理者Dev受入れをPendingとしていたが、利用者から「Local受入れ検証、コード検証: 完了」「上下番確定処理画面の確認事項: 確認OK（Dev受入れOK）」の確定報告を受領した。これによりSCR-02をCompleted・10点へ更新する。SCR-04はPlanned・得点0のまま維持し、SCR-02で整合した実績化範囲を再実装・二重計上しない。
 

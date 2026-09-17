@@ -8,6 +8,8 @@
 
 - SCR-02追加差分はユーザーcode review、domain-full 1434/1434、Local Emulator 180/180、Local UI build、`generate:dev`、GitHub Actions run `35066835154`によるHosting・Functions・Firestore RulesのDev反映まで成功し、利用者からLocal受入れ・コード検証の完了と上下番確定処理画面のDev受入れOKが報告された。実data状態の左右独立scroll、固定された確定操作、作業員鉛筆、上下番確定と再表示を含むSCR-02の受入れ範囲を完了とする。
 
+- 2026-09-17 Local verificationの結果、SCR-05のUI smokeを含む自動検証・build・cleanup証拠は[SCR Local verification receipt](../verification/scr-local-verification-2026-09-17.md)に固定した。dedicated snapshotの`System/system`欠落によるCustomer create阻害と、actor Auth/User mismatchが除外された事実を記録している。SCR-03/06/07/10のwrite acceptanceは未検証、SCR-04/08/09に追加UI evidenceなし、SCR-09の既存Callable挙動・受入れは維持する。`System/system`の注入・setup、restore、legacy/server-adapter、future lifecycle scopeは追加しない。
+
 - 棚卸し解消の継続先は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)。解消順、状態、次checkpointは同roadmapを正とし、既存phaseとの関係も同書から確認します。
 - SCR-01「Billings入金予定日」は標準Manager／Class保存、Rules整合、旧Function撤去、Local自動検証、Dev反映・受入れまで完了し、同ロードマップで10点を加点済みです。SCR-02「配置通知の状態更新・編集」は標準Manager／Class接続、Schemas `3.0.0-dev.3`の導入、PostAdoption、直接対象test、TESTERのLocal UI確認、ユーザー本人の遷移確認、domain-full 1433/1433、Local Emulator 180/180、最終Local T21、Generatorのscroll補正とsource regression test、Hosting/Functions/Firestore RulesのDev反映、利用者のDev受入れまで完了しました。DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認してmigration/repair不要と判断しています。SCR-02はロードマップで10点を加点し、SCR-04はPlannedのまま維持します。[SCR-02 Local検証記録](../verification/scr-02-arrangement-notification-local.md)を参照してください。
 - 製品全体の残作業は[正式運用ロードマップ](../roadmaps/airguard-v2.md)、確認済み要件は[現行仕様](../specification.md)、実行証拠は[検証索引](../verification/README.md)を参照します。
