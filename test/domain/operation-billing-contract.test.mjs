@@ -36,6 +36,17 @@ test("OperationBilling beforeUpdate canonicalizes one live Site agreement and pe
 
 async function sourceFile() { return await source("schemas/OperationBilling.js"); }
 
+test("稼働請求一覧は登録導線を持たず既存の月・顧客・現場・更新経路を維持する", async () => {
+  const code = await source("pages/billings/operations/index.vue");
+  assert.doesNotMatch(code, /mdi-plus|\btoCreate\b/u);
+  assert.match(code, /<MoleculesMonthSelector\b/u);
+  assert.match(code, /<CustomerSelect\b/u);
+  assert.match(code, /<SiteSelect\b/u);
+  assert.match(code, /<OperationBillingsDataTable\b/u);
+  assert.match(code, /function handleClickUpdate\(item\)/u);
+  assert.match(code, /router\.push\(`\/billings\/operations\/\$\{item\.docId\}`\)/u);
+});
+
 test("OperationBilling source contract rejects missing, duplicate, and stale agreements while preserving superclass validation", async () => {
   const code = await sourceFile();
   assert.match(code, /new Site\(\)\.fetchDoc\(\{ docId: this\.siteId, transaction: args\.transaction \}\)/u);
