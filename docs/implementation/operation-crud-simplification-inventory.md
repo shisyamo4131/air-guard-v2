@@ -33,7 +33,7 @@
 | 請求確定・確定後の編集削除 | 中・未提供UIを含む | 顧客請求のC/U/D handlerがunsupported。詳細の編集入口は入金予定日。Billingにstatus/confirmはあるが確定画面・issuer snapshot保存経路は今回未確認 | 「既存確定ロックの撤去」と誤分類しない。提供UI・標準保存・Rulesを実装する単位。現在の入金予定日編集から分ける |
 | 予定から実績化 | 高・要変更 | Generator→SiteOperationSchedule.syncToOperationResult。既存通知のactual値を読み、通知なしは予定値fallback。最終確定では通知を作成・更新しない | 標準sync、OperationResults作成Rules、既存通知の実勤務時間反映・予定との紐付けを整合。旧convert callerと通知期待値比較は撤去済み |
 | 配置通知作成 | 維持 | schedule.notifyでClassから通知documentを生成し予定側状態を同じtransactionで更新 | 後続通知生成と送信までclientへ移さない |
-| 配置確認・上番・下番／通知編集 | SCR-02 In Progress（Dev補正反映済み・Dev再受入れ待ち） | 単数・本人向けManagerはAir ManagerとArrangementNotificationの標準`update()`／遷移methodへ接続し、旧expected比較・patch transaction・再読込経路を撤去した。Schemas `3.0.0-dev.3`をroot/Functionsへ導入し、notify生成の`actualIsStartNextDay` parityをsaveOperationにも反映した。直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21、TESTERの会社管理者Local UI、ユーザー本人の遷移確認は成功した。DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した。Dev受入れでは上下番確定画面の縦長内容で確定buttonへ到達できない既存UI layout regressionを確認したが、Generator共通rowのscroll境界補正とsource regression test（TESTER最終39/39、review finding 0件）は完了し、Local UIも利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格とした | Devへ対象dataを用意できた後、同じUI条件を会社管理者で再受入れする |
+| 配置確認・上番・下番／通知編集 | SCR-02 Completed（Dev受入れ完了） | 単数・本人向けManagerはAir ManagerとArrangementNotificationの標準`update()`／遷移methodへ接続し、旧expected比較・patch transaction・再読込経路を撤去した。Schemas `3.0.0-dev.3`をroot/Functionsへ導入し、notify生成の`actualIsStartNextDay` parityをsaveOperationにも反映した。直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21、TESTERの会社管理者Local UI、ユーザー本人の遷移確認、Generator共通rowのscroll境界補正、source regression test、利用者によるDev受入れを完了した。DEV read-only確認で配置通知2579件と関連予定・勤務実績の整合を確認し、migration/repair不要と判断した | Prod、FCM実配信、backend日付算術、dashboard本人表示は未検証のまま後続範囲とする |
 | Notifications生成・FCM・結果記録／実績から請求勤怠等の反映 | 維持 | ArrangementNotifications→Notifications→FCMの二段階Trigger、OperationResultのC/U/D→各projection同期が存在 | 新しい専用層を増やさず既存Triggerを維持。保存完了と後続反映完了を区別して検証する |
 
 ### 主な一次根拠
@@ -54,13 +54,13 @@
 
 既存testには旧専用経路・client write拒否を期待するものがある。後続実装では`operation-write`、`operation-submission`、`billing-payment-date`、`client-billing-contract-parity`、各master archive、`employee-schema-compatibility`、`operation-result-projections`およびlocal harnessを対象に、旧期待値と新仕様を区別して更新する。今回testは存在・参照の確認だけで、runtime検証は実行していない。製品code、Rules、package、実data、remoteは変更していない。
 
-## SCR-02 Dev補正反映済み・Dev再受入れ待ちの実装状態（2026-09-16）
+## SCR-02 Dev受入れ完了の実装状態（2026-09-17）
 
 単数の配置通知編集、本人向け確認・上番・下番を`AirItemManager`／`AirArrayManager`へ接続し、編集対象`ArrangementNotification`の標準`update()`／`toConfirmed()`／`toArrived()`／`toLeaved()`等へ保存を委譲するcodeとtestを準備した。本人向け複数Managerは選択したlistener由来documentを追跡し、同documentのlistener更新時だけ編集中draft全体を最新instanceで置き換える。別documentだけの更新ではdraftを置き換えない。
 
 旧`useNotificationEditor`、`usePersonalNotification`、client／Functionsの`notificationStateContract`は到達元とtestを更新して削除した。`operationCommandContract`／`operationWriteContract`の`notificationExpectation`等は実績化で使用中のため維持する。Firestore Rules、配置通知の作成・状態変更Trigger、Notifications作成、FCM送信・結果記録には製品差分を加えていない。
 
-自動test codeは、標準クラスの4遷移、実勤務時刻・日跨ぎ・勤務時間、manager接続、同一tenant Rules、CONFIRMED／ARRIVED／LEAVED進入時のNotifications生成、同status非生成、`shouldNotify=false`を対象に更新した。listenerによる編集中draft全体の置換、別document更新時の入力維持、失敗時のdialog・入力保持、loadingと連打抑止はTESTERのLocal UIで確認した。Schemas `3.0.0-dev.3`はsource tag・release evidence・registry・root/Functionsのversion、resolved、integrity、installed sourceが一致し、`PostAdoption`は成功した。saveOperationのnotify生成分岐にも`actualIsStartNextDay`の実勤務値引継ぎを反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21は成功した。TESTERは会社管理者Local UIでLEAVED通知の取消、必須field validation、一時値保存、listener反映、reload保持、baseline復元を確認し、ユーザー本人は一方向遷移とLEAVED時の「閉じる」のみ表示を確認した。GitHub ActionsによるDevのHosting/Functions反映と会社管理者によるDev UI表示は成功したが、未確定dataが0件のため確定操作のDev受入れは未完了である。DEV read-only確認では配置通知2579件の必要最小fieldを取得し、翌日開始1件と関連予定・勤務実績の整合を確認したためmigration/repair不要と判断した。writeは0件である。Dev受入れ中に上下番確定画面の縦長内容で確定buttonへ到達できない既存UI layout regressionを確認したため、Generator共通rowへ`overflow-hidden`と`min-height: 0`を追加した。source regression testは左右独立scroll、右toolbar/actions固定、外側columnとalert→reload→row順序を固定し、TESTER最終39/39、review finding 0件である。Local UIは利用者確認により左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達を合格とした。Dev再受入れは未実施で、SCR-02はDev補正反映済み・Dev再受入れ待ち、得点0である。[Local検証記録](../verification/scr-02-arrangement-notification-local.md)と[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)を参照する。
+自動test codeは、標準クラスの4遷移、実勤務時刻・日跨ぎ・勤務時間、manager接続、同一tenant Rules、CONFIRMED／ARRIVED／LEAVED進入時のNotifications生成、同status非生成、`shouldNotify=false`を対象に更新した。listenerによる編集中draft全体の置換、別document更新時の入力維持、失敗時のdialog・入力保持、loadingと連打抑止はTESTERのLocal UIで確認した。Schemas `3.0.0-dev.3`はsource tag・release evidence・registry・root/Functionsのversion、resolved、integrity、installed sourceが一致し、`PostAdoption`は成功した。saveOperationのnotify生成分岐にも`actualIsStartNextDay`の実勤務値引継ぎを反映し、直接対象test、domain-full 1433/1433、Local Emulator 180/180、最終Local T21は成功した。TESTERは会社管理者Local UIでLEAVED通知の取消、必須field validation、一時値保存、listener反映、reload保持、baseline復元を確認し、ユーザー本人は一方向遷移とLEAVED時の「閉じる」のみ表示を確認した。GitHub ActionsによるDevのHosting/Functions反映と会社管理者によるDev UI表示は成功した。DEV read-only確認では配置通知2579件の必要最小fieldを取得し、翌日開始1件と関連予定・勤務実績の整合を確認したためmigration/repair不要と判断した。writeは0件である。Dev受入れ中に上下番確定画面の縦長内容で確定buttonへ到達できない既存UI layout regressionを確認したため、Generator共通rowへ`overflow-hidden`と`min-height: 0`を追加した。source regression testは左右独立scroll、右toolbar/actions固定、外側columnとalert→reload→row順序を固定し、TESTER最終39/39、review finding 0件である。Local UIの左Listと右Detail本文の独立scroll、右側操作部の固定、確定操作への到達、および利用者のDev受入れ報告によりSCR-02を完了した。[Local検証記録](../verification/scr-02-arrangement-notification-local.md)と[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md#scr-02受入れ前-ui-layout-regression-補正)を参照する。
 
 ## SCR-01-01 保存契約の調査結果（2026-09-15）
 
@@ -254,7 +254,7 @@ checkpointは後続07と同じDev release・受入れで完了した。schema変
 - Rulesは予定と配置通知をtenant共通の通常read/writeへ簡素化し、Site revision、maintenance、live Site、field形状、実績化済み状態の重複検査を撤去した。identityとtenant境界、nested pathの既定拒否は維持する。
 - 予定から実績への確定、請求、実績複製、稼働外売上、schema package、data shape、migration、Dev・Prodは変更しない。
 - Dev受入れで、上下番確定の左一覧と右詳細・日報写真が表示されず、外枠のManagerだけが表示される不具合を確認した。原因は予定Managerの明示的な`table`表示口と汎用転送の同名表示口の重複であり、汎用転送から`table`を除外するLocal補正と回帰testを追加した。
-- 対象test 36/36件、全domain 1,434/1,434件、buildはexit status 0。補正版commit `12f05e5a`をGitHub ActionsでHostingへDev再反映した。配置管理・上下番確定処理そのものの再受入れは未実施であり、エラー解消済みとは扱わない。
+- （2026-09-16時点の記録）対象test 36/36件、全domain 1,434/1,434件、buildはexit status 0。補正版commit `12f05e5a`をGitHub ActionsでHostingへDev再反映した。当時は配置管理・上下番確定処理そのものの再受入れが未実施だった。2026-09-17の利用者報告により、上下番確定処理のSCR-02重複範囲は解消済みであり、配置管理の受入れだけが現行の残存範囲である。
 
 ## SCR-05 稼働請求・実績lock・稼働外売上 prelocal実装（2026-09-16）
 

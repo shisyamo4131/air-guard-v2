@@ -54,7 +54,13 @@
 - 最終候補はcommit `f3b1e01891f6a14605d17b2e7fb5c67daabec15a`。domain-fullは1434/1434、Local Emulatorは180/180、Local UI build、`generate:dev`、project docs、diff-checkがそれぞれexit 0だった。
 - Codex専用Local UIではVueの`Extraneous non-props attributes (class)`警告がなく、左右paneが利用可能高まで表示され、再取得・旧再読込buttonがないことを確認した。未確定dataが0件だったため、実data状態の左右独立scroll、固定された確定操作、既存通知行の鉛筆は未確認とした。
 - GitHub Actions run `35066835154`はHosting・Functions・Firestore Rulesを選択し、Dev生成、鍵なし認証、dry-run、実deployをすべて成功した。Dev HostingはHTTP 200、`Cache-Control: no-cache, no-store, must-revalidate`を返し、local/remote `main`は上記commitで一致した。data migration・repair・削除は行っていない。
-- 上下番確定を実行できる対象dataが2026-09-17まで発生しないため、会社管理者によるDev受入れは`Pending`とする。対象data発生後に左右独立scroll、固定された確定操作、既存通知行の鉛筆、上下番確定と再表示を確認し、その結果が届くまでSCR-02は完了扱いにしない。
+- （2026-09-16時点の記録）上下番確定を実行できる対象dataが2026-09-17まで発生しないため、会社管理者によるDev受入れは`Pending`とした。翌日の利用者受入れ報告により、このPendingは解消した。
+
+### 2026-09-17 利用者Dev受入れ（完了）
+
+- 利用者から「Local受入れ検証、コード検証: 完了」と「上下番確定処理画面の確認事項: 確認OK（Dev受入れOK）」の確定報告を受領した。
+- これにより、上下番確定処理画面の左右独立scroll、固定された確定操作、既存通知行の鉛筆、上下番確定と再表示に関するSCR-02のDev受入れを完了とする。
+- SCR-02はLocal検証・コード検証・Dev反映・利用者Dev受入れを満たした。Prod、FCM実配信、Notificationsの実配信、backend日付算術、dashboard本人表示は未検証のまま維持する。
 
 以前の直接対象testも成功済みである。`operation-datetime` 1/1、`operation-write` 30/30、`operation-submission` 18/18、`role-presets-parity` 4/4、最終`operation-editor` 38/38を確認した。
 
@@ -62,7 +68,7 @@
 
 - Local Emulator full suiteはT19・T21に加え、最終Dev候補でも180/180、exit 0を確認した。
 - `local-ui-build`は初回Local工程では省略したが、最終Dev候補では実行してexit 0を確認した。
-- DevへのHosting・Functions・Firestore Rules反映は完了したが、対象data不足により会社管理者の上下番確定受入れは`Pending`である。Prod、FCM delivery、Notificationsの実配信、backendでの日付算術、別actorによる本人遷移は未検証である。Dev dataのmigration・repairは実施していない。
+- DevへのHosting・Functions・Firestore Rules反映と、対象data発生後の会社管理者による上下番確定受入れは完了した。Prod、FCM delivery、Notificationsの実配信、backendでの日付算術、別actorによる本人遷移は未検証である。Dev dataのmigration・repairは実施していない。
 - dashboard本人向け表示は会社管理者accountでは表示されず、TESTERによる独立確認はない。上記の本人確認と混同しない。
 - 最終候補のbuild、`generate:dev`、Dev deployは実施済み。data migrationとdata repairは実施していない。
 
@@ -70,4 +76,4 @@
 
 Local検証はlocalhost上の画面・自動testに限定した。後続のDev releaseはHosting・Functions・Firestore Rulesを反映したが、remote dataのmigration・repair・削除、FCM実配信、Prod操作は行っていない。rollbackは反映前commit `65529ef1dc6e51550c2dd4184be783be5c5b71cb`を基準とするrevert releaseであり、data rollbackは不要である。
 
-Local検証とDev反映は完了したが、SCR-02は会社管理者による上下番確定のDev受入れ前であるため得点0を維持し、状態は`Pending（Dev反映済み・2026-09-17以降の受入れ待ち）`とする。受入れ結果が届くまで再deployや同一gateの再実行は行わず、失敗が判明した場合だけ原因に対応する検証へ戻る。
+Local検証、Dev反映、利用者によるDev受入れが完了したため、SCR-02をCompletedとして扱う。migration・repairは不要であり、Prod、FCM実配信、backend日付算術、dashboard本人表示は後続の未検証範囲として残す。
