@@ -140,3 +140,11 @@ read-only dry-runを連続2回行ってdigestが一致し、private backup作成
 - Dev read-only dry-runは、対象project・database・company・期間・出力制限を示して承認を得る。
 - Dev applyはprivate backup成功を条件に承認済みである。rollbackは別承認とし、内部receipt、変更上限、batch幅、停止条件を事前に示す。
 - Prodは本計画の対象外とする。
+
+## 2026-09-17 試行Dev修復の実施結果（恒久対策とは別）
+
+利用者承認のもと、Billing内にあった、削除済みOperationResultを保持する孤立snapshot 3件に対して、現在の削除projectionを再実行した。うち2件は、撤去済みの厳密な参照チェックによる当時のdelete projection失敗と対応する。最古1件の発生原因は現時点で特定できない。対象はOperationResultからBilling、DailyAttendances、DailyOperationsByEmployee、SiteEmployeeHistoriesへ派生する4 projectionで、Billingは1文書削除・2文書更新、各対象で4 projection処理が成功した。private backupは省略することが明示承認され、PITR有効を確認したうえで実施した。機密ID、個別document ID、個票はこの文書へ記録しない。
+
+修復後の全Dev scanは、OperationResults 2457、Billings 275、DailyAttendances 4561、DailyOperationsByEmployee 4734、SiteEmployeeHistories 873だった。Billings、DailyAttendances、DailyOperationsByEmployeeのorphan・duplicate・index mismatchは各0、SiteEmployeeHistoriesのmissing・extra・mismatchは各0、maintenanceはfalseだった。cutoff後のOperationResult trigger change/failureは0/0だった。これらは試行Devで確認した実施結果であり、repository上の実装変更や恒久同期設計の完了を意味しない。
+
+この修復で確認した現行設計上の再発リスク・限界は、event順序非保証、retry=false、failure ledger・reconciliationの不在、clientのBilling全体保存による古いprojection再混入可能性、差分更新がsource-currentへ必ず収束する設計でない点である。これらは今回の3件の確定原因とは扱わない。恒久対策は[将来要対応事項 FUT-0197](future-actions.md#fut-0197-operationresultから派生文書へのprojection同期を恒久化する)へ切り分けて記録し、本復旧計画の試行結果を恒久対策の実装・完了として扱わない。

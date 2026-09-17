@@ -1,7 +1,7 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-09-17
+- 最終更新日: 2026-09-18
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
@@ -15,6 +15,8 @@
 Local completed、Resolved、Superseded等は記録された限定条件のまま読む。製品全体の完了やDev受入れを意味せず、本文の残作業・未確認点と[roadmap](../roadmaps/README.md)を照合する。
 
 ### Open
+
+[FUT-0197](#fut-0197-operationresultから派生文書へのprojection同期を恒久化する)
 
 [FUT-0196](#fut-0196-住所自動入力を日本郵便の住所データへ切り替える)
 
@@ -2866,3 +2868,16 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 完了条件案: 対象となる住所自動入力を日本郵便の住所データに基づく経路へ切り替え、採用方式の利用条件を確認した根拠を残す。通常検索、該当なし、複数候補、取得失敗、手入力・修正、既存住所の保持を検証する。具体的な受入れ条件は改修着手時に確定する。
 - 既存項目との関係: 住所field・郵便番号正規化のFUT-0142、個人住所・座標の外部送信のFUT-0143と関連するが、本件は住所自動入力のデータ提供元切替として区別する。
 - 今回の範囲: 将来の要改修事項の記録のみ。優先順位・着手時期は未指定。現行branchの製品改修scopeやrelease判断へ追加せず、実装・規約調査・外部接続・データ移行は後続工程とする。
+
+## FUT-0197 OperationResultから派生文書へのprojection同期を恒久化する
+
+- 状態: Open（要改修）
+- 優先度: 高
+- 報告日: 2026-09-18、Dev試行修復の結果と利用者決定に基づく記録。
+- 発生事実: Billing内に、削除済みOperationResultを保持する孤立snapshotが3件あった。うち2件は、撤去済みの厳密な参照チェックによる当時のdelete projection失敗と対応する。最古1件の発生原因は現時点で特定できない。2026-09-17の試行Dev修復では、この3件に対して削除projectionを再実行し、Billingは1文書削除・2文書更新、各対象で4 projection処理が成功した。修復後の全Dev scanは、OperationResults 2457、Billings 275、DailyAttendances 4561、DailyOperationsByEmployee 4734、SiteEmployeeHistories 873で、各照合の不足・余剰・重複・不一致（SiteEmployeeHistoriesはmissing・extra・mismatch）は0、cutoff後のOperationResult trigger change/failureは0/0だった。個別IDや個票はこの文書へ記録しない。
+- 現行の再発リスク・限界: event順序の非保証、retry=false、failure ledgerとreconciliationの不在、clientによるBilling全体保存で古いprojectionが再混入し得ること、差分更新がsource-currentへ必ず収束する設計でないことが残る。これらは現行設計上の懸念であり、今回の3件の確定原因とは扱わない。今回の試行修復は欠落状態を直した証拠であり、恒久対策の実装・完了を示さない。
+- 恒久対策の方向: OperationResultをsource of truthとして、4派生先へのprojectionをserver-ownedな同期境界へ寄せ、冪等なevent識別・順序逆転と重複の吸収・再実行可能なretry・failure ledger・alert・manual replay・定期reconciliationを設計する。clientが派生文書を全体保存する経路は、source-currentへ収束できる差分契約またはserver側計算へ整理する。部分失敗時も派生先ごとの状態と再開点を追跡可能にする。
+- 着手時の確認: out-of-order、重複event、削除後のrecreate、client競合、projectionの部分失敗、retry再実行、reconciliationによる修復を対象に、sourceと各派生先の期待値・revision・更新時刻の契約を確定する。Billing固有の手動調整やsnapshot fieldを上書きしない境界、tenant・認可、既存triggerとの互換性、移行対象、dry-run、rollback、監視と停止条件を具体化する。
+- 完了条件案: 正常・順序逆転・重複・再作成・競合・部分失敗の自動検証、failure ledgerからの再試行とmanual replay、reconciliationの検出・修復、client/server-owned境界、移行・dry-run・rollbackをレビュー可能な証拠で確認する。修復時は実dataへの適用承認を別に取得し、対象・上限・snapshot・復旧手段を固定する。
+- 既存項目との関係: OperationResult後続triggerの部分成功と再試行を扱うFUT-0030、Functionのretry・idempotency・failure観測を扱うFUT-0153、通常CRUDのdocument単位last-write-winsを扱うFUT-0188と関連する。既存項目を今回の記録で完了扱いにせず、着手時に重複範囲を整理する。
+- 今回の範囲: 要改修事項の記録のみ。現行SCR-03〜10の実装・得点・製品完了状態へ追加せず、既存の試行Dev修復とは切り分ける。新しいロードマップ、実装、test、package、設定、実data操作、外部操作は行わない。
