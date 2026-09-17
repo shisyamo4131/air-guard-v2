@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
 import test from "node:test";
+import { ref } from "vue";
 
 test("Site Managers compile and expose standard delete only in archive mode", async () => {
   for (const path of ["components/Site/Manager/index.vue", "components/Sites/Manager/index.vue", "pages/sites/[id].vue"]) {
@@ -32,8 +33,8 @@ test("Site detail uses the real Manager delete handler and navigates only after 
   assert.match(detail, /function handleDeleted\(\)[\s\S]*?navigateTo\("\/sites"\)/u);
   const script = manager.match(/<script setup>([\s\S]*?)<\/script>/u)?.[1];
   assert.ok(script);
-  const factory = new Function("Site", "defineOptions", "defineProps", "defineEmits", "useBaseManager", `${script.replace(/^import[^;]+;\r?\n/gmu, "")}; return { handleDelete };`);
-  const methods = factory(class Site {}, () => {}, () => ({}), () => () => {}, () => ({ attrs: {} }));
+  const factory = new Function("Site", "defineOptions", "defineProps", "defineEmits", "useBaseManager", "ref", `${script.replace(/^import[^;]+;\r?\n/gmu, "")}; return { handleDelete };`);
+  const methods = factory(class Site {}, () => {}, () => ({}), () => () => {}, () => ({ attrs: {} }), ref);
   let writes = 0;
   const draft = { docId: "site-a", async delete() { writes++; throw new Error("blocked"); } };
   await assert.rejects(methods.handleDelete(draft), /blocked/u);

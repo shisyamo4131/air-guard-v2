@@ -7,6 +7,7 @@ import { Site } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 import CreateInput from "@/components/Site/CustomInput/index.vue";
 import BaseInput from "@/components/Site/CustomInput/Base.vue";
+import { ref } from "vue";
 
 defineOptions({ inheritAttrs: false });
 
@@ -22,6 +23,7 @@ const props = defineProps({
   },
 });
 const emit = defineEmits(["created", "updated", "delete"]);
+const manager = ref(null);
 
 const { attrs } = useBaseManager("SiteManager");
 
@@ -32,6 +34,10 @@ function resolveCustomInput({ editMode }) {
       : props.customInput;
   }
   return editMode === "CREATE" ? CreateInput : BaseInput;
+}
+
+function updateProperties(changes) {
+  manager.value?.updateProperties(changes);
 }
 
 async function beforeEdit(editMode, item) {
@@ -77,6 +83,7 @@ async function handleDelete(draft) {
 
 <template>
   <air-item-manager
+    ref="manager"
     v-bind="{ ...$attrs, ...attrs }"
     :model-value="props.modelValue"
     :dialog-props="{
@@ -96,6 +103,12 @@ async function handleDelete(draft) {
     @update="emit('updated', $event)"
     @delete="emit('delete', $event)"
   >
+    <template #input-default="inputAttrs">
+      <component
+        :is="resolveCustomInput({ editMode: inputAttrs.editMode })"
+        v-bind="{ ...inputAttrs, updateProperties }"
+      />
+    </template>
     <template #activator="slotProps">
       <slot name="activator" v-bind="slotProps" />
     </template>

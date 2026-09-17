@@ -32,6 +32,20 @@ test("Site lifecycle editors gate by state and use standard Manager input", asyn
   assert.match(reactivate, /props\.site\.status !== 'TERMINATED'/u);
 });
 
+test("Site lifecycle custom input writes through AirItemManager updateProperties", async () => {
+  const manager = await read("components/Site/Manager/index.vue");
+  const lifecycle = await read("components/Site/CustomInput/Lifecycle.vue");
+  assert.match(manager, /ref="manager"/u);
+  assert.match(manager, /#input-default="inputAttrs"/u);
+  assert.match(manager, /manager\.value\?\.updateProperties\(changes\)/u);
+  assert.match(manager, /v-bind="\{ \.\.\.inputAttrs, updateProperties \}"/u);
+  assert.match(lifecycle, /updateProperties: \{ type: Function, required: true \}/u);
+  assert.match(lifecycle, /props\.updateProperties\(\{ constructionPeriodStartAt: \$event \}\)/u);
+  assert.match(lifecycle, /props\.updateProperties\(\{ constructionPeriodEndAt: \$event \}\)/u);
+  assert.match(lifecycle, /props\.updateProperties\(\{ statusChangeReason: \$event \}\)/u);
+  assert.doesNotMatch(lifecycle, /v-model="props\.item\.(?:constructionPeriodStartAt|constructionPeriodEndAt|statusChangeReason)"/u);
+});
+
 test("Terminated Site selection is visibly identified and requires explicit keep-terminated confirmation", async () => {
   const autocomplete = await read("components/Site/Autocomplete.vue");
   assert.match(autocomplete, /site\.status === "TERMINATED"/u);

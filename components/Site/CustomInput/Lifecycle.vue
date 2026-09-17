@@ -3,6 +3,7 @@ import { computed } from "vue";
 const props = defineProps({
   disabled: { type: Boolean, default: false },
   item: { type: Object, required: true },
+  updateProperties: { type: Function, required: true },
 });
 
 const isReactivation = computed(
@@ -24,21 +25,24 @@ const isReactivation = computed(
     </v-col>
     <v-col v-if="props.item.status === 'ACTIVE'" cols="12" md="6">
       <air-date-input
-        v-model="props.item.constructionPeriodStartAt"
+        :model-value="props.item.constructionPeriodStartAt"
+        @update:model-value="props.updateProperties({ constructionPeriodStartAt: $event })"
         label="新しい工期開始日"
         :disabled="props.disabled"
       />
     </v-col>
     <v-col v-if="props.item.status === 'ACTIVE'" cols="12" md="6">
       <air-date-input
-        v-model="props.item.constructionPeriodEndAt"
+        :model-value="props.item.constructionPeriodEndAt"
+        @update:model-value="props.updateProperties({ constructionPeriodEndAt: $event })"
         label="新しい工期終了日"
         :disabled="props.disabled"
       />
     </v-col>
     <v-col cols="12">
       <air-textarea
-        v-model="props.item.statusChangeReason"
+        :model-value="props.item.statusChangeReason"
+        @update:model-value="props.updateProperties({ statusChangeReason: $event })"
         label="状態変更理由"
         maxlength="200"
         counter
