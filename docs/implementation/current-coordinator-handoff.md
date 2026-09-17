@@ -1,6 +1,6 @@
 # 現在の製品作業と再開案内
 
-2026-09-17現行更新: SCR-02の今回追加修正（標準sync接続、通知不変、OperationResult Rules整合、旧convert撤去）は固定commit `f3b1e01891f6a14605d17b2e7fb5c67daabec15a`としてDevへ反映済み。利用者からLocal受入れ・コード検証の完了と、上下番確定処理画面の確認OK（Dev受入れOK）の確定報告を受領したため、SCR-02をCompleted・10点とする。SCR-04はPlannedのままで、SCR-02の実績化範囲を二重計上しない。
+2026-09-17現行更新: SCR-02はCompleted・10点を維持する。SCR-03/06/07/10の最終product contentは固定commit `1250f8ff8ef5fb1043d00b990bb8680fd53cadb0`で、Customer通常編集と明示archive入口の分離を含む。combined code reviewでMedium findingを検出し`1250f8ff...`で解消した。post-fix reviewとfinal security reviewはfinding 0、利用者環境LocalのCustomer非破壊再確認と最終UI buildも成功したが、Dev受入れ待ち・得点0は変更しない。詳細な実測値と未確認事項は[SCR-03〜10利用者環境Local receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)、状態と完了条件は[標準CRUD整合ロードマップ](../roadmaps/standard-crud-alignment.md)を正本とする。
 
 この文書は現在の製品作業・未決事項・次の操作から正本へ進む案内です。通常startupは[文書案内](../README.md)と[project coordination](../runbooks/project-coordination.md)に従います。Git・remote・dataの現在状態は実targetで別途確認し、過去の実行記録を現在値として使いません。
 

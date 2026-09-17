@@ -44,7 +44,7 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 | SCR-03 Site手動終了・再開 | 10 | 0 | Local検証済み・Dev受入れ待ち | [個別完了条件](#scr-03-site手動終了再開の目的と完了条件)に従い、Air Manager／Schema標準更新への委譲、不要経路撤去、Rules簡素化、現行業務条件の維持を確認する。利用者環境Local受入れは[receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)で確認済みだが、Dev受入れ完了までは得点0を維持する |
 | SCR-04 予定から実績化 | 10 | 0 | Planned | [個別完了条件](#scr-04-予定から実績化の目的と完了条件)に従い、SCR-02の成果を5つの目的と照合し、残る差分だけを解消する。未対応部分がなければ追加改修せず、必要な検証・受入れ証拠の充足を確認して完了判断する |
 | SCR-05 稼働請求・実績lock・稼働外売上 | 10 | 0 | Implementation（prelocal・検証継続/待ち） | [個別完了条件](#scr-05-稼働請求実績lock稼働外売上の目的と完了条件)に従い、提供済み操作をAir Manager／Schemaへ委譲する。今回の利用者環境では登録button非表示の限定UI証拠のみ確認し、取極め・調整・lock・稼働外売上は未確認。詳細は[receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)と旧receiptを参照し、得点0を維持する |
-| SCR-06 Customer archive整合 | 10 | 0 | Local検証済み・Dev受入れ待ち | [個別完了条件](#scr-06-customerアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、利用者環境Local確認は[receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)で確認済み。既存archiveは変換せず保持し、得点0とDev受入れ待ちは維持する |
+| SCR-06 Customer archive整合 | 10 | 0 | Local検証済み・Dev受入れ待ち | [個別完了条件](#scr-06-customerアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、通常basic/payment UPDATEからDELETEを分離した最終修正とreviewをreceiptで確認済み。既存archiveは変換せず保持し、得点0とDev受入れ待ちは維持する |
 | SCR-07 Site archive整合 | 10 | 0 | Local検証済み・Dev受入れ待ち | [個別完了条件](#scr-07-siteアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、利用者環境Local確認は[receipt](../verification/scr-03-10-user-local-acceptance-2026-09-17.md)で確認済み。既存archiveは保持し、得点0とDev受入れ待ちは維持する |
 | SCR-08 提供済み請求操作の標準CRUD整合 | 10 | 0 | Implementation（prelocal・検証待ち） | 現提供範囲はpaymentDueDateAtのみで、既存標準Manager／Schemaが充足することを確認した。BankAccount／PaymentMethod／WorkerOrder画面は未提供のため対象外。direct tests 2+13+16を確認し、Local／Dev受入れまでは完了としない |
 | SCR-09 Employee退職・誤退職訂正の専用経路維持 | 10 | 0 | Implementation（prelocal・検証待ち） | 既存退職／誤退職訂正Callableを維持し、変更不要であることを確認した。direct tests 7+14+18+4+3=46を確認し、Local／Dev受入れまでは完了としない |
@@ -139,6 +139,7 @@ SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路
 - 合意: 2026-09-16の質疑で確定。目的は提供済みCustomerアーカイブをAir ManagerからSchemaの標準削除処理へ接続し、hasManyによる従属確認へ委譲することである。
 - 対象: 既存のCustomerアーカイブ操作、新たに保存する標準archive形式、必要なRules整合、不要になった専用経路・重複処理の撤去。
 - 範囲外: 復元画面の追加、旧形式archiveの復元対応、既存archiveの一括変換。過去の独自形式のdataは変換・削除せず保持する。通常CRUDと既存の業務上の提供条件を維持する。
+- 最終実装事実: `1250f8ff8ef5fb1043d00b990bb8680fd53cadb0`で通常basic/payment UPDATEからDELETEを分離し、明示archive buttonだけをarchive-mode Managerへ接続した。CustomerManagerのcreated／updated／delete event forwardingも明示化した。fix reviewとfinal product content security reviewはfinding 0。Local確認済みだが、Dev受入れ・得点0は維持する。
 
 ### 完了条件
 

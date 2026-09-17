@@ -20,16 +20,16 @@
 |---|---|---|---|
 | Customer通常CRUD・取引状態／Outsourcer通常CRUD・取引状態 | 維持 | 単数・複数ManagerがClass.create/updateへ接続済み | 既存の標準保存を作り直さない。Outsourcerで未提供のarchive/restoreを自動追加しない |
 | Site・Employee通常CRUD | 大筋一致 | 標準Manager/Class保存は存在するが、状態変更を拒否するRulesが残る | Siteは状態変更工程で必要なRulesを合わせる。Employee退職・訂正の専用保護と退職後の通常情報編集禁止は維持する |
-| Customer／Site／Employee archive | SCR-06 Customer・SCR-07 Site・SCR-10 EmployeeはLocal検証済み・Dev受入れ待ち | Customer／Siteは標準Class.deleteへ移行し、Employeeはread-only preflight後に標準Class.deleteへ接続。既存archive形式は保持 | 利用者環境LocalでCustomer／Siteの拒否・標準archive、Employeeのpreflight拒否・標準archiveを確認済み。Dev受入れ、旧形式保持の継続確認、EmployeeのUser連携・予約・lock・lifecycle整合のsecurity reviewは残す |
+| Customer／Site／Employee archive | SCR-06 Customer・SCR-07 Site・SCR-10 EmployeeはLocal検証済み・Dev受入れ待ち | Customer／Siteは標準Class.deleteへ移行し、Employeeはread-only preflight後に標準Class.deleteへ接続。Customerは通常basic/payment UPDATEからarchive入口を分離し、既存archive形式は保持 | 利用者環境LocalでCustomer／Siteの拒否・標準archive、Customer通常dialogのDELETE非表示、Employeeのpreflight拒否・標準archiveを確認済み。final product contentの一般code/security reviewはfinding 0。Dev受入れ、旧形式保持の継続確認、受容済みrace/direct SDK riskの別境界は残す |
 | Restore | 提供範囲確認・archiveと同時検討 | client-adapterに標準restoreはあるが、対象masterの通常復旧入口は今回の検索で見つからない | 基盤の存在と製品UI提供を区別する。既存dataの有無・変換要否は未確認で、自動migrationしない |
-| Site手動終了・再開 | SCR-03 Local検証済み・Dev受入れ待ち | 専用editorをSiteManagerへ接続し、Site schemaの状態遷移検査とRulesのactor／tenant／metadata境界を追加。手動Callable／専用actionは撤去し、自動終了のsystem処理は維持 | 利用者環境Localで終了後のreload保持と再開直後の表示を確認済み。再開後reload、security review、Dev受入れ、Rules実行時構文確認を残す。package／data shape／migrationは変更しない |
+| Site手動終了・再開 | SCR-03 Local検証済み・Dev受入れ待ち | 専用editorをSiteManagerへ接続し、Site schemaの状態遷移検査とRulesのactor／tenant／metadata境界を追加。手動Callable／専用actionは撤去し、自動終了のsystem処理は維持 | 利用者環境Localで終了後のreload保持と再開直後の表示を確認済み。final product contentのsecurity reviewはfinding 0。再開後reload、Dev受入れ、Rules実行時構文確認を残す。package／data shape／migrationは変更しない |
 
 ## SCR-03 Site手動終了・再開（2026-09-16、PRELOCAL）
 
 - 確認範囲: `components/Site/**`、`components/Sites/**`、Site pages、`schemas/Site.js`、`firestore.rules`、Site lifecycle Functions／API／composableを静的確認した。Installed packageのSiteは終了のみで再開条件を持たないため、root schema subclassで状態遷移・理由・actor UID・工期・予定条件を補完した。
 - 実装: 手動終了・再有効化をSiteManagerの標準`update()`へ接続し、標準UIのsubmit・loading・error・listener経路を利用する。TERMINATEDの通常編集禁止、終了時の予定条件、再有効化時のCustomer不変と新工期・理由、同一tenantの有効な本登録Userとactor UID境界を維持する。手動Callable、manual mapper、専用site action／function exportは撤去し、自動終了処理だけをFunctionsに残した。
-- 未完了: security review、Rulesの実行時構文確認、Dev受入れは未実施。利用者環境Localでは終了後のreload保持と再開直後の表示をreceiptで確認し、再開後reloadは未確認。schemaの予定確認は標準client update前の非atomicな事前検査であり、同時変更を完全に防止するものではない。
-- 影響: package／lock／node_modules、Firestore data shape、migration、remote data、外部環境、deployは変更していない。Rules差分はsecurity review承認前のprototypeであり、承認なしにrelease・deployしてはならない。
+- 未完了: Rulesの実行時構文確認、Dev受入れは未実施。利用者環境Localでは終了後のreload保持と再開直後の表示をreceiptで確認し、再開後reloadは未確認。final product contentのsecurity review（`SCR-03-10-FINAL-SECURITY-14`）はfinding 0。schemaの予定確認は標準client update前の非atomicな事前検査であり、同時変更を完全に防止するものではない。
+- 影響: package／lock／node_modules、Firestore data shape、migration、remote data、外部環境、deployは変更していない。Rules実行時確認とDev受入れ前のため、承認なしにrelease・deployしてはならない。
 | Employee退職・訂正 | 標準CRUD化の例外・既存Callable維持 | 2026-09-16コード確認: 退職Callableは予約と実Userを照合してUserなし／本登録を分岐し、仮登録・不整合を拒否する。訂正Callableは最新の完了済み退職・User連携なし・lockを検証する | [SCR-09の個別完了条件](../roadmaps/standard-crud-alignment.md#scr-09-employee退職誤退職訂正の目的と完了条件)に従い、既存証拠と不足を照合する。標準toTerminatedへの置換、Userなしの別保存経路、package改修を前提にしない |
 | 稼働請求の編集・取極め・調整・lock／実績の稼働外売上 | SCR-05 Implementation（prelocal・検証継続/待ち） | 標準OperationBillingManager／ArticleDetailsManagerとroot OperationBilling schemaへ移行。旧Operation専用Manager、result/articles Callable経路、請求専用Functions分岐を撤去。Rulesはlock中updateを許可し、updateのisLocked型を要求 | 利用者環境Localでは登録button非表示だけを確認（既存receiptを参照）。取極め・調整・lock・稼働外売上、operation direct test、SFC runtime、Rules Emulator、Dev受入れ、live Site agreement検証は未確認 |
 | 実績ロックのクラス・画面 | 維持する基盤あり | OperationResultはlockを検査。OperationBillingはlock検査を無効にし、toggleLockはupdate、deleteは拒否。稼働請求画面も削除を非提供 | クラスを作り直す根拠は現時点でない。標準保存を妨げるRulesを整合し、画面別操作表を維持する |
