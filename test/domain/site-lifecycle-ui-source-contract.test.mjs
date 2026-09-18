@@ -43,6 +43,9 @@ test("Site lifecycle custom input writes through AirItemManager updateProperties
   assert.match(lifecycle, /props\.updateProperties\(\{ constructionPeriodStartAt: \$event \}\)/u);
   assert.match(lifecycle, /props\.updateProperties\(\{ constructionPeriodEndAt: \$event \}\)/u);
   assert.match(lifecycle, /props\.updateProperties\(\{ statusChangeReason: \$event \}\)/u);
+  assert.match(lifecycle, /label="新しい工期開始日"\s+required/u);
+  assert.match(lifecycle, /label="新しい工期終了日"\s+required/u);
+  assert.match(lifecycle, /label="状態変更理由"\s+required/u);
   assert.doesNotMatch(lifecycle, /v-model="props\.item\.(?:constructionPeriodStartAt|constructionPeriodEndAt|statusChangeReason)"/u);
 });
 

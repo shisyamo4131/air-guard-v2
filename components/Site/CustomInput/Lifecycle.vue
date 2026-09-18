@@ -28,6 +28,7 @@ const isReactivation = computed(
         :model-value="props.item.constructionPeriodStartAt"
         @update:model-value="props.updateProperties({ constructionPeriodStartAt: $event })"
         label="新しい工期開始日"
+        required
         :disabled="props.disabled"
       />
     </v-col>
@@ -36,6 +37,7 @@ const isReactivation = computed(
         :model-value="props.item.constructionPeriodEndAt"
         @update:model-value="props.updateProperties({ constructionPeriodEndAt: $event })"
         label="新しい工期終了日"
+        required
         :disabled="props.disabled"
       />
     </v-col>
@@ -44,6 +46,7 @@ const isReactivation = computed(
         :model-value="props.item.statusChangeReason"
         @update:model-value="props.updateProperties({ statusChangeReason: $event })"
         label="状態変更理由"
+        required
         maxlength="200"
         counter
         :disabled="props.disabled"

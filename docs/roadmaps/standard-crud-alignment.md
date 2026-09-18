@@ -41,7 +41,7 @@ SCRを優先して消化し、各項目の完了時にFGAの対応する完了�
 |---|---:|---:|---|---|
 | SCR-01 Billings入金予定日 | 10 | 10 | Completed | 提供済み編集をManager／Classへ接続し、Rulesと旧比較testを整合。保存・再表示・失敗、tenant境界を検証する |
 | SCR-02 配置通知の状態更新・編集 | 10 | 10 | Completed | 通知個別編集と最終確定を標準Manager／Schemasへ整合し、最終確定で通知を変更せず、既存通知のactual値を実績へ反映する。旧convert経路を撤去済み。Local検証、Dev反映、利用者による左右独立scroll・固定操作・既存通知行の鉛筆・上下番確定と再表示の受入れを完了した |
-| SCR-03 Site手動終了・再開 | 10 | 0 | Dev反映済み・Dev受入れ待ち | [個別完了条件](#scr-03-site手動終了再開の目的と完了条件)に従い、Air Manager／Schema標準更新への委譲、不要経路撤去、Rules簡素化、現行業務条件の維持を確認する。利用者環境Local受入れと[Dev反映](../verification/scr-03-10-dev-release-2026-09-17.md)は確認済みだが、Dev受入れ完了までは得点0を維持する |
+| SCR-03 Site手動終了・再開 | 10 | 0 | Implementation（必須入力修正・Dev再反映／再受入れ待ち） | [個別完了条件](#scr-03-site手動終了再開の目的と完了条件)に従い、Air Manager／Schema標準更新への委譲、不要経路撤去、Rules簡素化、現行業務条件の維持を確認する。必須入力修正は実装済みだが未deploy・Dev再受入れ待ちのため得点0を維持する |
 | SCR-04 予定から実績化 | 10 | 0 | Implementation（変更不要確認済み・Local／Dev受入れ待ち） | [個別完了条件](#scr-04-予定から実績化の目的と完了条件)に従い、SCR-02の成果を5つの目的と照合し、残る差分だけを解消する。今回の静的監査では追加改修を確認していないが、必要な検証・受入れ証拠の充足を確認するまで完了判断しない |
 | SCR-05 稼働請求・実績lock・稼働外売上 | 10 | 0 | Implementation（Dev反映済み・検証継続/受入れ待ち） | [個別完了条件](#scr-05-稼働請求実績lock稼働外売上の目的と完了条件)に従い、提供済み操作をAir Manager／Schemaへ委譲する。今回の利用者環境では登録button非表示の限定UI証拠のみ確認し、取極め・調整・lock・稼働外売上は未確認。対象candidateは[Dev反映済み](../verification/scr-03-10-dev-release-2026-09-17.md)だが、得点0を維持する |
 | SCR-06 Customer archive整合 | 10 | 0 | Dev反映済み・Dev受入れ待ち | [個別完了条件](#scr-06-customerアーカイブの目的と完了条件)に従い、Air Manager／Schema標準archive・hasManyへ委譲し、通常basic/payment UPDATEからDELETEを分離した最終修正とreviewをreceiptで確認済み。既存archiveは変換せず保持し、得点0とDev受入れ待ちは維持する |
@@ -94,6 +94,13 @@ SCR-01-01で確認した契約を02〜05に適用する。02〜05は保存経路
 | 最終受入れ | 上記の目的に対する差分・独立review・必要な自動検証・対象範囲のDev受入れを対応付ける。標準機能の呼出しやtest成功だけで閉じず、責務の委譲と撤去の証拠が揃ってからSCR-03を完了する |
 
 クラス側の変更が必要な場合、実装時に対象package・repository・採用範囲を確認する。本合意は画面側への重複実装で代替しない方針を確定するもので、package公開や外部操作の一括承認ではない。実装着手時に対象file・互換性・rollbackと影響別の検証範囲を具体化する。
+
+### 2026-09-18 Dev受入れと必須入力修正
+
+- 合成Siteを正規画面・会社管理者で操作し、手動終了は理由入力、保存、reload後の`TERMINATED`維持まで成功した。再有効化は、初回に終了日がUI stateへ反映されないままsubmitされ、sourceの実行順序上は`Site.beforeUpdate`がFirestore write前に拒否した。UI上はSiteが`TERMINATED`のまま維持された。ClientAdapterの汎用変換によりUIは`unknown error`を表示した。backendでのpartial write有無の直接assertは未実施である。
+- 利用者承認後、開始日`2026/09/18`、終了日`2026/09/30`、理由を確認して一度だけ再送し、reload後`ACTIVE`・工期保持と通常の「現場を終了」導線を確認した。開始時の工期未設定には戻していない。以上で手動終了・再有効化の正常系Dev操作を確認したが、必須fieldのUI抑止gapが残った。
+- application側で開始日・終了日・理由の3入力へ`required`を追加し、source contract testを追加した（未deploy）。対象は`components/Site/CustomInput/Lifecycle.vue`と`test/domain/site-lifecycle-ui-source-contract.test.mjs`のみ。空欄submitのruntime evidenceは、実DOM harnessがないため未検証とする。
+- generic adapter error mapping、focus中のrequired rule risk、逆順日付の表示は未解消・未検証。別package改修は未承認・未実施。Dev再反映・再受入れが完了するまでSCR-03は得点0、全体進捗20%を維持する。SCR-02、他SCR、FUT-0197、製品完了の状態は変更しない。
 
 ## SCR-04 予定から実績化の目的と完了条件
 
